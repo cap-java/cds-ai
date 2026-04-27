@@ -1,0 +1,28 @@
+
+logging:
+  level:
+    root: INFO
+    com.sap.cds: DEBUG
+---
+spring:
+  datasource:
+    url: "jdbc:h2:mem:testdb"
+  config:
+    activate:
+      on-profile: default
+  sql:
+    init:
+      platform: h2
+cds:
+  security:
+    mock:
+      users:
+        admin:
+          password: admin
+          roles:
+          - admin
+        user:
+          password: user
+  data-source:
+    auto-config:
+      enabled: false
