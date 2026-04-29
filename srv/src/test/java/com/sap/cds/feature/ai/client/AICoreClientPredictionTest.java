@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.ai.client.setup.AICoreSetup;
+import com.sap.cds.services.environment.CdsEnvironment;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -20,6 +21,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.mockito.Mockito;
 
 /**
  * Integration test verifying the full prediction flow against a real AI Core instance.
@@ -43,7 +45,8 @@ class AICoreClientPredictionTest {
 
     credentials = MAPPER.readValue(serviceKey, new TypeReference<>() {});
     resourceGroup = "default";
-    cut = new AICoreClient(new AICoreSetup());
+    CdsEnvironment environment = Mockito.mock(CdsEnvironment.class);
+    cut = new AICoreClient(new AICoreSetup(environment));
   }
 
   /**

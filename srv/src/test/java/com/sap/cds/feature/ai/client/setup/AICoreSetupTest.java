@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.ai.client.AICoreClient;
+import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.mt.SubscribeEventContext;
 import com.sap.cds.services.mt.UnsubscribeEventContext;
 import java.net.URI;
@@ -54,7 +55,8 @@ class AICoreSetupTest {
     aiApiUrl = ((Map<?, ?>) credentials.get("serviceurls")).get("AI_API_URL").toString();
 
     System.setProperty("cds.multitenancy.enabled", "true");
-    cut = new AICoreSetup();
+    CdsEnvironment environment = mock(CdsEnvironment.class);
+    cut = new AICoreSetup(environment);
     client = new AICoreClient(cut);
   }
 
