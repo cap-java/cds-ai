@@ -19,6 +19,7 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupBase;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
+import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
@@ -56,6 +57,8 @@ public class AICoreSetup implements EventHandler {
   // In-memory cache: resourceGroupId -> RPT-1 deploymentId
   private final Map<String, String> resourceGroupDeploymentCache = new ConcurrentHashMap<>();
 
+  private final CdsEnvironment environment;
+
   // For testing
   Map<String, String> getTenantResourceGroupCache() {
     return tenantResourceGroupCache;
@@ -65,7 +68,9 @@ public class AICoreSetup implements EventHandler {
     return resourceGroupDeploymentCache;
   }
 
-  public AICoreSetup() {}
+  public AICoreSetup(CdsEnvironment environment) {
+    this.environment = environment;
+  }
 
   /**
    * Called automatically after a tenant subscribes: Creates an AI Core resource group for the
@@ -120,7 +125,12 @@ public class AICoreSetup implements EventHandler {
     if (isMultitenancyEnabled()) {
       return getResourceGroupForTenant(tenantId);
     }
-    return DEFAULT_RESOURCE_GROUP;
+    String group =
+        this.environment.getProperty(
+            "cds.requires.AICore.resourceGroup", String.class, DEFAULT_RESOURCE_GROUP);
+    group = group != null ? group : DEFAULT_RESOURCE_GROUP;
+    logger.info("Multitenancy disabled, using resource group: {}", group);
+    return group;
   }
 
   /**

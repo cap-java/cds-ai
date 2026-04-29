@@ -29,10 +29,13 @@ public class AIRuntimeConfiguration implements CdsRuntimeConfiguration {
         serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
     logger.info("PersistenceService obtained from ServiceCatalog: " + (persistenceService != null));
 
-    Optional<ServiceBinding> bindingOpt = getAIBinding(configurer.getCdsRuntime().getEnvironment());
+    Optional<ServiceBinding> bindingOpt = getAIBinding(runtime.getEnvironment());
     // If the AI Core service binding is present, create the AICoreSetup event handler to manage
     // resource groups for tenants.
-    Optional<AICoreSetup> setupOpt = bindingOpt.map(b -> new AICoreSetup());
+    // The binding itself does *not* need to be passed to the AICoreSetup; the AICoreSetup uses
+    // the com.sap.ai.sdk.core library which reads the binding directly from the environment
+    // variable AICORE_SERVICE_KEY.
+    Optional<AICoreSetup> setupOpt = bindingOpt.map(b -> new AICoreSetup(runtime.getEnvironment()));
     setupOpt.ifPresent(
         setup -> {
           configurer.eventHandler(setup);

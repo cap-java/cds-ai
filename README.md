@@ -90,21 +90,7 @@ The plugin will automatically create resource groups per tenant labeled with `ex
 
 In single-tenant setups the plugin uses the 'default' resource group and creates an RPT-1 deployment as well if none exists.
 
-For single-tenant deployments you can change the resource group as follow in the `package.json`:
-
-```json
-{
-    "cds": {
-        "requires": {
-            "AICore": {
-                "resourceGroup": "CUSTOM_SINGLE_TENANT_RESOURCE_GROUP"
-            }
-        }
-    }
-}
-```
-
-or 
+For single-tenant deployments you can change the resource group as follow in the `application.yaml`:
 
 ```yaml
 # application.yaml
