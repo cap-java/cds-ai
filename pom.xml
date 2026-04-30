@@ -3,35 +3,82 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.sap.cds</groupId>
-  <artifactId>cds-feature-ai-parent</artifactId>
+  <artifactId>cds-feature-ai-root</artifactId>
   <version>${revision}</version>
   <packaging>pom</packaging>
 
-  <name>cds-feature-ai parent</name>
+  <name>CDS Feature for AI - Root</name>
+  <description>This artifact is a CAP Java plugin that provides smart recommendations using the SAP RPT-1 model.</description>
+
+  <organization>
+    <name>SAP SE</name>
+    <url>https://www.sap.com</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <organization>SAP SE</organization>
+      <organizationUrl>https://www.sap.com</organizationUrl>
+    </developer>
+  </developers>
 
   <modules>
     <module>srv</module>
   </modules>
+
+  <distributionManagement>
+    <repository>
+      <id>central</id>
+      <name>MavenCentral</name>
+      <url>https://central.sonatype.com</url>
+    </repository>
+    <snapshotRepository>
+      <id>artifactory</id>
+      <name>Artifactory_DMZ-snapshots</name>
+      <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <properties>
     <!-- OUR VERSION -->
     <revision>1.0.0-SNAPSHOT</revision>
 
     <!-- DEPENDENCIES VERSION -->
-    <jdk.version>17</jdk.version>
-    <cds.services.version>4.4.1</cds.services.version>
+    <java.version>17</java.version>
+    <cds.services.version>4.6.1</cds.services.version>
     <spring.boot.version>3.5.6</spring.boot.version>
     <ai-sdk.version>1.18.0</ai-sdk.version>
+    <jacoco.version>0.8.14</jacoco.version>
+    <junit.version>6.0.3</junit.version>
+    <mockito.version>5.23.0</mockito.version>
+    <maven.clean.plugin.version>3.5.0</maven.clean.plugin.version>
+    <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
+    <maven.source.plugin.version>3.4.1</maven.source.plugin.version>
+    <maven.deploy.plugin.version>3.1.4</maven.deploy.plugin.version>
+    <maven.javadoc.plugin.version>3.12.0</maven.javadoc.plugin.version>
+    <maven.surefire.plugin.version>3.5.5</maven.surefire.plugin.version>
+    <maven.failsafe.plugin.version>3.5.5</maven.failsafe.plugin.version>
+    <maven.pmd.plugin.version>3.28.0</maven.pmd.plugin.version>
+    <maven.enforcer.plugin.version>3.6.2</maven.enforcer.plugin.version>
+    <maven.flatten.plugin.version>1.7.3</maven.flatten.plugin.version>
+    <sap.cloud.sdk.version>5.28.0</sap.cloud.sdk.version>
+    <spotbugs.maven.plugin.version>4.9.8.3</spotbugs.maven.plugin.version>
+    <pitest.maven.plugin.version>1.23.0</pitest.maven.plugin.version>
 
-    <cds.install-node.downloadUrl>https://nodejs.org/dist/</cds.install-node.downloadUrl>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-    <excluded.generation.package>com/sap/cds/feature/ai/generated/</excluded.generation.package>
+    <!-- skip spotless check when not setting this to true sepecifically-->
+    <spotless.check.skip>true</spotless.check.skip>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <!-- CDS SERVICES -->
       <dependency>
         <groupId>com.sap.cds</groupId>
         <artifactId>cds-services-bom</artifactId>
@@ -40,21 +87,73 @@
         <scope>import</scope>
       </dependency>
 
-      <!-- SPRING BOOT -->
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${spring.boot.version}</version>
+        <groupId>com.sap.cloud.sdk</groupId>
+        <artifactId>sdk-bom</artifactId>
+        <version>${sap.cloud.sdk.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-bom</artifactId>
+        <version>${mockito.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>com.sap.cds</groupId>
+        <artifactId>cds-feature-ai</artifactId>
+        <version>${revision}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
 
+  <dependencies>
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-services-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.27.7</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
   <build>
     <pluginManagement>
       <plugins>
-        <!-- MAKE CDS PLUGIN RUNNABLE FROM ROOT -->
         <plugin>
           <groupId>com.sap.cds</groupId>
           <artifactId>cds-maven-plugin</artifactId>
@@ -63,48 +162,71 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.14</version>
+          <version>${jacoco.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>${maven.clean.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven.compiler.plugin.version}</version>
+          <configuration>
+            <release>${java.version}</release>
+            <encoding>UTF-8</encoding>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>${maven.source.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${maven.deploy.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${maven.javadoc.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven.surefire.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${maven.failsafe.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-pmd-plugin</artifactId>
+          <version>${maven.pmd.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>${maven.enforcer.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>${maven.flatten.plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.pitest</groupId>
           <artifactId>pitest-maven</artifactId>
-          <version>1.23.0</version>
+          <version>${pitest.maven.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>${spotbugs.maven.plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
 
     <plugins>
-      <!-- JAVA VERSION -->
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.1</version>
-        <configuration>
-          <release>${jdk.version}</release>
-          <encoding>UTF-8</encoding>
-        </configuration>
-      </plugin>
-
-      <!-- MAKE SPRING BOOT PLUGIN RUNNABLE FROM ROOT -->
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <version>${spring.boot.version}</version>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-
-      <!-- SUREFIRE VERSION -->
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.4</version>
-      </plugin>
-
       <!-- POM FLATTENING FOR CI FRIENDLY VERSIONS -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>flatten-maven-plugin</artifactId>
-        <version>1.7.3</version>
         <configuration>
           <updatePomFile>true</updatePomFile>
           <flattenMode>resolveCiFriendliesOnly</flattenMode>
@@ -127,27 +249,86 @@
         </executions>
       </plugin>
 
-      <!-- PROJECT STRUCTURE CHECKS -->
       <plugin>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.6.2</version>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <effort>Max</effort>
+          <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>/src/main/resources/spotbugs-exclusion-filter.xml</excludeFilterFile>
+          <spotbugsXmlOutputDirectory>${project.build.directory}</spotbugsXmlOutputDirectory>
+          <includeTests>true</includeTests>
+        </configuration>
         <executions>
           <execution>
-            <id>Project Structure Checks</id>
+            <id>spotbugs-error</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>process-test-classes</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <configuration>
+          <targetJdk>${java.version}</targetJdk>
+          <failurePriority>5</failurePriority>
+          <targetDirectory>${project.build.directory}</targetDirectory>
+          <printFailingErrors>true</printFailingErrors>
+          <includeTests>true</includeTests>
+          <linkXRef>false</linkXRef>
+          <verbose>false</verbose>
+          <rulesets>
+            <!-- Default Ruleset -->
+            <ruleset>/rulesets/java/maven-pmd-plugin-default.xml</ruleset>
+          </rulesets>
+          <excludeRoots>
+            <excludeRoot>${project.basedir}/src/gen/java</excludeRoot>
+          </excludeRoots>
+          <excludes>
+            <exclude>**/*Test**</exclude>
+          </excludes>
+        </configuration>
+        <!-- https://mvnrepository.com/artifact/com.sap.cloud.sdk.quality/pmd-rules -->
+        <dependencies>
+          <dependency>
+            <groupId>com.sap.cloud.sdk.quality</groupId>
+            <artifactId>pmd-rules</artifactId>
+            <version>3.78.0</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>pmd-error</id>
+            <goals>
+              <goal>check</goal>
+              <goal>cpd-check</goal>
+            </goals>
+            <phase>process-test-classes</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>no-duplicate-declared-dependencies</id>
             <goals>
               <goal>enforce</goal>
             </goals>
             <configuration>
               <rules>
+                <banDuplicatePomDependencyVersions/>
                 <requireMavenVersion>
                   <version>3.6.3</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
-                  <version>${jdk.version}</version>
+                  <version>${java.version}</version>
                 </requireJavaVersion>
-                <reactorModuleConvergence/>
               </rules>
-              <fail>true</fail>
             </configuration>
           </execution>
         </executions>
@@ -185,39 +366,7 @@
           </execution>
         </executions>
       </plugin>
-
-      <!-- CODE COVERAGE -->
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>${excluded.generation.package}**/*</exclude>
-          </excludes>
-        </configuration>
-        <executions>
-          <execution>
-            <id>jacoco-initialize</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>jacoco-site-report-all-tests</id>
-            <goals>
-              <goal>report</goal>
-            </goals>
-            <phase>verify</phase>
-          </execution>
-          <execution>
-            <id>jacoco-site-report-only-unit-tests</id>
-            <goals>
-              <goal>report</goal>
-            </goals>
-            <phase>test</phase>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
+  <!-- profiles for release etc. to be defined still-->
 </project>
