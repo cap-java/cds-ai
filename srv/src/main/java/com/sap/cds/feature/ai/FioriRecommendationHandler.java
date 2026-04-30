@@ -255,7 +255,7 @@ public class FioriRecommendationHandler implements EventHandler {
             try {
               recommendedValue = Double.valueOf(s);
             } catch (NumberFormatException ex2) {
-              /* keep as string */
+              recommendedValue = s; // keep as string
             }
           }
         }

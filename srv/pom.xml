@@ -4,18 +4,16 @@
 
   <parent>
     <groupId>com.sap.cds</groupId>
-    <artifactId>cds-feature-ai-parent</artifactId>
+    <artifactId>cds-feature-ai-root</artifactId>
     <version>${revision}</version>
   </parent>
 
   <artifactId>cds-feature-ai</artifactId>
   <packaging>jar</packaging>
 
-  <name>cds-feature-ai</name>
+  <name>CDS Feature for AI</name>
 
-  <!-- ACTUAL DEPENDENCIES -->
   <dependencies>
-    <!-- CDS SPRING BOOT STARTER -->
     <dependency>
       <groupId>com.sap.cds</groupId>
       <artifactId>cds-starter-spring-boot</artifactId>
@@ -24,18 +22,20 @@
     <dependency>
       <groupId>com.sap.cds</groupId>
       <artifactId>cds-services-utils</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-
-    <!-- SAP AI SDK -->
-    <dependency>
-      <groupId>com.sap.ai.sdk.foundationmodels</groupId>
-      <artifactId>sap-rpt</artifactId>
-      <version>${ai-sdk.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.sap.cds</groupId>
+          <artifactId>cds-adapter-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sap.cds</groupId>
+          <artifactId>cds4j-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sap.cloud.mt</groupId>
+          <artifactId>tools</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -45,61 +45,76 @@
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-devtools</artifactId>
-      <optional>true</optional>
+      <groupId>com.sap.ai.sdk.foundationmodels</groupId>
+      <artifactId>sap-rpt</artifactId>
+      <version>${ai-sdk.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
+    <!-- dependencies just for tests below this -->
 
-    <dependency>
-      <groupId>com.sap.cds</groupId>
-      <artifactId>cds-adapter-odata-v4</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-test</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
+    <!-- The deploy requires a stable artifact name -->
     <finalName>${project.artifactId}</finalName>
     <plugins>
-      <!-- SPRING BOOT PLUGIN -->
       <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <version>${spring.boot.version}</version>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
         <configuration>
-          <skip>false</skip>
+          <targetClasses>
+            <param>com.sap.cds.feature.ai.*</param>
+          </targetClasses>
+          <mutators>
+            <mutator>CONSTRUCTOR_CALLS</mutator>
+            <mutator>VOID_METHOD_CALLS</mutator>
+            <mutator>NON_VOID_METHOD_CALLS</mutator>
+            <mutator>CONDITIONALS_BOUNDARY</mutator>
+            <mutator>EMPTY_RETURNS</mutator>
+            <mutator>NEGATE_CONDITIONALS</mutator>
+            <mutator>REMOVE_CONDITIONALS_EQUAL_IF</mutator>
+            <mutator>REMOVE_CONDITIONALS_EQUAL_ELSE</mutator>
+            <mutator>REMOVE_CONDITIONALS_ORDER_IF</mutator>
+            <mutator>REMOVE_CONDITIONALS_ORDER_ELSE</mutator>
+          </mutators>
+          <coverageThreshold>95</coverageThreshold>
+          <aggregatedMutationThreshold>90</aggregatedMutationThreshold>
+        </configuration>
+
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>${pitest.maven.plugin.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <!-- Configure what happens during mvn clean -->
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>./</directory>
+              <includes>
+                <include>.flattened-pom.xml</include>
+              </includes>
+            </fileset>
+          </filesets>
         </configuration>
         <executions>
           <execution>
-            <id>repackage</id>
+            <id>auto-clean</id>
             <goals>
-              <goal>repackage</goal>
+              <goal>clean</goal>
             </goals>
-            <configuration>
-              <classifier>exec</classifier>
-            </configuration>
+            <phase>clean</phase>
           </execution>
         </executions>
       </plugin>
 
-      <!-- STEPS TO BUILD CDS MODEL AND GENERATE POJOs -->
+      <!-- cds plugin -->
       <plugin>
         <groupId>com.sap.cds</groupId>
         <artifactId>cds-maven-plugin</artifactId>
@@ -165,37 +180,38 @@
         </executions>
       </plugin>
 
-      <!-- MUTATION TESTING -->
       <plugin>
-        <groupId>org.pitest</groupId>
-        <artifactId>pitest-maven</artifactId>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
         <configuration>
-          <targetClasses>
-            <param>com.sap.cds.feature.ai.*</param>
-          </targetClasses>
-          <mutators>
-            <mutator>CONSTRUCTOR_CALLS</mutator>
-            <mutator>VOID_METHOD_CALLS</mutator>
-            <mutator>NON_VOID_METHOD_CALLS</mutator>
-            <mutator>REMOVE_CONDITIONALS_ORDER_ELSE</mutator>
-            <mutator>CONDITIONALS_BOUNDARY</mutator>
-            <mutator>EMPTY_RETURNS</mutator>
-            <mutator>NEGATE_CONDITIONALS</mutator>
-            <mutator>REMOVE_CONDITIONALS_EQUAL_IF</mutator>
-            <mutator>REMOVE_CONDITIONALS_EQUAL_ELSE</mutator>
-            <mutator>REMOVE_CONDITIONALS_ORDER_IF</mutator>
-          </mutators>
-          <coverageThreshold>80</coverageThreshold>
-          <aggregatedMutationThreshold>70</aggregatedMutationThreshold>
+          <excludes>
+            <exclude>${excluded.generation.package}**/*</exclude>
+          </excludes>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.pitest</groupId>
-            <artifactId>pitest-junit5-plugin</artifactId>
-            <version>1.2.3</version>
-          </dependency>
-        </dependencies>
+        <executions>
+          <execution>
+            <id>jacoco-initialize</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>jacoco-site-report-all-tests</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+          <execution>
+            <id>jacoco-site-report-only-unit-tests</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>test</phase>
+          </execution>
+        </executions>
       </plugin>
+
     </plugins>
   </build>
 

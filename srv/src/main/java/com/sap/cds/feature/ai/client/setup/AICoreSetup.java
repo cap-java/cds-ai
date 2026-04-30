@@ -15,7 +15,6 @@ import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
-import com.sap.ai.sdk.core.model.BckndResourceGroupBase;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
@@ -167,7 +166,7 @@ public class AICoreSetup implements EventHandler {
         BckndResourceGroupsPostRequest.create()
             .resourceGroupId(resourceGroupId)
             .labels(List.of(label));
-    BckndResourceGroupBase response = api.create(request);
+    api.create(request);
     logger.info("Created resource group {} for tenant {}", resourceGroupId, tenantId);
     return resourceGroupId;
   }
