@@ -85,7 +85,7 @@ public class AICoreSetup implements EventHandler {
     } catch (Exception e) {
       // Don't throw - let subscription succeed
       logger.error(
-          "Failed to create AI Core resources for tenant: {} (will retry on first prediction)",
+          "Failed to create AI Core resources for tenant {} (retrying on demand)",
           tenantId,
           e);
     }
