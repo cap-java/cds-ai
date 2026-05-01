@@ -46,7 +46,7 @@ annotate Books with {
 }
 ```
 
-### 2. Use case: Simplified AI Core usage (supported from version 0.0.2)
+### 2. Use case: Simplified AI Core usage
 
 The plugin introduces an `AICore` CAP service that automatically performs some administrative tasks and offers simplified access to AI Core.
 
