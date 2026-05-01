@@ -13,7 +13,7 @@ import com.sap.ai.sdk.foundationmodels.rpt.generated.model.PredictionConfig;
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.PredictionPlaceholder;
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.RowsInnerValue;
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.TargetColumnConfig;
-import com.sap.cds.feature.ai.client.setup.AICoreSetup;
+import com.sap.cds.feature.ai.client.setup.AICoreSetupHandler;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import java.util.LinkedHashMap;
@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 public class AICoreClient implements AIClient {
 
-  private final AICoreSetup setup;
+  private final AICoreSetupHandler setup;
   private static final Logger logger = LoggerFactory.getLogger(AICoreClient.class);
 
   // Retry inference call when resource group inference endpoint is not yet ready (403)
@@ -46,7 +46,7 @@ public class AICoreClient implements AIClient {
           "createdAt",
           "modifiedAt");
 
-  public AICoreClient(AICoreSetup setup) {
+  public AICoreClient(AICoreSetupHandler setup) {
     this.setup = setup;
   }
 
@@ -126,9 +126,14 @@ public class AICoreClient implements AIClient {
     // the logic from RptClient using our per-tenant resource group, with the same arguments, i.e.,
     // JacksonConfiguration.getDefaultObjectMapper() and the default header "Content-Encoding:
     // gzip".
+    System.out.println("Resolving inference destination for resource group: " + resourceGroup);
+    System.out.println(
+        "AICoreSetup.isMultitenancyEnabled() = " + AICoreSetupHandler.isMultitenancyEnabled());
     var inferenceBuilder = new AiCoreService().getInferenceDestination(resourceGroup);
+    var model = RptModel.SAP_RPT_1_SMALL;
+    System.out.println("Using model: " + model.name() + ", deployment: " + inferenceBuilder);
     var destination =
-        AICoreSetup.isMultitenancyEnabled()
+        AICoreSetupHandler.isMultitenancyEnabled()
             ? inferenceBuilder.usingDeploymentId(setup.getDeploymentForResourceGroup(resourceGroup))
             : inferenceBuilder.forModel(RptModel.SAP_RPT_1_SMALL);
     var apiClient =
@@ -150,7 +155,7 @@ public class AICoreClient implements AIClient {
           throw new RuntimeException("Failed to parse prediction response", e);
         }
       } catch (OpenApiRequestException e) {
-        if (AICoreSetup.notReadyYet(e) && i < INFERENCE_READY_MAX_RETRIES - 1) {
+        if (AICoreSetupHandler.notReadyYet(e) && i < INFERENCE_READY_MAX_RETRIES - 1) {
           logger.debug(
               "Inference endpoint for resource group {} not ready yet (403), retrying in {} ms ({}/{})",
               resourceGroup,

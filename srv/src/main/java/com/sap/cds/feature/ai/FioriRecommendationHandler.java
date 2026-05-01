@@ -6,7 +6,7 @@ package com.sap.cds.feature.ai;
 import com.sap.cds.feature.ai.client.AIClient;
 import com.sap.cds.feature.ai.client.AICoreClient;
 import com.sap.cds.feature.ai.client.MockAIClient;
-import com.sap.cds.feature.ai.client.setup.AICoreSetup;
+import com.sap.cds.feature.ai.client.setup.AICoreSetupHandler;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.services.cds.ApplicationService;
@@ -49,7 +49,7 @@ public class FioriRecommendationHandler implements EventHandler {
           "IsActiveEntity",
           "DraftAdministrativeData_DraftUUID");
 
-  public FioriRecommendationHandler(Optional<AICoreSetup> setupOpt, PersistenceService db) {
+  public FioriRecommendationHandler(Optional<AICoreSetupHandler> setupOpt, PersistenceService db) {
     this.db = db;
     if (setupOpt.isPresent()) {
       logger.info("Registered AI Service Handler with AI Core setup.");
