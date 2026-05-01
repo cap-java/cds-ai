@@ -34,14 +34,14 @@ import org.slf4j.LoggerFactory;
  * "clientid": "...", "clientsecret": "...", "url": "...", "serviceurls": { "AI_API_URL": "..." } }
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AICoreSetupTest {
+class AICoreSetupHandlerTest {
 
   private static final String TEST_TENANT = "it-test-tenant-" + System.currentTimeMillis();
   private static final String TENANT_LABEL_KEY = "ext.ai.sap.com/CDS_TENANT_ID";
   private static final ObjectMapper MAPPER = new ObjectMapper();
-  private static final Logger logger = LoggerFactory.getLogger(AICoreSetupTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(AICoreSetupHandlerTest.class);
 
-  private AICoreSetup cut;
+  private AICoreSetupHandler cut;
   private AICoreClient client;
   private Map<String, Object> credentials;
   private String aiApiUrl;
@@ -56,7 +56,7 @@ class AICoreSetupTest {
 
     System.setProperty("cds.multitenancy.enabled", "true");
     CdsEnvironment environment = mock(CdsEnvironment.class);
-    cut = new AICoreSetup(environment);
+    cut = new AICoreSetupHandler(environment);
     client = new AICoreClient(cut);
   }
 

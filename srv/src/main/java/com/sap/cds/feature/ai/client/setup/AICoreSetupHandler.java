@@ -36,7 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ServiceName(DeploymentService.DEFAULT_NAME)
-public class AICoreSetup implements EventHandler {
+public class AICoreSetupHandler implements EventHandler {
 
   private static final String DEFAULT_RESOURCE_GROUP = "default";
   private static final String TENANT_LABEL_KEY = "ext.ai.sap.com/CDS_TENANT_ID";
@@ -49,7 +49,7 @@ public class AICoreSetup implements EventHandler {
   // resource group
   private static final int AICORE_OPS_MAX_RETRIES = 10;
   private static final long AICORE_OPS_INITIAL_DELAY_MS = 300;
-  private static final Logger logger = LoggerFactory.getLogger(AICoreSetup.class);
+  private static final Logger logger = LoggerFactory.getLogger(AICoreSetupHandler.class);
 
   // In-memory cache: tenantId -> resourceGroupId
   private final Map<String, String> tenantResourceGroupCache = new ConcurrentHashMap<>();
@@ -67,7 +67,7 @@ public class AICoreSetup implements EventHandler {
     return resourceGroupDeploymentCache;
   }
 
-  public AICoreSetup(CdsEnvironment environment) {
+  public AICoreSetupHandler(CdsEnvironment environment) {
     this.environment = environment;
   }
 
@@ -78,16 +78,14 @@ public class AICoreSetup implements EventHandler {
   @After(event = DeploymentService.EVENT_SUBSCRIBE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
-    logger.info("Creating AI Core resources for tenant: {}", tenantId);
+    logger.debug("Creating AI Core resources for tenant {}", tenantId);
     try {
       String resourceGroupId = getResourceGroupForTenant(tenantId);
-      logger.info("AI Core resource group created: {} for tenant: {}", resourceGroupId, tenantId);
+      logger.info("Created AI Core resource group {} for tenant {}", resourceGroupId, tenantId);
     } catch (Exception e) {
       // Don't throw - let subscription succeed
       logger.error(
-          "Failed to create AI Core resources for tenant {} (retrying on demand)",
-          tenantId,
-          e);
+          "Failed to create AI Core resources for tenant {} (retrying on demand)", tenantId, e);
     }
   }
 
@@ -98,14 +96,13 @@ public class AICoreSetup implements EventHandler {
   @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
-    logger.info("Deleting AI Core resources for tenant: {}", tenantId);
+    logger.debug("Deleting AI Core resources for tenant {}", tenantId);
     try {
       deleteResourceGroupForTenant(tenantId);
-      logger.info("AI Core resources deleted for tenant: {}", tenantId);
+      logger.info("Deleted AI Core resources for tenant {}", tenantId);
     } catch (Exception e) {
       // Don't throw - let unsubscription succeed
-      logger.warn(
-          "Failed to delete AI Core resources for tenant: {} - {}", tenantId, e.getMessage());
+      logger.warn("Failed to delete AI Core resources for tenant {}: {}", tenantId, e.getMessage());
     }
   }
 
@@ -114,6 +111,7 @@ public class AICoreSetup implements EventHandler {
         System.getProperty(
             "cds.multitenancy.enabled",
             System.getenv().getOrDefault("CDS_MULTITENANCY_ENABLED", "false")));
+    // this.environment.getProperty("cds.requires.multitenancy", Boolean.class, false));
   }
 
   /**
@@ -128,7 +126,7 @@ public class AICoreSetup implements EventHandler {
         this.environment.getProperty(
             "cds.requires.AICore.resourceGroup", String.class, DEFAULT_RESOURCE_GROUP);
     group = group != null ? group : DEFAULT_RESOURCE_GROUP;
-    logger.info("Multitenancy disabled, using resource group: {}", group);
+    logger.info("Multitenancy disabled, using resource group {}", group);
     return group;
   }
 
@@ -167,7 +165,7 @@ public class AICoreSetup implements EventHandler {
             .resourceGroupId(resourceGroupId)
             .labels(List.of(label));
     api.create(request);
-    logger.info("Created resource group {} for tenant {}", resourceGroupId, tenantId);
+    logger.debug("Created resource group {} for tenant {}", resourceGroupId, tenantId);
     return resourceGroupId;
   }
 
@@ -185,7 +183,7 @@ public class AICoreSetup implements EventHandler {
     // Look for an existing running or pending RPT-1 deployment in this resource group.
     AiDeploymentList deploymentList =
         queryDeploymentsFromResourceGroupUntilReady(deploymentApi, resourceGroup);
-    Optional<AiDeployment> existing =
+    Optional<AiDeployment> aiDeployment =
         deploymentList.getResources().stream()
             .filter(
                 d ->
@@ -193,8 +191,8 @@ public class AICoreSetup implements EventHandler {
                         && (AiDeploymentStatus.RUNNING.equals(d.getStatus())
                             || AiDeploymentStatus.PENDING.equals(d.getStatus())))
             .findFirst();
-    if (existing.isPresent()) {
-      String deploymentId = existing.get().getId();
+    if (aiDeployment.isPresent()) {
+      String deploymentId = aiDeployment.get().getId();
       resourceGroupDeploymentCache.put(resourceGroup, deploymentId);
       return deploymentId;
     }
@@ -214,7 +212,7 @@ public class AICoreSetup implements EventHandler {
     String configId;
     if (existingConfig.isPresent()) {
       configId = existingConfig.get().getId();
-      logger.info(
+      logger.debug(
           "Reusing existing RPT-1 configuration {} in resource group {}", configId, resourceGroup);
     } else {
       // Configuration creation is synchronous and should be fast, so we don't implement a retry
@@ -229,7 +227,7 @@ public class AICoreSetup implements EventHandler {
               AiParameterArgumentBinding.create().key("modelName").value(RPT_MODEL_NAME),
               AiParameterArgumentBinding.create().key("modelVersion").value(RPT_MODEL_VERSION)));
       configId = configApi.create(resourceGroup, configRequest).getId();
-      logger.info("Created RPT-1 configuration {} in resource group {}", configId, resourceGroup);
+      logger.debug("Created RPT-1 configuration {} in resource group {}", configId, resourceGroup);
     }
 
     // Now create a deployment for the configuration and poll until it's running and usable.
@@ -239,7 +237,7 @@ public class AICoreSetup implements EventHandler {
         var deployRequest = AiDeploymentCreationRequest.create().configurationId(configId);
         var deployResponse = deploymentApi.create(resourceGroup, deployRequest);
         String deploymentId = deployResponse.getId();
-        logger.info(
+        logger.debug(
             "Created RPT-1 deployment {} in resource group {}, polling for RUNNING",
             deploymentId,
             resourceGroup);
@@ -364,7 +362,7 @@ public class AICoreSetup implements EventHandler {
   private void deleteResourceGroupForTenant(String tenantId) {
     String resourceGroupId = tenantResourceGroupCache.remove(tenantId);
     if (resourceGroupId == null) {
-      logger.info("No cached resource group for tenant {}, nothing to delete", tenantId);
+      logger.debug("No cached resource group for tenant {}, nothing to delete", tenantId);
       return;
     }
     resourceGroupDeploymentCache.remove(resourceGroupId);

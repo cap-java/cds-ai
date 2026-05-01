@@ -3,9 +3,8 @@
  */
 package com.sap.cds.feature.ai;
 
-import com.sap.cds.feature.ai.client.setup.AICoreSetup;
+import com.sap.cds.feature.ai.client.setup.AICoreSetupHandler;
 import com.sap.cds.services.ServiceCatalog;
-import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -27,28 +26,26 @@ public class AIRuntimeConfiguration implements CdsRuntimeConfiguration {
 
     PersistenceService persistenceService =
         serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
-    logger.info("PersistenceService obtained from ServiceCatalog: " + (persistenceService != null));
 
-    Optional<ServiceBinding> bindingOpt = getAIBinding(runtime.getEnvironment());
+    Optional<ServiceBinding> binding =
+        runtime
+            .getEnvironment()
+            .getServiceBindings()
+            .filter(b -> b.getServiceName().map(name -> name.equals("aicore")).orElse(false))
+            .findFirst();
     // If the AI Core service binding is present, create the AICoreSetup event handler to manage
     // resource groups for tenants.
     // The binding itself does *not* need to be passed to the AICoreSetup; the AICoreSetup uses
     // the com.sap.ai.sdk.core library which reads the binding directly from the environment
     // variable AICORE_SERVICE_KEY.
-    Optional<AICoreSetup> setupOpt = bindingOpt.map(b -> new AICoreSetup(runtime.getEnvironment()));
-    setupOpt.ifPresent(
-        setup -> {
-          configurer.eventHandler(setup);
+    Optional<AICoreSetupHandler> setup =
+        binding.map(b -> new AICoreSetupHandler(runtime.getEnvironment()));
+    setup.ifPresent(
+        s -> {
+          configurer.eventHandler(s);
           logger.info("Registered AICoreSetup as event handler for MTX subscribe/unsubscribe.");
         });
-    configurer.eventHandler(new FioriRecommendationHandler(setupOpt, persistenceService));
+    configurer.eventHandler(new FioriRecommendationHandler(setup, persistenceService));
     logger.info("Registered FioriRecommendationHandler for recommendations.");
-  }
-
-  private static Optional<ServiceBinding> getAIBinding(CdsEnvironment environment) {
-    return environment
-        .getServiceBindings()
-        .filter(b -> b.getServiceName().map(name -> name.equals("aicore")).orElse(false))
-        .findFirst();
   }
 }
