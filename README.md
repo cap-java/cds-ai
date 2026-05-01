@@ -79,7 +79,7 @@ pom.xml:
 package.json:
 ```json
 "dependencies": {
-    "@cap-js/ai": "<revision>"
+    "@cap-js/ai": "1.0.0"
 }
 ```
 
