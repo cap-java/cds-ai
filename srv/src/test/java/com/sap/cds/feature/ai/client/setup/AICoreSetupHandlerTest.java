@@ -29,9 +29,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Integration test verifying the full AICoreSetup lifecycle against a real AI Core instance.
- *
- * <p>Required environment variables: AICORE_SERVICE_KEY – Full AI Core service key JSON: {
- * "clientid": "...", "clientsecret": "...", "url": "...", "serviceurls": { "AI_API_URL": "..." } }
+ * Requires an AI Core service instance bound to the app (VCAP_SERVICES).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AICoreSetupHandlerTest {
@@ -48,8 +46,18 @@ class AICoreSetupHandlerTest {
 
   @BeforeAll
   void setup() throws Exception {
-    String serviceKey = System.getenv("AICORE_SERVICE_KEY");
-    assumeTrue(serviceKey != null, "Skipping integration test: AICORE_SERVICE_KEY env var not set");
+    String vcap = System.getenv("VCAP_SERVICES");
+    String serviceKey = null;
+    if (vcap != null) {
+      Map<String, Object> vcapServices = MAPPER.readValue(vcap, new TypeReference<>() {});
+      List<Map<String, Object>> aicoreBindings =
+          MAPPER.convertValue(vcapServices.get("aicore"), new TypeReference<>() {});
+      if (aicoreBindings != null && !aicoreBindings.isEmpty()) {
+        serviceKey = MAPPER.writeValueAsString(aicoreBindings.get(0).get("credentials"));
+      }
+    }
+    assumeTrue(
+        serviceKey != null, "Skipping integration test: VCAP_SERVICES with aicore binding not set");
 
     credentials = MAPPER.readValue(serviceKey, new TypeReference<>() {});
     aiApiUrl = ((Map<?, ?>) credentials.get("serviceurls")).get("AI_API_URL").toString();

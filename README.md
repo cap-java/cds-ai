@@ -128,13 +128,12 @@ or for a full build including tests:
 mvn clean install
 ```
 
-To run integration tests against a real AI Core instance, set the following environment variable, then run `mvn test`:
+To run the integration test [AICoreSetupHandlerTest](https://github.com/cap-java/cds-feature-ai/blob/main/srv/src/test/java/com/sap/cds/feature/ai/client/setup/AICoreSetupHandlerTest.java), you need a [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding.
+Then, first  run `cds bind <local-name> -to <name-of-the-binding-on-btp>` in order to make the service binding available locally. This command will use your currently targeted Cloud Foundry space, for more info consult the cds bind documentation at https://cap.cloud.sap/docs/tools/cds-bind.
 
-| Variable | Description |
-|---|---|
-| `AICORE_SERVICE_KEY` | Full AI Core service key JSON: `{ "clientid": "...", "clientsecret": "...", "url": "...", "serviceurls": { "AI_API_URL": "..." } }` |
+Then execute the test with `cds bind --exec mvn test`.
 
-If the variable is not set, the integration tests are skipped automatically.
+If there is no binding, the integration test is skipped automatically.
 
 ## Support, Feedback, Contributing
 
