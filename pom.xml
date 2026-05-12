@@ -53,8 +53,8 @@
 
     <!-- DEPENDENCIES VERSION -->
     <java.version>17</java.version>
-    <cds.services.version>4.6.1</cds.services.version>
-    <spring.boot.version>3.5.6</spring.boot.version>
+    <cds.services.version>4.9.0</cds.services.version>
+    <spring.boot.version>3.5.14</spring.boot.version>
     <ai-sdk.version>1.18.0</ai-sdk.version>
     <jacoco.version>0.8.14</jacoco.version>
     <junit.version>6.0.3</junit.version>
@@ -79,6 +79,15 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Imported before cds-services-bom so it takes precedence for Spring Boot / Tomcat versions -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
       <dependency>
         <groupId>com.sap.cds</groupId>
         <artifactId>cds-services-bom</artifactId>
@@ -115,6 +124,13 @@
         <groupId>com.sap.cds</groupId>
         <artifactId>cds-feature-ai</artifactId>
         <version>${revision}</version>
+      </dependency>
+
+      <!-- Explicit override for Bouncy Castle security fix (BDSA-2026-7218) -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>1.84</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
