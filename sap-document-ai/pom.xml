@@ -22,6 +22,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>com.sap.cds</groupId>
+        <artifactId>cds-feature-attachments</artifactId>
+        <version>1.5.0</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -41,6 +46,11 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
       <version>6.2.6</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-feature-attachments</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
