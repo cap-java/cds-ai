@@ -15,23 +15,12 @@ import org.slf4j.LoggerFactory;
 * Currently a placeholder handler, to integrate with attachments and test if it is triggered :)
 * */
 @ServiceName(value = "*", type = AttachmentService.class)
-public class AttachmentExtractionHandler implements EventHandler {
+public class AttachmentEventHandler implements EventHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(AttachmentExtractionHandler.class);
-
-    @Before(event = "*")
-    public void debug(EventContext context) {
-        log.info("[sap-document-ai] Event fired: {}", context.getEvent());
-    }
+    private static final Logger log = LoggerFactory.getLogger(AttachmentEventHandler.class);
 
     @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
     public void onCreateAttachment(AttachmentCreateEventContext context) {
         log.info("[sap-document-ai] Attachment created: {}", context.getAttachmentIds().get(Attachments.ID));
-        String contentId = (String) context.getAttachmentIds().get(Attachments.ID);
-        context.setContentId(contentId);
-        context.setIsInternalStored(true);
-        // TODO: call SAP Document AI with context.getData() to extract document content
-        context.setCompleted();
     }
-
 }
