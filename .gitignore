@@ -1,5 +1,6 @@
 **/gen/
 **/edmx/
+**/src/test/resources/model/csn.json
 *.db
 *.sqlite
 *.sqlite-wal

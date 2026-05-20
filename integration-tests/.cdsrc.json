@@ -1,0 +1,13 @@
+{
+  "build": {
+    "target": ".",
+    "tasks": [
+      { "for": "java", "src": "spring" }
+    ]
+  },
+  "requires": {
+    "AICore": {
+      "model": false
+    }
+  }
+}

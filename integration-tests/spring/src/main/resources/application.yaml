@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: "jdbc:h2:mem:testdb"
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+
+cds:
+  security:
+    mock:
+      users:
+        test-user:
+          password: pass
+        tenant-a-user:
+          password: pass
+          tenant: tenant-a
+        tenant-b-user:
+          password: pass
+          tenant: tenant-b
+        admin-user:
+          password: pass
+          roles:
+            - admin

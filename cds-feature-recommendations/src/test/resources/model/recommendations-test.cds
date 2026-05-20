@@ -1,0 +1,56 @@
+namespace test;
+
+@odata.draft.enabled
+entity Books {
+  key ID         : UUID;
+  title          : String;
+  @Common.ValueListWithFixedValues
+  genre_ID       : Integer;
+  @Common.Text   : genre.name
+  genre          : Association to Genres;
+  @Common.ValueListWithFixedValues
+  currency_code  : String(3);
+  @(Common.Text: { $value: ![currency.name] })
+  currency       : Association to Currencies;
+  image          : LargeBinary;
+  embedding      : Vector(8);
+}
+
+entity Genres {
+  key ID   : Integer;
+  name     : String;
+}
+
+entity Currencies {
+  key code : String(3);
+  name     : String;
+}
+
+@odata.draft.enabled
+entity OrderItems {
+  key order_ID    : Integer;
+  key item_no     : Integer;
+  @Common.ValueListWithFixedValues
+  category_ID     : Integer;
+}
+
+@odata.draft.enabled
+entity IsbnBooks {
+  key isbn        : String;
+  @Common.ValueListWithFixedValues
+  category_ID     : Integer;
+}
+
+entity PlainEntity {
+  key ID   : UUID;
+  title    : String;
+}
+
+service TestService {
+  entity Books        as projection on test.Books;
+  entity Genres       as projection on test.Genres;
+  entity Currencies   as projection on test.Currencies;
+  entity OrderItems   as projection on test.OrderItems;
+  entity IsbnBooks    as projection on test.IsbnBooks;
+  entity PlainEntity  as projection on test.PlainEntity;
+}
