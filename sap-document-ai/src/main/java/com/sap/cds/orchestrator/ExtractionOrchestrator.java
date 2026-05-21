@@ -11,10 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ExtractionOrchestrator implements ExtractionService {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtractionOrchestrator.class);
+    private static final int MAX_PARALLEL_EXTRACTIONS = Runtime.getRuntime().availableProcessors();
+    private static final ExecutorService executor = Executors.newFixedThreadPool(MAX_PARALLEL_EXTRACTIONS);
 
     private final PersistenceService persistenceService;
 
@@ -33,11 +37,13 @@ public class ExtractionOrchestrator implements ExtractionService {
                 updateStatus(jobId, ExtractionStatus.PROCESSING);
                 processDocument(jobId);
                 updateStatus(jobId, ExtractionStatus.COMPLETED);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                updateStatus(jobId, ExtractionStatus.FAILED);
             } catch (Exception e) {
                 updateStatus(jobId, ExtractionStatus.FAILED);
-                Thread.currentThread().interrupt();
             }
-        });
+        }, executor);
     }
 
     private String createExtractionJob(String attachmentId, String tenantId) {
@@ -51,17 +57,17 @@ public class ExtractionOrchestrator implements ExtractionService {
         return jobId;
     }
 
-    //TODO: real implementation for processing a document will be here sooon
-    private static void processDocument(String jobId) throws InterruptedException {
+    //TODO: real implementation for processing a document will be here soon
+    private void processDocument(String jobId) throws InterruptedException {
         logger.info("[sap-document-ai] Simulating document processing for jobId={}", jobId);
         Thread.sleep(3000);
     }
 
     private void updateStatus(String jobId, String status) {
-            ExtractionJob extractionJob = ExtractionJob.create();
-            extractionJob.setStatus(status);
-            persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
-            logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
+        ExtractionJob extractionJob = ExtractionJob.create();
+        extractionJob.setStatus(status);
+        persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
+        logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
     }
 
 }

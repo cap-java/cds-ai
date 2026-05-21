@@ -12,6 +12,7 @@ type ExtractionStatus : String enum {
     Failed;
 }
 
+@assert.unique: { attachmentId: [attachmentId] }
 entity ExtractionJob : cuid, managed {
     attachmentId : String;
     status       : ExtractionStatus default #Pending;
