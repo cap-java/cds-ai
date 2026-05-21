@@ -2,7 +2,8 @@ package com.sap.cds;
 
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.handlers.AttachmentEventHandler;
-import com.sap.cds.orchestrator.ExtractionOrchestrator;
+import com.sap.cds.orchestrator.ExtractionService;
+import com.sap.cds.services.request.UserInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,16 +18,19 @@ import static org.mockito.Mockito.*;
 class AttachmentEventHandlerTest {
 
     @Mock
-    ExtractionOrchestrator extractionOrchestrator;
+    ExtractionService extractionService;
 
     @Test
-    void afterCreateAttachment_triggersOrchestration() {
-        AttachmentEventHandler handler = new AttachmentEventHandler(extractionOrchestrator);
+    void afterCreateAttachment_triggersOrchestrationWithTenant() {
+        AttachmentEventHandler handler = new AttachmentEventHandler(extractionService);
         assertNotNull(handler);
         AttachmentCreateEventContext context = mock(AttachmentCreateEventContext.class);
+        UserInfo userInfo = mock(UserInfo.class);
         when(context.getAttachmentIds()).thenReturn(Map.of("ID", "test-attachment-id"));
+        when(context.getUserInfo()).thenReturn(userInfo);
+        when(userInfo.getTenant()).thenReturn("test-tenant");
         handler.afterCreateAttachment(context);
-        verify(extractionOrchestrator).startExtraction("test-attachment-id");
+        verify(extractionService).startExtraction("test-attachment-id", "test-tenant");
     }
 
 }

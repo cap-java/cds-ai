@@ -11,6 +11,7 @@
     <jdk.version>17</jdk.version>
     <cds.services.version>4.6.0</cds.services.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <generation-package>com.sap.cds.feature.documentai.generated</generation-package>
   </properties>
 
   <dependencyManagement>
@@ -75,6 +76,57 @@
         <configuration>
           <release>${jdk.version}</release>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.sap.cds</groupId>
+        <artifactId>cds-maven-plugin</artifactId>
+        <version>${cds.services.version}</version>
+        <executions>
+          <execution>
+            <id>cds.install-node</id>
+            <goals>
+              <goal>install-node</goal>
+            </goals>
+          </execution>
+
+          <execution>
+            <id>cds.npm-ci</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>ci</arguments>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>cds.build</id>
+            <goals>
+              <goal>cds</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>./src/main/resources/cds/com.sap.cds/sap-document-ai</workingDirectory>
+              <commands>
+                <command>build --for java --src ./ --dest ../../../../../../../gen/srv</command>
+              </commands>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>cds.generate</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <basePackage>${generation-package}.cds4j</basePackage>
+              <csnFile>${project.basedir}/gen/srv/src/main/resources/edmx/csn.json</csnFile>
+              <includes>
+                <include>sap.document.ai.**</include>
+              </includes>
+            </configuration>
+          </execution>
+
+        </executions>
       </plugin>
     </plugins>
   </build>
