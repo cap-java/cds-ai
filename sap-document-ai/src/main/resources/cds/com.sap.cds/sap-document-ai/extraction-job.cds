@@ -14,6 +14,6 @@ type ExtractionStatus : String enum {
 
 entity ExtractionJob : cuid, managed {
     attachmentId : String;
-    status       : ExtractionStatus;
+    status       : ExtractionStatus default #Pending;
     tenantId     : String;
 }

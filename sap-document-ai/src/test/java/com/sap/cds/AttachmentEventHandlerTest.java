@@ -11,8 +11,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 class AttachmentEventHandlerTest {
@@ -22,15 +22,35 @@ class AttachmentEventHandlerTest {
 
     @Test
     void afterCreateAttachment_triggersOrchestrationWithTenant() {
+        // Arrange
         AttachmentEventHandler handler = new AttachmentEventHandler(extractionService);
-        assertNotNull(handler);
         AttachmentCreateEventContext context = mock(AttachmentCreateEventContext.class);
         UserInfo userInfo = mock(UserInfo.class);
         when(context.getAttachmentIds()).thenReturn(Map.of("ID", "test-attachment-id"));
         when(context.getUserInfo()).thenReturn(userInfo);
         when(userInfo.getTenant()).thenReturn("test-tenant");
+
+        // Act
         handler.afterCreateAttachment(context);
+
+        // Assert
         verify(extractionService).startExtraction("test-attachment-id", "test-tenant");
+    }
+
+    @Test
+    void afterCreateAttachment_skipsExtractionWhenAttachmentIdIsNull() {
+        // Arrange
+        AttachmentEventHandler handler = new AttachmentEventHandler(extractionService);
+        AttachmentCreateEventContext context = mock(AttachmentCreateEventContext.class);
+        UserInfo userInfo = mock(UserInfo.class);
+        when(context.getAttachmentIds()).thenReturn(Map.of());
+        when(context.getUserInfo()).thenReturn(userInfo);
+
+        // Act
+        handler.afterCreateAttachment(context);
+
+        // Assert
+        verify(extractionService, never()).startExtraction(any(), any());
     }
 
 }
