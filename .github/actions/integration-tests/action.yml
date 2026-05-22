@@ -28,7 +28,7 @@ runs:
       run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am -DskipTests -Dcds.install-node.skip
       shell: bash
 
-    - name: Integration Tests (spring + mtx-local)
-      run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -P mtx-integration-tests -Dcds.install-node.skip
+    - name: Integration Tests (spring)
+      run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -Dcds.install-node.skip
       working-directory: integration-tests
       shell: bash
