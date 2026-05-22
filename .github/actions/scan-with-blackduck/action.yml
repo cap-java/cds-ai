@@ -10,7 +10,7 @@ inputs:
     required: true
   java-version:
     description: The version of Java to use
-    default: '17'
+    default: "17"
     required: false
   maven-version:
     description: The Maven version the build shall run with.
@@ -18,10 +18,10 @@ inputs:
   version:
     description: The project version to report to Black Duck (e.g. release tag). If empty, falls back to the Maven `revision` reduced to major-minor.
     required: false
-    default: ''
+    default: ""
   scan_mode:
     description: The scan mode to use (FULL uploads a report to the Black Duck server; RAPID is a fast policy gate without server upload).
-    default: 'FULL'
+    default: "FULL"
     required: false
 
 runs:
@@ -62,7 +62,7 @@ runs:
         blackducksca_scan_full: ${{ inputs.scan_mode == 'FULL' }}
         github_token: ${{ inputs.github_token }}
         detect_args: >
-          --detect.project.name=cds-ai
+          --detect.project.name=com.sap.cds.cds-ai
           --detect.project.version.name=${{ steps.resolve-version.outputs.VERSION }}
           --detect.project.user.groups=CDSJAVA-OPEN-SOURCE
           --detect.included.detector.types=MAVEN
