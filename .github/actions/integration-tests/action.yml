@@ -32,3 +32,9 @@ runs:
       run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -P mtx-integration-tests -Dcds.install-node.skip
       working-directory: integration-tests
       shell: bash
+
+    - name: Cleanup AI Core test resource groups
+      if: ${{ always() }}
+      run: cds bind --exec -- node cleanup-resource-groups.cjs || true
+      working-directory: integration-tests
+      shell: bash
