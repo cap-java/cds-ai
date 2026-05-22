@@ -271,6 +271,31 @@ class FioriRecommendationHandlerTest {
         });
   }
 
+  @Test
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  void rptStyleClient_filledColumns_areExcludedFromRecommendations() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", 12);
+          row.put("currency_code", null);
+          CdsReadEventContext ctx = readContext("test.Books", List.of(row));
+          when(db.run(any(CqnSelect.class)))
+              .thenReturn(
+                  twoContextRows(),
+                  ResultBuilder.selectedRows(List.of()).result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          predictionClient = rptStyleClient();
+          cut.afterRead(ctx, dataList(row));
+          assertThat(row).containsKey("SAP_Recommendations");
+          Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
+          assertThat(recs).doesNotContainKey("genre_ID");
+          assertThat((List<?>) recs.get("currency_code")).hasSize(1);
+        });
+  }
+
   // ── helpers ────────────────────────────────────────────────────────────────
 
   private CdsReadEventContext readContext(String entityName, List<Map<String, Object>> resultRows) {
@@ -315,6 +340,31 @@ class FioriRecommendationHandlerTest {
                     Map.of("ID", "x1", "genre_ID", 12, "currency_code", "USD"),
                     Map.of("ID", "x2", "genre_ID", 16, "currency_code", "GBP"))))
         .result();
+  }
+
+  private static RecommendationClient rptStyleClient() {
+    Random random = new Random(42);
+    return (rows, predictionColumns, indexColumn) -> {
+      List<CdsData> predictions = new ArrayList<>();
+      for (CdsData row : rows) {
+        if (predictionColumns.stream().noneMatch(col -> "[PREDICT]".equals(row.get(col)))) {
+          continue;
+        }
+        Map<String, Object> prediction = new HashMap<>();
+        for (String col : predictionColumns) {
+          List<Object> available =
+              rows.stream()
+                  .filter(r -> r.get(col) != null && !"[PREDICT]".equals(r.get(col)))
+                  .map(r -> r.get(col))
+                  .toList();
+          Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
+          prediction.put(col, List.of(Map.of("prediction", val)));
+        }
+        prediction.put(indexColumn, row.get(indexColumn));
+        predictions.add(CdsData.create(prediction));
+      }
+      return predictions;
+    };
   }
 
   private static RecommendationClient randomPickClient() {
