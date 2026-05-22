@@ -1,0 +1,123 @@
+name: Reusable Workflow
+
+env:
+  MAVEN_VERSION: '3.9.15'
+
+on:
+  workflow_call:
+
+jobs:
+  tests:
+    name: Tests (Java ${{ matrix.java-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [17, 21]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Java ${{ matrix.java-version }}
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: sapmachine
+          cache: maven
+
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1 # v5
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Install @sap/cds-dk
+        run: npm i -g @sap/cds-dk@9.9.1
+        shell: bash
+
+      - name: Run Tests
+        run: mvn test -ntp -B -P skip-integration-tests -Dcds.install-node.skip
+
+  integration-tests:
+    name: Integration Tests (Java ${{ matrix.java-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [17, 21]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Bind CF Services
+        uses: ./.github/actions/cf-bind
+        with:
+          cf-api: ${{ secrets.CF_API_AWS }}
+          cf-username: ${{ secrets.CF_USERNAME }}
+          cf-password: ${{ secrets.CF_PASSWORD }}
+          cf-org: ${{ secrets.CF_ORG_AWS }}
+          cf-space: ${{ secrets.CF_SPACE_AWS }}
+
+      - name: Integration Tests
+        uses: ./.github/actions/integration-tests
+        with:
+          java-version: ${{ matrix.java-version }}
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+  sonarqube-scan:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Bind CF Services
+        uses: ./.github/actions/cf-bind
+        with:
+          cf-api: ${{ secrets.CF_API_AWS }}
+          cf-username: ${{ secrets.CF_USERNAME }}
+          cf-password: ${{ secrets.CF_PASSWORD }}
+          cf-org: ${{ secrets.CF_ORG_AWS }}
+          cf-space: ${{ secrets.CF_SPACE_AWS }}
+
+      - name: SonarQube Scan
+        uses: ./.github/actions/scan-with-sonar
+        with:
+          java-version: '17'
+          maven-version: ${{ env.MAVEN_VERSION }}
+          sonarq-token: ${{ secrets.SONARQ_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    name: CodeQL Analysis (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, actions]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: CodeQL Analysis
+        uses: ./.github/actions/scan-with-codeql
+        with:
+          java-version: '17'
+          maven-version: ${{ env.MAVEN_VERSION }}
+          language: ${{ matrix.language }}

@@ -10,14 +10,18 @@ inputs:
     required: true
   java-version:
     description: The version of Java to use
-    default: '17'
+    default: "17"
     required: false
   maven-version:
     description: The Maven version the build shall run with.
     required: true
+  version:
+    description: The project version to report to Black Duck (e.g. release tag). If empty, falls back to the Maven `revision` reduced to major-minor.
+    required: false
+    default: ""
   scan_mode:
-    description: The scan mode to use (FULL or RAPID)
-    default: 'RAPID'
+    description: The scan mode to use (FULL uploads a report to the Black Duck server; RAPID is a fast policy gate without server upload).
+    default: "FULL"
     required: false
 
 runs:
@@ -35,10 +39,19 @@ runs:
       with:
         maven-version: ${{ inputs.maven-version }}
 
-    - name: Get Revision
-      id: get-revision
+    - name: Resolve Project Version
+      id: resolve-version
+      env:
+        VERSION_INPUT: ${{ inputs.version }}
       run: |
-        echo "REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)" >> $GITHUB_OUTPUT
+        if [ -n "$VERSION_INPUT" ]; then
+          VERSION="$VERSION_INPUT"
+        else
+          REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)
+          VERSION=$(echo "$REVISION" | cut -d. -f1,2)
+        fi
+        echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Resolved BlackDuck project version: $VERSION"
       shell: bash
 
     - name: BlackDuck Security Scan
@@ -49,15 +62,18 @@ runs:
         blackducksca_scan_full: ${{ inputs.scan_mode == 'FULL' }}
         github_token: ${{ inputs.github_token }}
         detect_args: >
-          --detect.project.name=com.sap.cds.feature.ai
-          --detect.project.version.name=${{ steps.get-revision.outputs.REVISION }}
+          --detect.project.name=com.sap.cds.cds-ai
+          --detect.project.version.name=${{ steps.resolve-version.outputs.VERSION }}
+          --detect.project.user.groups=CDSJAVA-OPEN-SOURCE
           --detect.included.detector.types=MAVEN
-          --detect.excluded.directories=**/node_modules,**/*test*,**/localrepo,**/target/site,**/*-site.jar,**/samples/**
+          --detect.excluded.directories=**/*test*,**/samples/**
+          --detect.maven.included.modules=cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai
+          --detect.maven.excluded.scopes=test,provided
           --detect.tools=DETECTOR,BINARY_SCAN
+          --detect.timeout=6000
           --detect.risk.report.pdf=false
+          --detect.policy.check.fail.on.severities=NONE
+          --detect.force.success.on.skip=true
+          --blackduck.signature.scanner.memory=4096
+          --blackduck.trust.cert=true
           --logging.level.detect=INFO
-      env:
-        BLACKDUCKSCA_TOKEN: ${{ inputs.blackduck_token }}
-        BLACKDUCKSCA_URL: https://sap.blackducksoftware.com/
-        BLACKDUCK_API_TOKEN: ${{ inputs.blackduck_token }}
-        DETECT_MAVEN_BUILD_COMMAND: '-pl com.sap.cds:cds-feature-ai'

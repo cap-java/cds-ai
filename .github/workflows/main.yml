@@ -1,11 +1,5 @@
 name: CI - MAIN
 
-permissions:
-  contents: read
-  actions: read
-  security-events: write
-  packages: read
-
 env:
   MAVEN_VERSION: '3.9.15'
 
@@ -19,6 +13,8 @@ jobs:
     name: Blackduck Scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -29,19 +25,13 @@ jobs:
           blackduck_token: ${{ secrets.BLACK_DUCK_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           maven-version: ${{ env.MAVEN_VERSION }}
-          scan_mode: RAPID
+          scan_mode: FULL
 
-  codeql:
-    name: CodeQL Scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Scan With CodeQL
-        continue-on-error: true
-        uses: ./.github/actions/scan-with-codeql
-        with:
-          maven-version: ${{ env.MAVEN_VERSION }}
-          java-version: '17'
+  build-and-test:
+    uses: ./.github/workflows/pipeline.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    secrets: inherit
