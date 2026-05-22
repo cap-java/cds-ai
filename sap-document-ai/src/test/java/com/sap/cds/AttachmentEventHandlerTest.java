@@ -1,5 +1,6 @@
 package com.sap.cds;
 
+import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.handlers.AttachmentEventHandler;
 import com.sap.cds.service.ExtractionService;
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Map;
 
 import static org.mockito.Mockito.*;
@@ -26,15 +29,20 @@ class AttachmentEventHandlerTest {
         AttachmentEventHandler handler = new AttachmentEventHandler(extractionService);
         AttachmentCreateEventContext context = mock(AttachmentCreateEventContext.class);
         UserInfo userInfo = mock(UserInfo.class);
+        MediaData mediaData = mock(MediaData.class);
+        InputStream content = new ByteArrayInputStream("test".getBytes());
         when(context.getAttachmentIds()).thenReturn(Map.of("ID", "test-attachment-id"));
+        when(context.getContentId()).thenReturn("test-content-id");
         when(context.getUserInfo()).thenReturn(userInfo);
+        when(context.getData()).thenReturn(mediaData);
+        when(mediaData.getContent()).thenReturn(content);
         when(userInfo.getTenant()).thenReturn("test-tenant");
 
         // Act
         handler.afterCreateAttachment(context);
 
         // Assert
-        verify(extractionService).startExtraction("test-attachment-id", "test-tenant");
+        verify(extractionService).startExtraction("test-attachment-id", "test-content-id", "test-tenant", content);
     }
 
     @Test
@@ -50,7 +58,7 @@ class AttachmentEventHandlerTest {
         handler.afterCreateAttachment(context);
 
         // Assert
-        verify(extractionService, never()).startExtraction(any(), any());
+        verify(extractionService, never()).startExtraction(any(), any(), any(), any());
     }
 
 }

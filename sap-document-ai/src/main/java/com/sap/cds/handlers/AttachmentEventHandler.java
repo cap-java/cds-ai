@@ -8,6 +8,9 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.InputStream;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class AttachmentEventHandler implements EventHandler {
@@ -24,12 +27,17 @@ public class AttachmentEventHandler implements EventHandler {
     public void afterCreateAttachment(AttachmentCreateEventContext context) {
         String attachmentId = (String) context.getAttachmentIds().get(Attachments.ID);
         String tenantId = context.getUserInfo().getTenant();
+
         if (attachmentId == null) {
             log.warn("[sap-document-ai] attachmentId is null, skipping extraction");
             return;
         }
-        log.info("[sap-document-ai] Attachment persisted. Triggering extraction for attachmentId={}, tenantId={}", attachmentId, tenantId);
-        extractionService.startExtraction(attachmentId, tenantId);
+
+        String contentId = context.getContentId();
+        InputStream content = context.getData().getContent();
+
+        log.info("[sap-document-ai] Attachment persisted. Triggering extraction for attachmentId={}, contentId={}, tenantId={}", attachmentId, contentId, tenantId);
+        extractionService.startExtraction(attachmentId, contentId, tenantId, content);
     }
 
 }

@@ -10,6 +10,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,25 +22,23 @@ public class ExtractionServiceImpl implements ExtractionService {
     private static final ExecutorService executor = Executors.newFixedThreadPool(MAX_PARALLEL_EXTRACTIONS);
 
     private final PersistenceService persistenceService;
+    private final DocumentAiProcessingService documentAiProcessingService;
 
-    public ExtractionServiceImpl(PersistenceService persistenceService) {
+    public ExtractionServiceImpl(PersistenceService persistenceService, DocumentAiProcessingService documentAiProcessingService) {
         this.persistenceService = persistenceService;
+        this.documentAiProcessingService = documentAiProcessingService;
     }
 
-    public void startExtraction(String attachmentId, String tenantId) {
+    @Override
+    public void startExtraction(String attachmentId, String contentId, String tenantId, InputStream content) {
         logger.info("[sap-document-ai] Orchestrator triggered for attachmentId={}, tenantId={}", attachmentId, tenantId);
         String jobId = createExtractionJob(attachmentId, tenantId);
 
         CompletableFuture.runAsync(() -> {
             try {
-                //TODO: Thread.sleep is currently for simulation purposes only. Remove it once real service in place.
-                Thread.sleep(3000);
                 updateStatus(jobId, ExtractionStatus.PROCESSING);
-                processDocument(jobId);
+                documentAiProcessingService.processDocument(jobId, content);
                 updateStatus(jobId, ExtractionStatus.COMPLETED);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                updateStatus(jobId, ExtractionStatus.FAILED);
             } catch (Exception e) {
                 updateStatus(jobId, ExtractionStatus.FAILED);
             }
@@ -57,17 +56,10 @@ public class ExtractionServiceImpl implements ExtractionService {
         return jobId;
     }
 
-    //TODO: real implementation for processing a document will be here soon
-    private void processDocument(String jobId) throws InterruptedException {
-        logger.info("[sap-document-ai] Simulating document processing for jobId={}", jobId);
-        Thread.sleep(3000);
-    }
-
     private void updateStatus(String jobId, String status) {
         ExtractionJob extractionJob = ExtractionJob.create();
         extractionJob.setStatus(status);
         persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
         logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
     }
-
-}
+ }
