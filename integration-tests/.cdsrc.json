@@ -8,6 +8,14 @@
   "requires": {
     "AICore": {
       "model": false
+    },
+    "kinds": {
+      "AICore-btp": {
+        "model": false
+      },
+      "AICore-mocked": {
+        "model": false
+      }
     }
   }
 }

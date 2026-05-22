@@ -29,5 +29,5 @@ runs:
       shell: bash
 
     - name: Maven Build
-      run: mvn clean install -DskipTests -B -ntp -Dcds.install-node.skip -P skip-integration-tests
+      run: mvn clean install -DskipTests -B -ntp -Dcds.install-node.skip -P '!with-integration-tests'
       shell: bash
