@@ -63,15 +63,10 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
   public void eventHandlers(CdsRuntimeConfigurer configurer) {
     CdsRuntime runtime = configurer.getCdsRuntime();
 
-    boolean hasBinding = hasAICoreBinding(runtime);
+    AICoreService registered =
+        runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
 
-    if (hasBinding) {
-      AICoreServiceImpl service =
-          (AICoreServiceImpl)
-              runtime
-                  .getServiceCatalog()
-                  .getService(AICoreService.class, AICoreService.DEFAULT_NAME);
-
+    if (registered instanceof AICoreServiceImpl service) {
       configurer.eventHandler(new ResourceGroupHandler(service));
       configurer.eventHandler(new DeploymentHandler(service));
       configurer.eventHandler(new ConfigurationHandler(service));
@@ -83,12 +78,7 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
         configurer.eventHandler(new AICoreSetupHandler(service));
         logger.debug("Registered AI-Core Setup Handler for MTX subscribe/unsubscribe.");
       }
-    } else {
-      MockAICoreServiceImpl mockService =
-          (MockAICoreServiceImpl)
-              runtime
-                  .getServiceCatalog()
-                  .getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    } else if (registered instanceof MockAICoreServiceImpl mockService) {
       configurer.eventHandler(new MockEntityHandler());
       configurer.eventHandler(new AICoreApplicationServiceHandler(mockService));
       logger.debug("Registered Mock AI-Core Implementation");

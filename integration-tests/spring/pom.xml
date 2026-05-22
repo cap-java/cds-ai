@@ -70,6 +70,22 @@
         <artifactId>cds-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>cds.install-node</id>
+            <goals>
+              <goal>install-node</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>cds.npm-ci</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}/..</workingDirectory>
+              <arguments>ci</arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>cds.resolve</id>
             <goals>
               <goal>resolve</goal>

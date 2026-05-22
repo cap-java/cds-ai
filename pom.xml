@@ -40,8 +40,6 @@
     <module>cds-feature-ai-core</module>
     <module>cds-feature-recommendations</module>
     <module>cds-starter-ai</module>
-    <module>integration-tests</module>
-    <module>coverage-report</module>
   </modules>
 
   <distributionManagement>
@@ -420,12 +418,13 @@
   </build>
   <profiles>
     <profile>
-      <id>skip-integration-tests</id>
+      <id>with-integration-tests</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <modules>
-        <module>cds-feature-ai-core</module>
-        <module>cds-feature-recommendations</module>
-        <module>cds-starter-ai</module>
-        <!-- Exclude integration-tests and coverage-report modules -->
+        <module>integration-tests</module>
+        <module>coverage-report</module>
       </modules>
     </profile>
     <profile>

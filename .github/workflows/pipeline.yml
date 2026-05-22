@@ -38,7 +38,7 @@ jobs:
         shell: bash
 
       - name: Run Tests
-        run: mvn test -ntp -B -P skip-integration-tests -Dcds.install-node.skip
+        run: mvn test -ntp -B -P '!with-integration-tests' -Dcds.install-node.skip
 
   integration-tests:
     name: Integration Tests (Java ${{ matrix.java-version }})
