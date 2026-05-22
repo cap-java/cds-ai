@@ -215,8 +215,10 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
+    List<String> missingPredictionElementNames =
+        predictionElementNames.stream().filter(c -> row.get(c) == null).toList();
     Map<String, Object> recommendations =
-        buildRecommendations(db, predictions.get(0), predictionElementNames, context, rowType);
+        buildRecommendations(db, predictions.get(0), missingPredictionElementNames, context, rowType);
     row.put("SAP_Recommendations", recommendations);
   }
 
