@@ -36,12 +36,6 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
   }
 
   private void deleteTestResourceGroups() {
-    String envKey = System.getenv("AICORE_SERVICE_KEY");
-    if (envKey == null || envKey.isBlank()) {
-      logger.debug("No AI Core binding available, skipping resource group cleanup.");
-      return;
-    }
-
     try {
       ResourceGroupApi api = new ResourceGroupApi();
       BckndResourceGroupList list = api.getAll(null, null, null, null, null, null, null);
