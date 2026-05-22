@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sap.cds</groupId>
+    <artifactId>cds-starter-ai-root</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>cds-feature-ai-core</artifactId>
+  <packaging>jar</packaging>
+
+  <name>CDS Feature AI Core</name>
+  <description>AI client infrastructure for CAP Java (AIClient, retry, AI Core setup)</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-services-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-services-utils</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sap.ai.sdk</groupId>
+      <artifactId>core</artifactId>
+      <version>${ai-sdk.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-retry</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-services-impl</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>jacoco-initialize</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

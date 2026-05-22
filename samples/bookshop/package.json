@@ -8,7 +8,8 @@
     "@sap/cds-dk": "^9.3.2"
   },
   "dependencies": {
-    "@cap-js/ai": "*",
+    "@cap-js/ai": "^1",
+    "@sap/cds": "^9",
     "@sap/cds-common-content": "^1.4.0"
   }
 }

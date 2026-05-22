@@ -1,8 +1,7 @@
-
 logging:
   level:
     root: INFO
-    com.sap.cds: DEBUG
+    com.sap.cds.feature.aicore.core: DEBUG
 ---
 spring:
   datasource:
@@ -16,14 +15,14 @@ spring:
 cds:
   requires:
     AICore:
-      resourceGroup: custom-resource-group
+      resourceGroup: default
   security:
     mock:
       users:
         admin:
           password: admin
           roles:
-          - admin
+            - admin
         user:
           password: user
   data-source:

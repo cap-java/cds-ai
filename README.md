@@ -1,113 +1,46 @@
-# SAP Cloud Application Programming Model, AI plugin for Java
-
-This is the Java version of the [SAP CAP AI plugin for Node.js](https://github.com/cap-js/ai).
+# SAP Cloud Application Programming Model - AI Plugins for Java
 
 ## About this project
 
-The SAP Cloud Application Programming Model, AI plugin for Java provides AI-powered UI recommendations for CAP Java applications, leveraging SAP AI Core and the SAP-RPT-1 model.
+This repository contains a collection of AI plugins for [CAP Java](https://cap.cloud.sap/docs/java/) applications, leveraging [SAP AI Core](https://help.sap.com/docs/sap-ai-core) and the SAP-RPT-1 foundation model.
 
-> [!IMPORTANT]
-> In multi-tenancy scenarios with a sidecar, the plugin must be included in the sidecar for SAP AI Core handling.
+### Plugins
 
-### 1. Use case: Recommendations
+| Module                                                                 | Description                                                                                                               |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [`cds-feature-ai-core`](cds-feature-ai-core/README.md)                 | Bridges CAP Java to SAP AI Core - resource group management, deployment lifecycle, configuration CRUD, and prediction API |
+| [`cds-feature-recommendations`](cds-feature-recommendations/README.md) | AI-powered field recommendations for Fiori UIs in draft-enabled entities                                                  |
 
-Recommendations are implemented leveraging SAP-RPT-1 and AI Core. This plugin generically hooks into any entity which has properties with a value help (detected via `@Common.ValueList` on the property or `@cds.odata.valuelist` on the association target).
+### Starter
 
-```cds 
-entity Books {
-  key ID : Integer;
-  title  : String(111);
-  descr  : String(1111);
-  genre : Association to one Genres;
-  status : Association to one Status;
-}
-annotate Genres with @cds.odata.valuelist;
-annotate Books with {
-    status @Common.ValueList : {
-        CollectionPath : 'Status',
-        Parameters: [
-            {
-                $Type: 'Common.ValueListParameterInOut'
-                ValueListProperty : 'code',
-                LocalDataProperty : status_code
-            }
-        ]
-    }
-}
-```
+For the simplest setup, add the **`cds-starter-ai`** dependency which bundles both plugins:
 
-The annotated fields automatically receive AI-powered recommendations in Fiori draft edit mode. The handler fetches existing rows from the database as training context, calls the RPT-1 model, and writes the predictions into the `SAP_Recommendations` property on the result.
-
-If you do not want recommendations for a specific field, annotate it with `@UI.RecommendationState: 0`.
-
-```cds
-annotate Books with {
-    genre @UI.RecommendationState : 0;
-}
-```
-
-### 2. Use case: Simplified AI Core usage
-
-The plugin introduces an `AICore` CAP service that automatically performs some administrative tasks and offers simplified access to AI Core.
-
-#### Automatic operations
-
-- The plugin automatically creates a new SAP AI Core resource group per tenant during tenant onboarding and deletes it during offboarding.
-- The plugin automatically creates an RPT-1 deployment per resource group for the recommendations feature.
-
-## Requirements and Setup
-
-### Prerequisites
-
-- Java 17+
-- Maven 3.6.3+
-- Node.js 20+ (for CDS build tooling)
-- `@sap/cds-dk` 9+ (CDS build tooling)
-- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for production)
-
-### Dependencies to add
-
-pom.xml:
 ```xml
 <dependency>
     <groupId>com.sap.cds</groupId>
-    <artifactId>cds-feature-ai</artifactId>
-    <version>${revision}</version>
+    <artifactId>cds-starter-ai</artifactId>
+    <version>${cds-ai.version}</version>
 </dependency>
 ```
 
-package.json:
 ```json
 "dependencies": {
-    "@cap-js/ai": "1.0.0"
+    "@cap-js/ai": "^1"
 }
 ```
 
-### AI Core service binding
+## Prerequisites
 
-To use the plugin in production scenarios you need an [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding.
-The plugin will automatically create resource groups per tenant labeled with `ext.ai.sap.com/CDS_TENANT_ID` in multi-tenancy scenarios and create an RPT-1 deployment in each for the recommendations feature. For multitenancy, set `cds.multitenancy.enabled=true` (or the environment variable `CDS_MULTITENANCY_ENABLED=true`). 
+- Java 17+
+- CAP Java 4.9+
+- Node.js 20+ with `@sap/cds-dk` 9+ (for CDS build tooling)
+- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for production use)
 
-In single-tenant setups the plugin uses the 'default' resource group and creates an RPT-1 deployment as well if none exists.
+Without an AI Core binding the plugins fall back to mock implementations for local development.
 
-For single-tenant deployments you can change the resource group as follow in the `application.yaml`:
+## Samples
 
-```yaml
-# application.yaml
-cds:
-  requires:
-    AICore:
-      resourceGroup: CUSTOM_RESOURCE_GROUP
-```
-
-For Cloud Foundry apps an example config could look like in [samples/bookshop/mta.yaml](samples/bookshop/mta.yaml).
-
-For local development without an AI Core binding, the plugin falls back to a `MockAIClient` that returns random predictions from the existing context rows.
-
-
-## Test the plugin locally
-
-In `samples/bookshop` you can find a complete CAP Java bookshop that demonstrates the plugin:
+In [`samples/bookshop`](samples/bookshop) you can find a complete CAP Java bookshop demonstrating both plugins:
 
 ```bash
 mvn clean install
@@ -115,25 +48,19 @@ cd samples/bookshop
 mvn spring-boot:run
 ```
 
-### Local Testing
-To execute local tests, simply run:
+## Local Development
 
 ```bash
-mvn test
+mvn clean install     # build all modules
+mvn test              # run unit tests
 ```
 
-or for a full build including tests:
+For integration tests against a real AI Core instance:
 
 ```bash
-mvn clean install
+cds bind ai-core -2 <your-ai-core-service-instance>
+cds bind --exec mvn test -pl integration-tests/spring -am
 ```
-
-To run the integration test [AICoreSetupHandlerTest](https://github.com/cap-java/cds-feature-ai/blob/main/srv/src/test/java/com/sap/cds/feature/ai/client/setup/AICoreSetupHandlerTest.java), you need a [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding.
-Then, first  run `cds bind <local-name> -to <name-of-the-binding-on-btp>` in order to make the service binding available locally. This command will use your currently targeted Cloud Foundry space, for more info consult the cds bind documentation at https://cap.cloud.sap/docs/tools/cds-bind.
-
-Then execute the test with `cds bind --exec mvn test`.
-
-If there is no binding, the integration test is skipped automatically.
 
 ## Support, Feedback, Contributing
 
@@ -150,4 +77,3 @@ We as members, contributors, and leaders pledge to make participation in our com
 ## Licensing
 
 Copyright 2026 SAP SE or an SAP affiliate company and cds-feature-ai contributors. Please see our [LICENSE](LICENSE) for copyright and license information. Detailed information including third-party components and their licensing/copyright information is available via the REUSE tool.
-
