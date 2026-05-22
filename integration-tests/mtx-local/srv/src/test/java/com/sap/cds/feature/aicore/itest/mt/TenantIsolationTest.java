@@ -7,7 +7,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.core.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
@@ -37,16 +36,16 @@ class TenantIsolationTest {
 
   @Test
   void multiTenancyEnabled() {
-    AICoreServiceImpl service = getService();
+    AICoreService service = getService();
     assertThat(service.isMultiTenancyEnabled()).isTrue();
   }
 
   @Test
   void differentTenants_getDifferentResourceGroups() throws Exception {
+    AICoreService service = getService();
+
     subscriptionEndpointClient.subscribeTenant("tenant-1");
     subscriptionEndpointClient.subscribeTenant("tenant-2");
-
-    AICoreServiceImpl service = getService();
 
     String rg1 = service.getTenantResourceGroupCache().get("tenant-1");
     String rg2 = service.getTenantResourceGroupCache().get("tenant-2");
@@ -58,9 +57,9 @@ class TenantIsolationTest {
 
   @Test
   void resourceGroupPrefix_applied() throws Exception {
-    subscriptionEndpointClient.subscribeTenant("tenant-1");
+    AICoreService service = getService();
 
-    AICoreServiceImpl service = getService();
+    subscriptionEndpointClient.subscribeTenant("tenant-1");
     String rg = service.getTenantResourceGroupCache().get("tenant-1");
 
     assertThat(rg).startsWith(service.getResourceGroupPrefix());
@@ -68,10 +67,11 @@ class TenantIsolationTest {
 
   @Test
   void clearTenantCache_onlyAffectsTarget() throws Exception {
+    AICoreService service = getService();
+
     subscriptionEndpointClient.subscribeTenant("tenant-1");
     subscriptionEndpointClient.subscribeTenant("tenant-2");
 
-    AICoreServiceImpl service = getService();
     String rg2 = service.getTenantResourceGroupCache().get("tenant-2");
 
     service.clearTenantCache("tenant-1");
@@ -80,9 +80,8 @@ class TenantIsolationTest {
     assertThat(service.getTenantResourceGroupCache()).containsEntry("tenant-2", rg2);
   }
 
-  private AICoreServiceImpl getService() {
-    return (AICoreServiceImpl)
-        runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private AICoreService getService() {
+    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 
   @AfterEach

@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.core.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
@@ -51,11 +50,9 @@ class SubscribeUnsubscribeTest {
 
   @Test
   void subscribeTenant_createsResourceGroup() throws Exception {
-    subscriptionEndpointClient.subscribeTenant("tenant-3");
+    AICoreService service = getService();
 
-    AICoreServiceImpl service =
-        (AICoreServiceImpl)
-            runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    subscriptionEndpointClient.subscribeTenant("tenant-3");
 
     assertThat(service.isMultiTenancyEnabled()).isTrue();
     assertThat(service.getTenantResourceGroupCache()).containsKey("tenant-3");
@@ -63,11 +60,9 @@ class SubscribeUnsubscribeTest {
 
   @Test
   void unsubscribeTenant_clearsCaches() throws Exception {
-    subscriptionEndpointClient.subscribeTenant("tenant-3");
+    AICoreService service = getService();
 
-    AICoreServiceImpl service =
-        (AICoreServiceImpl)
-            runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    subscriptionEndpointClient.subscribeTenant("tenant-3");
 
     assertThat(service.getTenantResourceGroupCache()).containsKey("tenant-3");
 
@@ -97,5 +92,9 @@ class SubscribeUnsubscribeTest {
       subscriptionEndpointClient.unsubscribeTenant("tenant-3");
     } catch (Exception ignored) {
     }
+  }
+
+  private AICoreService getService() {
+    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 }

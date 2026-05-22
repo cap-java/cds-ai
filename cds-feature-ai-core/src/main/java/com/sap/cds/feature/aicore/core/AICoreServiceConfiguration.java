@@ -81,6 +81,10 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
     } else if (registered instanceof MockAICoreServiceImpl mockService) {
       configurer.eventHandler(new MockEntityHandler());
       configurer.eventHandler(new AICoreApplicationServiceHandler(mockService));
+      if (mockService.isMultiTenancyEnabled()) {
+        configurer.eventHandler(new MockAICoreSetupHandler(mockService));
+        logger.debug("Registered Mock AI-Core Setup Handler for MTX subscribe/unsubscribe.");
+      }
       logger.debug("Registered Mock AI-Core Implementation");
     }
   }
