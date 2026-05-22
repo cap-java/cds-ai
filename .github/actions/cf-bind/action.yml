@@ -69,10 +69,10 @@ runs:
       run: |
         for i in {1..5}; do
           cds bind ai-core && break
-          echo "cds bind ai-core failed, retrying ($i/5)..."
-          sleep 30
           if [ "$i" -eq 5 ]; then
             echo "cds bind ai-core failed after 5 attempts."
             exit 1
           fi
+          echo "cds bind ai-core failed, retrying ($i/5)..."
+          sleep 30
         done

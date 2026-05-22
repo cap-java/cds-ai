@@ -45,8 +45,9 @@ jobs:
           maven-version: ${{ env.MAVEN_VERSION }}
 
       - name: Verify pom.xml revision matches release tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)
           echo "Tag:      $TAG"
           echo "Revision: $REVISION"

@@ -48,9 +48,10 @@ runs:
 
     - name: Import GPG Key
       run: |
-        echo "${{ inputs.pgp-private-key }}" | gpg --batch --passphrase "$PASSPHRASE" --import
+        echo "$PGP_PRIVATE_KEY" | gpg --batch --passphrase "$PASSPHRASE" --import
       shell: bash
       env:
+        PGP_PRIVATE_KEY: ${{ inputs.pgp-private-key }}
         PASSPHRASE: ${{ inputs.pgp-passphrase }}
 
     - name: Deploy to Maven Central

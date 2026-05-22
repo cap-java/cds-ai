@@ -1,5 +1,5 @@
 name: Scan with SonarQube
-description: Scans the project with SonarQube
+description: Scans the project with SonarQube. Caller is responsible for setting up the CF binding (e.g. via the cf-bind action) before invoking this action.
 
 inputs:
   sonarq-token:
@@ -34,7 +34,7 @@ runs:
     - name: Get Revision
       id: get-revision
       run: |
-        echo "REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)" >> $GITHUB_OUTPUT
+        echo "REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - name: Build project for SonarQube scan
