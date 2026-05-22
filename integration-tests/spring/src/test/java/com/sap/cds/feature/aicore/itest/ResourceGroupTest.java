@@ -14,6 +14,7 @@ import com.sap.cds.services.cds.CqnService;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   }
 
   @Test
+  @Disabled("#24: requires AI Core tenant-admin scopes for /v2/admin/resourceGroups; CI key is read-only")
   void create_andRead_resourceGroup() {
     createdResourceGroupId = TEST_RG_PREFIX + System.currentTimeMillis();
     CqnService service = getAICoreCqnService();
@@ -60,6 +62,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   }
 
   @Test
+  @Disabled("#24: requires AI Core tenant-admin scopes for /v2/admin/resourceGroups; CI key is read-only")
   void create_withTenantLabel_andFilterByTenant() {
     String tenantId = "itest-tenant-" + System.currentTimeMillis();
     createdResourceGroupId = TEST_RG_PREFIX + tenantId;
@@ -86,6 +89,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   }
 
   @Test
+  @Disabled("#24: requires AI Core tenant-admin scopes for /v2/admin/resourceGroups; CI key is read-only")
   void create_withLabels() {
     createdResourceGroupId = TEST_RG_PREFIX + "labels-" + System.currentTimeMillis();
     CqnService service = getAICoreCqnService();
@@ -115,6 +119,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   }
 
   @Test
+  @Disabled("#24: requires AI Core tenant-admin scopes for /v2/admin/resourceGroups; CI key is read-only")
   void delete_resourceGroup() throws InterruptedException {
     String rgId = TEST_RG_PREFIX + "del-" + System.currentTimeMillis();
     CqnService service = getAICoreCqnService();
