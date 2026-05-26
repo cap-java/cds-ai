@@ -24,8 +24,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ResourceGroupCleanupExtension.class)
 class ActionTest extends BaseIntegrationTest {
 
-  private static final String TEST_RG = "default";
-
   @BeforeAll
   void ensureResourceGroupReady() {
     ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreService().getDefaultResourceGroup());
@@ -75,11 +73,12 @@ class ActionTest extends BaseIntegrationTest {
   @Test
   void stop_deployment_changesTargetStatus() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
 
     Result deployments =
         service.run(
             Select.from("AICore.deployments")
-                .where(d -> d.get("resourceGroup_resourceGroupId").eq(TEST_RG)));
+                .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     String deploymentId = null;
     for (Row row : deployments) {
@@ -96,7 +95,7 @@ class ActionTest extends BaseIntegrationTest {
     service.run(
         Update.entity("AICore.deployments")
             .where(d -> d.get("id").eq(targetId))
-            .data(Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", TEST_RG)));
+            .data(Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
@@ -105,7 +104,7 @@ class ActionTest extends BaseIntegrationTest {
                     d ->
                         d.get("id")
                             .eq(targetId)
-                            .and(d.get("resourceGroup_resourceGroupId").eq(TEST_RG))));
+                            .and(d.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
 
     assertThat(readResult.list()).hasSize(1);
     Row row = readResult.single();
