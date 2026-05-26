@@ -137,6 +137,13 @@
               <goal>prepare-agent</goal>
             </goals>
           </execution>
+          <execution>
+            <id>jacoco-site-report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
         </executions>
       </plugin>
     </plugins>
