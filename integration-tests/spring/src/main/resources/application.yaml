@@ -10,6 +10,7 @@ cds:
   requires:
     AICore:
       resourceGroup: ${CDS_AICORE_TEST_RESOURCE_GROUP:cap-java-ai-default}
+      maxRetries: 15
   security:
     mock:
       users:
