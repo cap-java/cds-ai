@@ -6,13 +6,13 @@ package com.sap.cds.feature.aicore.itest;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.recommendation.RptModelSpec;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
@@ -28,12 +28,7 @@ public abstract class BaseIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(BaseIntegrationTest.class);
 
-  private static final Set<String> ALIVE_DEPLOYMENT_STATUSES =
-      Set.of("RUNNING", "PENDING", "UNKNOWN", "INITIAL");
-
-  private static final int POLL_MAX_ATTEMPTS = 15;
-  private static final long POLL_INITIAL_DELAY_MS = 300L;
-  private static final long POLL_MAX_DELAY_MS = 30_000L;
+  static final String ITEST_OWNER_LABEL_KEY = "ext.ai.sap.com/CDS_FEATURE_AI_ITEST_OWNER";
 
   private static final ConcurrentMap<String, String> CACHED_DEPLOYMENT_IDS =
       new ConcurrentHashMap<>();
@@ -50,94 +45,27 @@ public abstract class BaseIntegrationTest {
     return (CqnService) getAICoreService();
   }
 
-  protected String getOrCreateRptConfig(CqnService service, String resourceGroup) {
-    Result configs =
-        service.run(
-            Select.from("AICore.configurations")
-                .where(
-                    c ->
-                        c.get("scenarioId")
-                            .eq("foundation-models")
-                            .and(c.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
-
-    for (Row row : configs) {
-      if ("sap-rpt-1-small".equals(row.get("name"))) {
-        return (String) row.get("id");
-      }
-    }
-
-    Result created =
-        service.run(
-            Insert.into("AICore.configurations")
-                .entry(
-                    Map.of(
-                        "name", "sap-rpt-1-small",
-                        "executableId", "aicore-sap",
-                        "scenarioId", "foundation-models",
-                        "resourceGroup_resourceGroupId", resourceGroup,
-                        "parameterBindings",
-                            List.of(
-                                Map.of("key", "modelName", "value", "sap-rpt-1-small"),
-                                Map.of("key", "modelVersion", "value", "latest")))));
-
-    return (String) created.single().get("id");
-  }
-
-  protected String getOrCreateRptDeployment(CqnService service, String resourceGroup) {
-    String configId = getOrCreateRptConfig(service, resourceGroup);
-
-    Result existing =
-        service.run(
-            Select.from("AICore.deployments")
-                .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
-
-    String deploymentId = null;
-    for (Row row : existing) {
-      if (configId.equals(row.get("configurationId"))) {
-        String status = (String) row.get("status");
-        if (status == null || ALIVE_DEPLOYMENT_STATUSES.contains(status)) {
-          deploymentId = (String) row.get("id");
-          break;
-        }
-      }
-    }
-
-    if (deploymentId == null) {
-      Result created =
-          service.run(
-              Insert.into("AICore.deployments")
-                  .entry(
-                      Map.of(
-                          "configurationId",
-                          configId,
-                          "resourceGroup_resourceGroupId",
-                          resourceGroup)));
-      deploymentId = (String) created.single().get("id");
-      logger.info(
-          "Created RPT-1 deployment {} in resource group {}, polling for RUNNING",
-          deploymentId,
-          resourceGroup);
-    }
-
-    return waitForDeploymentRunning(service, resourceGroup, deploymentId);
-  }
-
   protected String ensureRptDeploymentReady() {
     String resourceGroup = getAICoreService().getDefaultResourceGroup();
     return CACHED_DEPLOYMENT_IDS.computeIfAbsent(
         resourceGroup,
         rg -> {
-          CqnService service = getAICoreCqnService();
-          ensureResourceGroupProvisioned(service, rg);
-          return getOrCreateRptDeployment(service, rg);
+          ensureResourceGroupProvisioned(getAICoreCqnService(), rg);
+          return getAICoreService().deploymentId(rg, RptModelSpec.rpt1());
         });
   }
 
   private void ensureResourceGroupProvisioned(CqnService service, String resourceGroup) {
     if (!resourceGroupExists(service, resourceGroup)) {
-      logger.info("Creating resource group {}", resourceGroup);
+      logger.info("Creating resource group {} with itest owner label", resourceGroup);
       service.run(
-          Insert.into("AICore.resourceGroups").entry(Map.of("resourceGroupId", resourceGroup)));
+          Insert.into("AICore.resourceGroups")
+              .entry(
+                  Map.of(
+                      "resourceGroupId",
+                      resourceGroup,
+                      "labels",
+                      List.of(Map.of("key", ITEST_OWNER_LABEL_KEY, "value", resourceGroup)))));
     }
     waitForResourceGroupProvisioned(service, resourceGroup);
   }
@@ -168,38 +96,6 @@ public abstract class BaseIntegrationTest {
     }
     throw new IllegalStateException(
         "Resource group " + resourceGroup + " did not reach PROVISIONED status");
-  }
-
-  private String waitForDeploymentRunning(
-      CqnService service, String resourceGroup, String deploymentId) {
-    for (int i = 0; i < POLL_MAX_ATTEMPTS; i++) {
-      Result result =
-          service.run(
-              Select.from("AICore.deployments")
-                  .where(
-                      d ->
-                          d.get("resourceGroup_resourceGroupId")
-                              .eq(resourceGroup)
-                              .and(d.get("id").eq(deploymentId))));
-      if (!result.list().isEmpty()) {
-        String status = (String) result.single().get("status");
-        if ("RUNNING".equals(status)) {
-          return deploymentId;
-        }
-        logger.info(
-            "Deployment {} status {}, retry {}/{}", deploymentId, status, i + 1, POLL_MAX_ATTEMPTS);
-      }
-      long delay = Math.min(POLL_INITIAL_DELAY_MS * (1L << i), POLL_MAX_DELAY_MS);
-      sleepQuietly(delay);
-    }
-    throw new IllegalStateException(
-        "Deployment "
-            + deploymentId
-            + " in resource group "
-            + resourceGroup
-            + " did not reach RUNNING status after "
-            + POLL_MAX_ATTEMPTS
-            + " attempts");
   }
 
   private static void sleepQuietly(long millis) {

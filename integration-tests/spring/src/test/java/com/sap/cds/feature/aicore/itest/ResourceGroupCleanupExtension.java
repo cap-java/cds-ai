@@ -11,7 +11,9 @@ import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
+import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -23,8 +25,8 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceGroupCleanupExtension.class);
 
-  private static final Set<String> PRESERVED_RESOURCE_GROUPS =
-      Set.of("default", "cap-java-ai-default");
+  private static final String OWNER_ENV_VAR = "CDS_AICORE_TEST_RESOURCE_GROUP";
+  private static final String LOCAL_DEV_RG = "cap-java-ai-default";
 
   private static final Set<AiDeploymentStatus> TERMINAL_STATUSES =
       Set.of(AiDeploymentStatus.STOPPED, AiDeploymentStatus.DEAD, AiDeploymentStatus.COMPLETED);
@@ -48,18 +50,33 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
       return;
     }
     store.put(storeKey, true);
-    deleteTestResourceGroups();
+    deleteOwnedResourceGroups();
   }
 
-  private void deleteTestResourceGroups() {
+  private void deleteOwnedResourceGroups() {
+    String owner = System.getenv(OWNER_ENV_VAR);
+    if (owner == null || owner.isBlank() || LOCAL_DEV_RG.equals(owner)) {
+      logger.info(
+          "Skipping resource group cleanup: {}={}, local-dev RGs persist across runs",
+          OWNER_ENV_VAR,
+          owner);
+      return;
+    }
+
+    String labelSelector = BaseIntegrationTest.ITEST_OWNER_LABEL_KEY + "=" + owner;
     try {
       ResourceGroupApi rgApi = new ResourceGroupApi();
       DeploymentApi deploymentApi = new DeploymentApi();
-      BckndResourceGroupList list = rgApi.getAll(null, null, null, null, null, null, null);
+      BckndResourceGroupList list =
+          rgApi.getAll(null, null, null, null, null, null, List.of(labelSelector));
 
       for (BckndResourceGroup rg : list.getResources()) {
         String id = rg.getResourceGroupId();
-        if (id == null || PRESERVED_RESOURCE_GROUPS.contains(id)) {
+        if (id == null || !ownsResourceGroup(rg, owner)) {
+          logger.warn(
+              "Server-side label filter returned RG {} that is not owned by {}; skipping",
+              id,
+              owner);
           continue;
         }
         try {
@@ -73,6 +90,18 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
     } catch (Exception e) {
       logger.warn("Resource group cleanup failed: {}", e.getMessage());
     }
+  }
+
+  private boolean ownsResourceGroup(BckndResourceGroup rg, String owner) {
+    List<BckndResourceGroupLabel> labels = rg.getLabels();
+    if (labels == null) {
+      return false;
+    }
+    return labels.stream()
+        .anyMatch(
+            l ->
+                BaseIntegrationTest.ITEST_OWNER_LABEL_KEY.equals(l.getKey())
+                    && owner.equals(l.getValue()));
   }
 
   private void stopDeploymentsInResourceGroup(DeploymentApi api, String resourceGroupId) {
