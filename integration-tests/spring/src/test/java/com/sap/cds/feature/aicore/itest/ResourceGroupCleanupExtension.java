@@ -40,7 +40,13 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
 
   @Override
   public void afterAll(ExtensionContext context) {
-    cleanupOnce(context, "resourceGroupCleanupAfterDone");
+    // Defer cleanup to the very end of the test suite using CloseableResource.
+    // JUnit 5 invokes close() on CloseableResource entries in the global store only
+    // after ALL test classes have completed, preventing premature resource group deletion.
+    ExtensionContext.Store store = context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL);
+    store.getOrComputeIfAbsent(
+        "resourceGroupCleanupShutdownHook",
+        k -> (ExtensionContext.Store.CloseableResource) this::deleteOwnedResourceGroups);
   }
 
   private void cleanupOnce(ExtensionContext context, String storeKey) {
@@ -89,6 +95,8 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
     } catch (Exception e) {
       logger.warn("Resource group cleanup failed: {}", e.getMessage());
     }
+    // Invalidate cached deployment IDs so subsequent tests don't reference deleted resources.
+    BaseIntegrationTest.clearDeploymentIdCache();
   }
 
   private boolean ownsResourceGroup(BckndResourceGroup rg, String owner) {

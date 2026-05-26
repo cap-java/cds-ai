@@ -42,7 +42,7 @@ runs:
       shell: bash
 
     - name: Build project for SonarQube scan
-      run: cds bind --exec -- mvn clean verify -ntp -B -P mtx-integration-tests -Dcds.install-node.skip
+      run: cds bind --exec -- mvn clean verify -ntp -B -Dcds.install-node.skip
       working-directory: integration-tests
       shell: bash
 

@@ -33,6 +33,11 @@ public abstract class BaseIntegrationTest {
   private static final ConcurrentMap<String, String> CACHED_DEPLOYMENT_IDS =
       new ConcurrentHashMap<>();
 
+  /** Clears the cached deployment IDs (used by cleanup extension after resource groups are deleted). */
+  static void clearDeploymentIdCache() {
+    CACHED_DEPLOYMENT_IDS.clear();
+  }
+
   @Autowired protected MockMvc mockMvc;
 
   @Autowired protected CdsRuntime runtime;

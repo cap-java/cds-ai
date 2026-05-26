@@ -88,15 +88,15 @@ class TenantIsolationTest {
   void tearDown() {
     try {
       subscriptionEndpointClient.unsubscribeTenant("tenant-1");
-    } catch (Exception ignored) {
+    } catch (Throwable ignored) {
     }
     try {
       subscriptionEndpointClient.unsubscribeTenant("tenant-2");
-    } catch (Exception ignored) {
+    } catch (Throwable ignored) {
     }
     try {
       subscriptionEndpointClient.unsubscribeTenant("tenant-3");
-    } catch (Exception ignored) {
+    } catch (Throwable ignored) {
     }
   }
 }
