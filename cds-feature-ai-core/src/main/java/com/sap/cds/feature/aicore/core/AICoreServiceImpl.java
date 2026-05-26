@@ -360,7 +360,7 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     while (t != null) {
       if (t instanceof OpenApiRequestException oae) {
         Integer code = oae.statusCode();
-        if (code != null && (code == 403 || code == 412)) {
+        if (code != null && (code == 403 || code == 404 || code == 412)) {
           return true;
         }
       }
