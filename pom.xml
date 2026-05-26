@@ -65,7 +65,7 @@
     <cds.services.version>4.9.0</cds.services.version>
 
     <!-- https://central.sonatype.com/artifact/com.sap.ai.sdk/sdk-core/versions -->
-    <ai-sdk.version>1.18.0</ai-sdk.version>
+    <ai-sdk.version>1.19.0</ai-sdk.version>
     <!-- https://central.sonatype.com/artifact/org.springframework.boot/spring-boot-dependencies/versions -->
     <spring.boot.version>3.4.5</spring.boot.version>
     <!-- https://central.sonatype.com/artifact/org.jacoco/jacoco-maven-plugin/versions -->
@@ -91,13 +91,13 @@
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-pmd-plugin/versions -->
     <maven.pmd.plugin.version>3.28.0</maven.pmd.plugin.version>
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-enforcer-plugin/versions -->
-    <maven.enforcer.plugin.version>3.6.2</maven.enforcer.plugin.version>
+    <maven.enforcer.plugin.version>3.6.3</maven.enforcer.plugin.version>
     <!-- https://central.sonatype.com/artifact/org.codehaus.mojo/flatten-maven-plugin/versions -->
     <maven.flatten.plugin.version>1.7.3</maven.flatten.plugin.version>
     <!-- https://central.sonatype.com/artifact/com.sap.cloud.sdk/sdk-bom/versions -->
     <sap.cloud.sdk.version>5.30.0</sap.cloud.sdk.version>
     <!-- https://central.sonatype.com/artifact/com.github.ben-manes.caffeine/caffeine/versions -->
-    <caffeine.version>3.2.0</caffeine.version>
+    <caffeine.version>3.2.4</caffeine.version>
     <!-- https://central.sonatype.com/artifact/com.github.spotbugs/spotbugs-maven-plugin/versions -->
     <spotbugs.maven.plugin.version>4.9.8.3</spotbugs.maven.plugin.version>
 
@@ -386,7 +386,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.4.0</version>
+        <version>3.5.0</version>
         <configuration>
           <java>
             <googleJavaFormat>
