@@ -11,7 +11,6 @@ import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
-import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import java.util.List;
 import java.util.Set;
@@ -93,11 +92,7 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
   }
 
   private boolean ownsResourceGroup(BckndResourceGroup rg, String owner) {
-    List<BckndResourceGroupLabel> labels = rg.getLabels();
-    if (labels == null) {
-      return false;
-    }
-    return labels.stream()
+    return rg.getLabels().stream()
         .anyMatch(
             l ->
                 BaseIntegrationTest.ITEST_OWNER_LABEL_KEY.equals(l.getKey())
