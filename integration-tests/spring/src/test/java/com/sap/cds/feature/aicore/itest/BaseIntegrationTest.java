@@ -134,11 +134,7 @@ public abstract class BaseIntegrationTest {
   }
 
   private void ensureResourceGroupProvisioned(CqnService service, String resourceGroup) {
-    Result existing =
-        service.run(
-            Select.from("AICore.resourceGroups")
-                .where(r -> r.get("resourceGroupId").eq(resourceGroup)));
-    if (existing.list().isEmpty()) {
+    if (!resourceGroupExists(service, resourceGroup)) {
       logger.info("Creating resource group {}", resourceGroup);
       service.run(
           Insert.into("AICore.resourceGroups").entry(Map.of("resourceGroupId", resourceGroup)));
@@ -146,16 +142,26 @@ public abstract class BaseIntegrationTest {
     waitForResourceGroupProvisioned(service, resourceGroup);
   }
 
+  private boolean resourceGroupExists(CqnService service, String resourceGroup) {
+    Result all = service.run(Select.from("AICore.resourceGroups"));
+    for (Row row : all) {
+      if (resourceGroup.equals(row.get("resourceGroupId"))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private void waitForResourceGroupProvisioned(CqnService service, String resourceGroup) {
     for (int i = 0; i < 30; i++) {
-      Result result =
-          service.run(
-              Select.from("AICore.resourceGroups")
-                  .where(r -> r.get("resourceGroupId").eq(resourceGroup)));
-      if (!result.list().isEmpty()) {
-        String status = (String) result.single().get("status");
-        if ("PROVISIONED".equals(status)) {
-          return;
+      Result all = service.run(Select.from("AICore.resourceGroups"));
+      for (Row row : all) {
+        if (resourceGroup.equals(row.get("resourceGroupId"))) {
+          String status = (String) row.get("status");
+          if ("PROVISIONED".equals(status)) {
+            return;
+          }
+          break;
         }
       }
       sleepQuietly(2000L);
