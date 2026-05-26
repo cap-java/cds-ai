@@ -31,7 +31,7 @@ public abstract class BaseIntegrationTest {
   private static final Set<String> ALIVE_DEPLOYMENT_STATUSES =
       Set.of("RUNNING", "PENDING", "UNKNOWN", "INITIAL");
 
-  private static final int POLL_MAX_ATTEMPTS = 18;
+  private static final int POLL_MAX_ATTEMPTS = 15;
   private static final long POLL_INITIAL_DELAY_MS = 300L;
   private static final long POLL_MAX_DELAY_MS = 30_000L;
 
