@@ -15,13 +15,21 @@ import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.CqnService;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(ResourceGroupCleanupExtension.class)
 class ActionTest extends BaseIntegrationTest {
 
   private static final String TEST_RG = "default";
+
+  @BeforeAll
+  void ensureResourceGroupReady() {
+    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreService().getDefaultResourceGroup());
+  }
 
   @Test
   void resourceGroupForTenant_singleTenancy_returnsDefault() {

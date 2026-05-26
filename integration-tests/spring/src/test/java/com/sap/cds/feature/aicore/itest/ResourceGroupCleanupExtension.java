@@ -15,12 +15,11 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAllCallback {
+public class ResourceGroupCleanupExtension implements AfterAllCallback {
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceGroupCleanupExtension.class);
 
@@ -34,11 +33,6 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
   private static final long STOP_POLL_INTERVAL_MS = 2_000L;
 
   @Override
-  public void beforeAll(ExtensionContext context) {
-    cleanupOnce(context, "resourceGroupCleanupBeforeDone");
-  }
-
-  @Override
   public void afterAll(ExtensionContext context) {
     // Defer cleanup to the very end of the test suite using CloseableResource.
     // JUnit 5 invokes close() on CloseableResource entries in the global store only
@@ -47,15 +41,6 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
     store.getOrComputeIfAbsent(
         "resourceGroupCleanupShutdownHook",
         k -> (ExtensionContext.Store.CloseableResource) this::deleteOwnedResourceGroups);
-  }
-
-  private void cleanupOnce(ExtensionContext context, String storeKey) {
-    ExtensionContext.Store store = context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL);
-    if (store.get(storeKey) != null) {
-      return;
-    }
-    store.put(storeKey, true);
-    deleteOwnedResourceGroups();
   }
 
   private void deleteOwnedResourceGroups() {

@@ -60,7 +60,7 @@ public abstract class BaseIntegrationTest {
         });
   }
 
-  private void ensureResourceGroupProvisioned(CqnService service, String resourceGroup) {
+  protected void ensureResourceGroupProvisioned(CqnService service, String resourceGroup) {
     if (!resourceGroupExists(service, resourceGroup)) {
       logger.info("Creating resource group {} with itest owner label", resourceGroup);
       service.run(
