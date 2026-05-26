@@ -7,9 +7,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sap.cds.feature.aicore.core.AICoreService;
 import com.sap.cds.feature.recommendation.RptModelSpec;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AICoreServiceTest extends BaseIntegrationTest {
+
+  @BeforeAll
+  void prepareDeployment() {
+    ensureRptDeploymentReady();
+  }
 
   @Test
   void service_isRegistered() {

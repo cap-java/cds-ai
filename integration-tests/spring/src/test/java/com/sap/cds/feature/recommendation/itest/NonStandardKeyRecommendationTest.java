@@ -34,6 +34,8 @@ class NonStandardKeyRecommendationTest extends BaseIntegrationTest {
 
   @BeforeAll
   void setupContextData() {
+    ensureRptDeploymentReady();
+
     PersistenceService db =
         runtime
             .getServiceCatalog()

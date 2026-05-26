@@ -3,9 +3,16 @@
  */
 package com.sap.cds.feature.aicore.itest;
 
+import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
+import com.sap.ai.sdk.core.model.AiDeployment;
+import com.sap.ai.sdk.core.model.AiDeploymentList;
+import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
+import com.sap.ai.sdk.core.model.AiDeploymentStatus;
+import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
+import java.util.Set;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -15,6 +22,15 @@ import org.slf4j.LoggerFactory;
 public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAllCallback {
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceGroupCleanupExtension.class);
+
+  private static final Set<String> PRESERVED_RESOURCE_GROUPS =
+      Set.of("default", "cap-java-ai-default");
+
+  private static final Set<AiDeploymentStatus> TERMINAL_STATUSES =
+      Set.of(AiDeploymentStatus.STOPPED, AiDeploymentStatus.DEAD, AiDeploymentStatus.COMPLETED);
+
+  private static final int STOP_POLL_MAX_ATTEMPTS = 30;
+  private static final long STOP_POLL_INTERVAL_MS = 2_000L;
 
   @Override
   public void beforeAll(ExtensionContext context) {
@@ -37,22 +53,84 @@ public class ResourceGroupCleanupExtension implements BeforeAllCallback, AfterAl
 
   private void deleteTestResourceGroups() {
     try {
-      ResourceGroupApi api = new ResourceGroupApi();
-      BckndResourceGroupList list = api.getAll(null, null, null, null, null, null, null);
+      ResourceGroupApi rgApi = new ResourceGroupApi();
+      DeploymentApi deploymentApi = new DeploymentApi();
+      BckndResourceGroupList list = rgApi.getAll(null, null, null, null, null, null, null);
 
       for (BckndResourceGroup rg : list.getResources()) {
         String id = rg.getResourceGroupId();
-        if (id != null && !"default".equals(id)) {
-          try {
-            api.delete(id);
-            logger.info("Cleaned up integration test resource group: {}", id);
-          } catch (Exception e) {
-            logger.warn("Failed to delete resource group {}: {}", id, e.getMessage());
-          }
+        if (id == null || PRESERVED_RESOURCE_GROUPS.contains(id)) {
+          continue;
+        }
+        try {
+          stopDeploymentsInResourceGroup(deploymentApi, id);
+          rgApi.delete(id);
+          logger.info("Cleaned up integration test resource group: {}", id);
+        } catch (Exception e) {
+          logger.warn("Failed to delete resource group {}: {}", id, e.getMessage());
         }
       }
     } catch (Exception e) {
       logger.warn("Resource group cleanup failed: {}", e.getMessage());
     }
+  }
+
+  private void stopDeploymentsInResourceGroup(DeploymentApi api, String resourceGroupId) {
+    AiDeploymentList list;
+    try {
+      list = api.query(resourceGroupId);
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to list deployments in resource group {}: {}", resourceGroupId, e.getMessage());
+      return;
+    }
+
+    for (AiDeployment deployment : list.getResources()) {
+      AiDeploymentStatus status = deployment.getStatus();
+      if (status != null && TERMINAL_STATUSES.contains(status)) {
+        continue;
+      }
+      try {
+        api.modify(
+            resourceGroupId,
+            deployment.getId(),
+            AiDeploymentModificationRequest.create()
+                .targetStatus(AiDeploymentTargetStatus.STOPPED));
+      } catch (Exception e) {
+        logger.warn(
+            "Failed to stop deployment {} in resource group {}: {}",
+            deployment.getId(),
+            resourceGroupId,
+            e.getMessage());
+      }
+    }
+
+    waitForDeploymentsStopped(api, resourceGroupId);
+  }
+
+  private void waitForDeploymentsStopped(DeploymentApi api, String resourceGroupId) {
+    for (int i = 0; i < STOP_POLL_MAX_ATTEMPTS; i++) {
+      AiDeploymentList list;
+      try {
+        list = api.query(resourceGroupId);
+      } catch (Exception e) {
+        return;
+      }
+      boolean allStopped =
+          list.getResources().stream()
+              .map(AiDeployment::getStatus)
+              .allMatch(s -> s == null || TERMINAL_STATUSES.contains(s));
+      if (allStopped) {
+        return;
+      }
+      try {
+        Thread.sleep(STOP_POLL_INTERVAL_MS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+    }
+    logger.warn(
+        "Deployments in resource group {} did not all reach STOPPED in time", resourceGroupId);
   }
 }

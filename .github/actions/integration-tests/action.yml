@@ -29,6 +29,8 @@ runs:
       shell: bash
 
     - name: Integration Tests (spring)
+      env:
+        CDS_AICORE_TEST_RESOURCE_GROUP: itest-${{ github.run_id }}-${{ github.run_attempt }}-j${{ inputs.java-version }}
       run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -Dcds.install-node.skip
       working-directory: integration-tests
       shell: bash
