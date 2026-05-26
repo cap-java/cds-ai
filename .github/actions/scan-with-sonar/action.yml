@@ -42,6 +42,8 @@ runs:
       shell: bash
 
     - name: Run integration tests
+      env:
+        CDS_AICORE_TEST_RESOURCE_GROUP: sonar-${{ github.run_id }}-${{ github.run_attempt }}
       run: cds bind --exec -- mvn clean verify install -ntp -B -Dcds.install-node.skip
       working-directory: integration-tests
       shell: bash

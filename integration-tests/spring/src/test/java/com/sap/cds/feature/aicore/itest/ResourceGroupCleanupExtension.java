@@ -25,6 +25,7 @@ public class ResourceGroupCleanupExtension implements AfterAllCallback {
 
   private static final String OWNER_ENV_VAR = "CDS_AICORE_TEST_RESOURCE_GROUP";
   private static final String LOCAL_DEV_RG = "cap-java-ai-default";
+  private static final String TEST_RG_PREFIX = "itest-rg-";
 
   private static final Set<AiDeploymentStatus> TERMINAL_STATUSES =
       Set.of(AiDeploymentStatus.STOPPED, AiDeploymentStatus.DEAD, AiDeploymentStatus.COMPLETED);
@@ -47,12 +48,17 @@ public class ResourceGroupCleanupExtension implements AfterAllCallback {
     String owner = System.getenv(OWNER_ENV_VAR);
     if (owner == null || owner.isBlank() || LOCAL_DEV_RG.equals(owner)) {
       logger.info(
-          "Skipping resource group cleanup: {}={}, local-dev RGs persist across runs",
+          "Skipping label-based resource group cleanup: {}={}, local-dev RGs persist across runs",
           OWNER_ENV_VAR,
           owner);
-      return;
+    } else {
+      deleteLabeledResourceGroups(owner);
     }
+    // Safety net: always delete any itest-rg-* groups that leaked from ResourceGroupTest
+    deleteResourceGroupsByPrefix();
+  }
 
+  private void deleteLabeledResourceGroups(String owner) {
     String labelSelector = BaseIntegrationTest.ITEST_OWNER_LABEL_KEY + "=" + owner;
     try {
       ResourceGroupApi rgApi = new ResourceGroupApi();
@@ -82,6 +88,26 @@ public class ResourceGroupCleanupExtension implements AfterAllCallback {
     }
     // Invalidate cached deployment IDs so subsequent tests don't reference deleted resources.
     BaseIntegrationTest.clearDeploymentIdCache();
+  }
+
+  private void deleteResourceGroupsByPrefix() {
+    try {
+      ResourceGroupApi rgApi = new ResourceGroupApi();
+      BckndResourceGroupList all = rgApi.getAll(null, null, null, null, null, null, null);
+      for (BckndResourceGroup rg : all.getResources()) {
+        String id = rg.getResourceGroupId();
+        if (id != null && id.startsWith(TEST_RG_PREFIX)) {
+          try {
+            rgApi.delete(id);
+            logger.info("Cleaned up leaked test resource group: {}", id);
+          } catch (Exception e) {
+            logger.warn("Failed to delete test resource group {}: {}", id, e.getMessage());
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.warn("Prefix-based resource group cleanup failed: {}", e.getMessage());
+    }
   }
 
   private boolean ownsResourceGroup(BckndResourceGroup rg, String owner) {
