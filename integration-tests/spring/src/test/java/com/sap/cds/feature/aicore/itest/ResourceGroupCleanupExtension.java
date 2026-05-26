@@ -35,13 +35,14 @@ public class ResourceGroupCleanupExtension implements AfterAllCallback {
 
   @Override
   public void afterAll(ExtensionContext context) {
-    // Defer cleanup to the very end of the test suite using CloseableResource.
-    // JUnit 5 invokes close() on CloseableResource entries in the global store only
-    // after ALL test classes have completed, preventing premature resource group deletion.
+    // Only clean up itest-rg-* leaked groups at suite end.
+    // The main test resource group (itest-<run_id>-...) is cleaned up by CI
+    // after ALL parallel jobs complete, to avoid one job's cleanup affecting
+    // another job's deployment sharing the same AI Core model infrastructure.
     ExtensionContext.Store store = context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL);
     store.getOrComputeIfAbsent(
         "resourceGroupCleanupShutdownHook",
-        k -> (ExtensionContext.Store.CloseableResource) this::deleteOwnedResourceGroups);
+        k -> (ExtensionContext.Store.CloseableResource) this::deleteResourceGroupsByPrefix);
   }
 
   private void deleteOwnedResourceGroups() {
@@ -51,11 +52,9 @@ public class ResourceGroupCleanupExtension implements AfterAllCallback {
           "Skipping label-based resource group cleanup: {}={}, local-dev RGs persist across runs",
           OWNER_ENV_VAR,
           owner);
-    } else {
-      deleteLabeledResourceGroups(owner);
+      return;
     }
-    // Safety net: always delete any itest-rg-* groups that leaked from ResourceGroupTest
-    deleteResourceGroupsByPrefix();
+    deleteLabeledResourceGroups(owner);
   }
 
   private void deleteLabeledResourceGroups(String owner) {
