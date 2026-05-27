@@ -67,6 +67,24 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
   private final AiCoreService sdkService;
 
   public AICoreServiceImpl(String name, CdsRuntime runtime, boolean multiTenancyEnabled) {
+    this(
+        name,
+        runtime,
+        multiTenancyEnabled,
+        new DeploymentApi(),
+        new ConfigurationApi(),
+        new ResourceGroupApi(),
+        new AiCoreService());
+  }
+
+  public AICoreServiceImpl(
+      String name,
+      CdsRuntime runtime,
+      boolean multiTenancyEnabled,
+      DeploymentApi deploymentApi,
+      ConfigurationApi configurationApi,
+      ResourceGroupApi resourceGroupApi,
+      AiCoreService sdkService) {
     super(name, runtime);
     this.multiTenancyEnabled = multiTenancyEnabled;
     CdsEnvironment env = runtime.getEnvironment();
@@ -83,10 +101,10 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     this.tenantResourceGroupCache = newCache();
     this.resourceGroupDeploymentCache = newCache();
     this.deploymentLocks = newCache();
-    this.deploymentApi = new DeploymentApi();
-    this.configurationApi = new ConfigurationApi();
-    this.resourceGroupApi = new ResourceGroupApi();
-    this.sdkService = new AiCoreService();
+    this.deploymentApi = deploymentApi;
+    this.configurationApi = configurationApi;
+    this.resourceGroupApi = resourceGroupApi;
+    this.sdkService = sdkService;
   }
 
   private static <V> Cache<String, V> newCache() {
