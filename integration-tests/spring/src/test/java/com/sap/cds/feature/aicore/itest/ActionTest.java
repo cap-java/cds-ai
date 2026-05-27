@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.recommendation.RptModelSpec;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -27,12 +28,12 @@ class ActionTest extends BaseIntegrationTest {
 
   @BeforeAll
   void ensureResourceGroupReady() {
-    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreService().getDefaultResourceGroup());
+    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreServiceImpl().getDefaultResourceGroup());
   }
 
   @Test
   void resourceGroupForTenant_singleTenancy_returnsDefault() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeFalse(service.isMultiTenancyEnabled(), "Multi-tenancy is enabled");
     String result = service.resourceGroupForTenant("any-tenant-id");
     assertThat(result).isEqualTo(service.getDefaultResourceGroup());
@@ -40,7 +41,7 @@ class ActionTest extends BaseIntegrationTest {
 
   @Test
   void resourceGroupForTenant_multiTenancy_createsGroup() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeTrue(service.isMultiTenancyEnabled(), "Multi-tenancy is not enabled");
     String tenantId = "itest-action-tenant-" + System.currentTimeMillis();
     try {
@@ -54,7 +55,7 @@ class ActionTest extends BaseIntegrationTest {
 
   @Test
   void deploymentId_returnsValidDeployment() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     String resourceGroup = service.getDefaultResourceGroup();
 
     String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
@@ -63,7 +64,7 @@ class ActionTest extends BaseIntegrationTest {
 
   @Test
   void deploymentId_cachedOnSecondCall() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     String resourceGroup = service.getDefaultResourceGroup();
 
     String first = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
@@ -76,7 +77,7 @@ class ActionTest extends BaseIntegrationTest {
   @Test
   void stop_deployment_changesTargetStatus() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
 
     Result deployments =
         service.run(
@@ -116,7 +117,7 @@ class ActionTest extends BaseIntegrationTest {
 
   @Test
   void resolveResourceGroupFromKeys_directKey() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     Map<String, Object> keys = Map.of("resourceGroup_resourceGroupId", "my-rg");
     String resolved = service.resolveResourceGroupFromKeys(keys);
     assertThat(resolved).isEqualTo("my-rg");
@@ -124,7 +125,7 @@ class ActionTest extends BaseIntegrationTest {
 
   @Test
   void resolveResourceGroupFromKeys_nestedMap() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     Map<String, Object> keys = Map.of("resourceGroup", Map.of("resourceGroupId", "nested-rg"));
     String resolved = service.resolveResourceGroupFromKeys(keys);
     assertThat(resolved).isEqualTo("nested-rg");

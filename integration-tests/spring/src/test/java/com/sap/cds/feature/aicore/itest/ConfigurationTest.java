@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.services.cds.CqnService;
@@ -19,7 +20,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void readAll_returnsConfigurations() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
     Result result =
         service.run(
             Select.from("AICore.configurations")
@@ -31,7 +32,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void readAll_filterByScenario() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
     Result result =
         service.run(
             Select.from("AICore.configurations")
@@ -47,7 +48,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void create_andReadById() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
 
     String configName = "itest-config-" + System.currentTimeMillis();
     Result created =
@@ -92,7 +93,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void create_withParameterBindings_mapsCorrectly() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
 
     String configName = "itest-params-" + System.currentTimeMillis();
     Result created =

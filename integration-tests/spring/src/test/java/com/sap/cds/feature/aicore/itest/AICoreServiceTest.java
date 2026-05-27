@@ -6,6 +6,7 @@ package com.sap.cds.feature.aicore.itest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.recommendation.RptModelSpec;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class AICoreServiceTest extends BaseIntegrationTest {
 
   @Test
   void resourceGroupForTenant_singleTenancy_returnsDefault() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     if (!service.isMultiTenancyEnabled()) {
       String result = service.resourceGroupForTenant("any-tenant");
       assertThat(result).isEqualTo(service.getDefaultResourceGroup());
@@ -36,7 +37,7 @@ class AICoreServiceTest extends BaseIntegrationTest {
 
   @Test
   void resourceGroupForTenant_multiTenancy_createsOrFindsGroup() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     if (service.isMultiTenancyEnabled()) {
       String tenantId = "itest-svc-tenant-" + System.currentTimeMillis();
       try {
@@ -55,7 +56,7 @@ class AICoreServiceTest extends BaseIntegrationTest {
 
   @Test
   void deploymentId_returnsDeploymentId() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     String resourceGroup = service.getDefaultResourceGroup();
 
     String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
@@ -68,7 +69,7 @@ class AICoreServiceTest extends BaseIntegrationTest {
 
   @Test
   void clearTenantCache_removesEntries() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     String tenantId = "itest-cache-tenant";
     String fakeRg = "fake-rg";
     String fakeKey = fakeRg + "::" + RptModelSpec.CONFIG_NAME;
@@ -83,7 +84,7 @@ class AICoreServiceTest extends BaseIntegrationTest {
 
   @Test
   void configProperties_areApplied() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assertThat(service.getRetry()).isNotNull();
     assertThat(service.getDefaultResourceGroup()).isNotBlank();
     assertThat(service.getResourceGroupPrefix()).isNotBlank();
