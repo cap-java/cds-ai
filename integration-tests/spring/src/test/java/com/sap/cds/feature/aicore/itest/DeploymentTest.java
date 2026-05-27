@@ -12,19 +12,19 @@ import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.CqnService;
 import java.util.Map;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class DeploymentTest extends BaseIntegrationTest {
 
-  private static final String TEST_RG = "default";
-
   @Test
   void readAll_returnsDeployments() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
     Result result =
         service.run(
             Select.from("AICore.deployments")
-                .where(d -> d.get("resourceGroup_resourceGroupId").eq(TEST_RG)));
+                .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assertThat(result.list()).isNotNull();
   }
@@ -32,10 +32,11 @@ class DeploymentTest extends BaseIntegrationTest {
   @Test
   void readSingle_returnsDeploymentDetails() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
     Result all =
         service.run(
             Select.from("AICore.deployments")
-                .where(d -> d.get("resourceGroup_resourceGroupId").eq(TEST_RG)));
+                .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assumeFalse(all.list().isEmpty(), "No deployments available");
 
@@ -47,7 +48,7 @@ class DeploymentTest extends BaseIntegrationTest {
                     d ->
                         d.get("id")
                             .eq(id)
-                            .and(d.get("resourceGroup_resourceGroupId").eq(TEST_RG))));
+                            .and(d.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
 
     assertThat(single.list()).hasSize(1);
     Row row = single.single();
@@ -56,14 +57,17 @@ class DeploymentTest extends BaseIntegrationTest {
     assertThat(row.get("status")).isNotNull();
   }
 
+  @Disabled("Stops the shared RPT deployment needed by subsequent Recommendation tests; "
+      + "re-enable once test creates its own isolated deployment")
   @Test
   void update_targetStatus_stopsRunningDeployment() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
 
     Result deployments =
         service.run(
             Select.from("AICore.deployments")
-                .where(d -> d.get("resourceGroup_resourceGroupId").eq(TEST_RG)));
+                .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     String deploymentId = null;
     for (Row row : deployments) {
@@ -80,7 +84,7 @@ class DeploymentTest extends BaseIntegrationTest {
     service.run(
         Update.entity("AICore.deployments")
             .where(d -> d.get("id").eq(targetId))
-            .data(Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", TEST_RG)));
+            .data(Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
@@ -89,7 +93,7 @@ class DeploymentTest extends BaseIntegrationTest {
                     d ->
                         d.get("id")
                             .eq(targetId)
-                            .and(d.get("resourceGroup_resourceGroupId").eq(TEST_RG))));
+                            .and(d.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
 
     assertThat(readResult.list()).hasSize(1);
     Row row = readResult.single();

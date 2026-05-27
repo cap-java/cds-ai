@@ -360,7 +360,7 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     while (t != null) {
       if (t instanceof OpenApiRequestException oae) {
         Integer code = oae.statusCode();
-        if (code != null && (code == 403 || code == 412)) {
+        if (code != null && (code == 403 || code == 404 || code == 412)) {
           return true;
         }
       }
@@ -369,11 +369,14 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return false;
   }
 
+  private static final long MAX_INTERVAL_MS = 30_000L;
+
   private static Retry buildRetry(int maxAttempts, long initialDelayMs) {
     RetryConfig config =
         RetryConfig.custom()
             .maxAttempts(maxAttempts)
-            .intervalFunction(IntervalFunction.ofExponentialBackoff(initialDelayMs, 2.0))
+            .intervalFunction(
+                IntervalFunction.ofExponentialBackoff(initialDelayMs, 2.0, MAX_INTERVAL_MS))
             .retryOnException(e -> e instanceof OpenApiRequestException oae && notReadyYet(oae))
             .build();
     return Retry.of("aicore", config);

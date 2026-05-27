@@ -34,6 +34,14 @@ class AICoreServiceImplTest {
   }
 
   @Test
+  void notReadyYet_topLevel404_returnsTrue() {
+    OpenApiRequestException e = mock(OpenApiRequestException.class);
+    when(e.statusCode()).thenReturn(404);
+
+    assertThat(AICoreServiceImpl.notReadyYet(e)).isTrue();
+  }
+
+  @Test
   void notReadyYet_topLevel500_returnsFalse() {
     OpenApiRequestException e = mock(OpenApiRequestException.class);
     when(e.statusCode()).thenReturn(500);

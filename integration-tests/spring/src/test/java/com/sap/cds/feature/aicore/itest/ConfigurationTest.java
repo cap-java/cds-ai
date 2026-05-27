@@ -16,15 +16,14 @@ import org.junit.jupiter.api.Test;
 
 class ConfigurationTest extends BaseIntegrationTest {
 
-  private static final String TEST_RG = "default";
-
   @Test
   void readAll_returnsConfigurations() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
     Result result =
         service.run(
             Select.from("AICore.configurations")
-                .where(c -> c.get("resourceGroup_resourceGroupId").eq(TEST_RG)));
+                .where(c -> c.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assertThat(result.list()).isNotNull();
   }
@@ -32,6 +31,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void readAll_filterByScenario() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
     Result result =
         service.run(
             Select.from("AICore.configurations")
@@ -39,7 +39,7 @@ class ConfigurationTest extends BaseIntegrationTest {
                     c ->
                         c.get("scenarioId")
                             .eq("foundation-models")
-                            .and(c.get("resourceGroup_resourceGroupId").eq(TEST_RG))));
+                            .and(c.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
 
     assertThat(result.list()).isNotNull();
   }
@@ -47,6 +47,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void create_andReadById() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
 
     String configName = "itest-config-" + System.currentTimeMillis();
     Result created =
@@ -61,7 +62,7 @@ class ConfigurationTest extends BaseIntegrationTest {
                         "scenarioId",
                         "foundation-models",
                         "resourceGroup_resourceGroupId",
-                        TEST_RG,
+                        resourceGroup,
                         "parameterBindings",
                         List.of(
                             Map.of("key", "modelName", "value", "sap-rpt-1-small"),
@@ -79,7 +80,7 @@ class ConfigurationTest extends BaseIntegrationTest {
                     c ->
                         c.get("id")
                             .eq(configId)
-                            .and(c.get("resourceGroup_resourceGroupId").eq(TEST_RG))));
+                            .and(c.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
 
     assertThat(readResult.list()).hasSize(1);
     Row row = readResult.single();
@@ -91,6 +92,7 @@ class ConfigurationTest extends BaseIntegrationTest {
   @Test
   void create_withParameterBindings_mapsCorrectly() {
     CqnService service = getAICoreCqnService();
+    String resourceGroup = getAICoreService().getDefaultResourceGroup();
 
     String configName = "itest-params-" + System.currentTimeMillis();
     Result created =
@@ -105,7 +107,7 @@ class ConfigurationTest extends BaseIntegrationTest {
                         "scenarioId",
                         "foundation-models",
                         "resourceGroup_resourceGroupId",
-                        TEST_RG,
+                        resourceGroup,
                         "parameterBindings",
                         List.of(
                             Map.of("key", "param1", "value", "value1"),
@@ -120,7 +122,7 @@ class ConfigurationTest extends BaseIntegrationTest {
                     c ->
                         c.get("id")
                             .eq(configId)
-                            .and(c.get("resourceGroup_resourceGroupId").eq(TEST_RG))));
+                            .and(c.get("resourceGroup_resourceGroupId").eq(resourceGroup))));
 
     Row row = readResult.single();
     @SuppressWarnings("unchecked")

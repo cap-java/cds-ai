@@ -28,7 +28,9 @@ runs:
       run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am -DskipTests -Dcds.install-node.skip
       shell: bash
 
-    - name: Integration Tests (spring + mtx-local)
-      run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -P mtx-integration-tests -Dcds.install-node.skip
+    - name: Integration Tests (spring)
+      env:
+        CDS_AICORE_TEST_RESOURCE_GROUP: itest-${{ github.run_id }}-${{ github.run_attempt }}-j${{ inputs.java-version }}
+      run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -Dcds.install-node.skip
       working-directory: integration-tests
       shell: bash

@@ -29,10 +29,11 @@ class ResourceGroupTest extends BaseIntegrationTest {
   void cleanup() {
     if (createdResourceGroupId != null) {
       try {
-        getAICoreCqnService()
-            .run(
-                Delete.from("AICore.resourceGroups")
-                    .where(r -> r.get("resourceGroupId").eq(createdResourceGroupId)));
+        CqnService service = getAICoreCqnService();
+        waitForResourceGroupProvisioned(service, createdResourceGroupId);
+        service.run(
+            Delete.from("AICore.resourceGroups")
+                .where(r -> r.get("resourceGroupId").eq(createdResourceGroupId)));
       } catch (Exception ignored) {
       }
       createdResourceGroupId = null;
