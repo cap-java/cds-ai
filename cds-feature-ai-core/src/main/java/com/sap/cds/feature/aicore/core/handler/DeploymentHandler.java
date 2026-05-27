@@ -3,6 +3,8 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
+import static com.sap.cds.feature.aicore.core.AICoreElements.Deployment;
+
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.model.AiDeployment;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationRequest;
@@ -57,14 +59,15 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
     String resourceGroupId = resolveResourceGroup(merge(keys, values));
 
-    String id = (String) keys.get("id");
+    String id = (String) keys.get(Deployment.ID);
     if (id != null) {
       AiDeploymentResponseWithDetails deployment = deploymentApi.get(resourceGroupId, id);
-      context.setResult(List.of(toMap(deployment, resourceGroupId)));
+      context.setResult(List.of(toCdsData(extractFields(deployment), resourceGroupId)));
     } else {
       AiDeploymentList result =
           deploymentApi.query(resourceGroupId, null, null, null, null, null, null, null);
-      context.setResult(mapResources(result.getResources(), d -> toMap(d, resourceGroupId)));
+      context.setResult(
+          mapResources(result.getResources(), d -> toCdsData(extractFields(d), resourceGroupId)));
     }
   }
 
@@ -76,19 +79,19 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
     for (Map<String, Object> entry : entries) {
       String resourceGroupId = resolveResourceGroup(entry);
-      String configurationId = (String) entry.get("configurationId");
+      String configurationId = (String) entry.get(Deployment.CONFIGURATION_ID);
 
       AiDeploymentCreationRequest request =
           AiDeploymentCreationRequest.create().configurationId(configurationId);
 
-      if (entry.containsKey("ttl")) {
-        request.ttl((String) entry.get("ttl"));
+      if (entry.containsKey(Deployment.TTL)) {
+        request.ttl((String) entry.get(Deployment.TTL));
       }
 
       var response = deploymentApi.create(resourceGroupId, request);
       CdsData result = CdsData.create(entry);
-      result.put("id", response.getId());
-      result.put("status", response.getStatus().getValue());
+      result.put(Deployment.ID, response.getId());
+      result.put(Deployment.STATUS, response.getStatus().getValue());
       results.add(result);
       logger.debug("Created deployment {} in resource group {}", response.getId(), resourceGroupId);
     }
@@ -103,7 +106,8 @@ public class DeploymentHandler extends AbstractCrudHandler {
       throw new ServiceException(ErrorStatuses.BAD_REQUEST, "No update payload provided");
     }
     Map<String, Object> data = entries.get(0);
-    if (!data.containsKey("targetStatus") && !data.containsKey("configurationId")) {
+    if (!data.containsKey(Deployment.TARGET_STATUS)
+        && !data.containsKey(Deployment.CONFIGURATION_ID)) {
       throw new ServiceException(
           ErrorStatuses.BAD_REQUEST,
           "Update payload must contain 'targetStatus' or 'configurationId'");
@@ -113,17 +117,17 @@ public class DeploymentHandler extends AbstractCrudHandler {
     CqnAnalyzer analyzer = CqnAnalyzer.create(model);
     Map<String, Object> keys = analyzer.analyze(update).targetKeys();
 
-    String deploymentId = (String) keys.get("id");
+    String deploymentId = (String) keys.get(Deployment.ID);
     String resourceGroupId = resolveResourceGroup(merge(keys, data));
 
     AiDeploymentModificationRequest modRequest = AiDeploymentModificationRequest.create();
 
-    if (data.containsKey("targetStatus")) {
-      String targetStatus = (String) data.get("targetStatus");
+    if (data.containsKey(Deployment.TARGET_STATUS)) {
+      String targetStatus = (String) data.get(Deployment.TARGET_STATUS);
       modRequest.targetStatus(AiDeploymentTargetStatus.fromValue(targetStatus));
     }
-    if (data.containsKey("configurationId")) {
-      modRequest.configurationId((String) data.get("configurationId"));
+    if (data.containsKey(Deployment.CONFIGURATION_ID)) {
+      modRequest.configurationId((String) data.get(Deployment.CONFIGURATION_ID));
     }
 
     deploymentApi.modify(resourceGroupId, deploymentId, modRequest);
@@ -138,7 +142,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     CqnAnalyzer analyzer = CqnAnalyzer.create(model);
     Map<String, Object> keys = analyzer.analyze(delete).targetKeys();
 
-    String deploymentId = (String) keys.get("id");
+    String deploymentId = (String) keys.get(Deployment.ID);
     String resourceGroupId = resolveResourceGroup(keys);
 
     deploymentApi.delete(resourceGroupId, deploymentId);
@@ -146,54 +150,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     context.setResult(List.of());
   }
 
-  // CPD-OFF - SDK types AiDeploymentResponseWithDetails and AiDeployment share no common interface
-  private CdsData toMap(AiDeploymentResponseWithDetails d, String resourceGroupId) {
-    return buildDeploymentData(
-        d.getId(),
-        d.getDeploymentUrl(),
-        d.getConfigurationId(),
-        d.getConfigurationName(),
-        d.getExecutableId(),
-        d.getScenarioId(),
-        d.getStatus().getValue(),
-        d.getStatusMessage(),
-        d.getTargetStatus().getValue(),
-        d.getLastOperation() != null ? d.getLastOperation().getValue() : null,
-        d.getLatestRunningConfigurationId(),
-        d.getTtl(),
-        d.getCreatedAt(),
-        d.getModifiedAt(),
-        d.getSubmissionTime(),
-        d.getStartTime(),
-        d.getCompletionTime(),
-        resourceGroupId);
-  }
-
-  private CdsData toMap(AiDeployment d, String resourceGroupId) {
-    return buildDeploymentData(
-        d.getId(),
-        d.getDeploymentUrl(),
-        d.getConfigurationId(),
-        d.getConfigurationName(),
-        d.getExecutableId(),
-        d.getScenarioId(),
-        d.getStatus().getValue(),
-        d.getStatusMessage(),
-        d.getTargetStatus().getValue(),
-        d.getLastOperation() != null ? d.getLastOperation().getValue() : null,
-        d.getLatestRunningConfigurationId(),
-        d.getTtl(),
-        d.getCreatedAt(),
-        d.getModifiedAt(),
-        d.getSubmissionTime(),
-        d.getStartTime(),
-        d.getCompletionTime(),
-        resourceGroupId);
-  }
-
-  // CPD-ON
-
-  private static CdsData buildDeploymentData(
+  private record DeploymentFields(
       String id,
       String deploymentUrl,
       String configurationId,
@@ -210,26 +167,72 @@ public class DeploymentHandler extends AbstractCrudHandler {
       Object modifiedAt,
       Object submissionTime,
       Object startTime,
-      Object completionTime,
-      String resourceGroupId) {
+      Object completionTime) {}
+
+  // CPD-OFF - SDK types AiDeploymentResponseWithDetails and AiDeployment share no common interface
+  private static DeploymentFields extractFields(AiDeploymentResponseWithDetails d) {
+    return new DeploymentFields(
+        d.getId(),
+        d.getDeploymentUrl(),
+        d.getConfigurationId(),
+        d.getConfigurationName(),
+        d.getExecutableId(),
+        d.getScenarioId(),
+        d.getStatus().getValue(),
+        d.getStatusMessage(),
+        d.getTargetStatus().getValue(),
+        d.getLastOperation() != null ? d.getLastOperation().getValue() : null,
+        d.getLatestRunningConfigurationId(),
+        d.getTtl(),
+        d.getCreatedAt(),
+        d.getModifiedAt(),
+        d.getSubmissionTime(),
+        d.getStartTime(),
+        d.getCompletionTime());
+  }
+
+  private static DeploymentFields extractFields(AiDeployment d) {
+    return new DeploymentFields(
+        d.getId(),
+        d.getDeploymentUrl(),
+        d.getConfigurationId(),
+        d.getConfigurationName(),
+        d.getExecutableId(),
+        d.getScenarioId(),
+        d.getStatus().getValue(),
+        d.getStatusMessage(),
+        d.getTargetStatus().getValue(),
+        d.getLastOperation() != null ? d.getLastOperation().getValue() : null,
+        d.getLatestRunningConfigurationId(),
+        d.getTtl(),
+        d.getCreatedAt(),
+        d.getModifiedAt(),
+        d.getSubmissionTime(),
+        d.getStartTime(),
+        d.getCompletionTime());
+  }
+
+  // CPD-ON
+
+  private static CdsData toCdsData(DeploymentFields f, String resourceGroupId) {
     CdsData data = CdsData.create();
-    data.put("id", id);
-    data.put("deploymentUrl", deploymentUrl);
-    data.put("configurationId", configurationId);
-    data.put("configurationName", configurationName);
-    data.put("executableId", executableId);
-    data.put("scenarioId", scenarioId);
-    data.put("status", status);
-    data.put("statusMessage", statusMessage);
-    data.put("targetStatus", targetStatus);
-    data.put("lastOperation", lastOperation);
-    data.put("latestRunningConfigurationId", latestRunningConfigurationId);
-    data.put("ttl", ttl);
-    data.put("createdAt", createdAt);
-    data.put("modifiedAt", modifiedAt);
-    data.put("submissionTime", submissionTime);
-    data.put("startTime", startTime);
-    data.put("completionTime", completionTime);
+    data.put(Deployment.ID, f.id());
+    data.put(Deployment.DEPLOYMENT_URL, f.deploymentUrl());
+    data.put(Deployment.CONFIGURATION_ID, f.configurationId());
+    data.put(Deployment.CONFIGURATION_NAME, f.configurationName());
+    data.put(Deployment.EXECUTABLE_ID, f.executableId());
+    data.put(Deployment.SCENARIO_ID, f.scenarioId());
+    data.put(Deployment.STATUS, f.status());
+    data.put(Deployment.STATUS_MESSAGE, f.statusMessage());
+    data.put(Deployment.TARGET_STATUS, f.targetStatus());
+    data.put(Deployment.LAST_OPERATION, f.lastOperation());
+    data.put(Deployment.LATEST_RUNNING_CONFIGURATION_ID, f.latestRunningConfigurationId());
+    data.put(Deployment.TTL, f.ttl());
+    data.put(Deployment.CREATED_AT, f.createdAt());
+    data.put(Deployment.MODIFIED_AT, f.modifiedAt());
+    data.put(Deployment.SUBMISSION_TIME, f.submissionTime());
+    data.put(Deployment.START_TIME, f.startTime());
+    data.put(Deployment.COMPLETION_TIME, f.completionTime());
     data.putPath("resourceGroup.resourceGroupId", resourceGroupId);
     return data;
   }
