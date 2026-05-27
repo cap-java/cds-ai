@@ -16,7 +16,6 @@ import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnDelete;
-import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsModel;
@@ -75,19 +74,16 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
   }
 
   @On(event = CqnService.EVENT_CREATE, entity = AICoreService.RESOURCE_GROUPS)
-  public void onCreate(CdsCreateEventContext context) {
-    CqnInsert insert = context.getCqn();
-    List<Map<String, Object>> entries = insert.entries();
+  public void onCreate(CdsCreateEventContext context, List<ResourceGroups> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
-    for (Map<String, Object> entry : entries) {
-      String resourceGroupId = (String) entry.get(ResourceGroups.RESOURCE_GROUP_ID);
+    for (ResourceGroups entry : entries) {
+      String resourceGroupId = entry.getResourceGroupId();
       BckndResourceGroupsPostRequest request =
           BckndResourceGroupsPostRequest.create().resourceGroupId(resourceGroupId);
 
       @SuppressWarnings("unchecked")
-      List<Map<String, Object>> labels =
-          (List<Map<String, Object>>) entry.get(ResourceGroups.LABELS);
+      List<Map<String, Object>> labels = (List<Map<String, Object>>) entry.get(ResourceGroups.LABELS);
       List<BckndResourceGroupLabel> mergedLabels = new ArrayList<>();
 
       // User-supplied labels take precedence: if they include the tenant label key, we skip
@@ -97,12 +93,11 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
               && labels.stream()
                   .anyMatch(l -> AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.get("key")));
 
-      if (entry.containsKey(ResourceGroups.TENANT_ID) && !userSuppliedTenantLabel) {
-        String tenantId = (String) entry.get(ResourceGroups.TENANT_ID);
+      if (entry.getTenantId() != null && !userSuppliedTenantLabel) {
         mergedLabels.add(
             BckndResourceGroupLabel.create()
                 .key(AICoreServiceImpl.TENANT_LABEL_KEY)
-                .value(tenantId));
+                .value(entry.getTenantId()));
       }
 
       if (labels != null) {

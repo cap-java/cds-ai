@@ -5,6 +5,7 @@ package com.sap.cds.feature.aicore.itest;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.core.AICoreService;
 import com.sap.cds.feature.recommendation.RptModelSpec;
 import com.sap.cds.ql.Insert;
@@ -41,12 +42,16 @@ public abstract class BaseIntegrationTest {
     return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 
+  protected AbstractAICoreService getAICoreServiceImpl() {
+    return (AbstractAICoreService) getAICoreService();
+  }
+
   protected CqnService getAICoreCqnService() {
     return (CqnService) getAICoreService();
   }
 
   protected String ensureRptDeploymentReady() {
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
     return CACHED_DEPLOYMENT_IDS.computeIfAbsent(
         resourceGroup,
         rg -> {
