@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
-import com.sap.cds.ql.cqn.CqnUpdate;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
@@ -28,7 +28,6 @@ class DeploymentHandlerTest {
   @Mock private AICoreServiceImpl service;
   @Mock private DeploymentApi deploymentApi;
   @Mock private CdsUpdateEventContext context;
-  @Mock private CqnUpdate update;
 
   private DeploymentHandler cut;
 
@@ -40,10 +39,9 @@ class DeploymentHandlerTest {
 
   @Test
   void onUpdate_emptyEntries_throwsBadRequest() {
-    when(context.getCqn()).thenReturn(update);
-    when(update.entries()).thenReturn(List.of());
+    List<Deployments> entries = List.of();
 
-    assertThatThrownBy(() -> cut.onUpdate(context))
+    assertThatThrownBy(() -> cut.onUpdate(context, entries))
         .isInstanceOfSatisfying(
             ServiceException.class,
             e -> assertThat(e.getErrorStatus()).isEqualTo(ErrorStatuses.BAD_REQUEST))
@@ -54,10 +52,9 @@ class DeploymentHandlerTest {
 
   @Test
   void onUpdate_payloadWithoutTargetStatusOrConfigurationId_throwsBadRequest() {
-    when(context.getCqn()).thenReturn(update);
-    when(update.entries()).thenReturn(List.of(Map.of("ttl", "1d")));
+    List<Deployments> entries = List.of(Deployments.of(Map.of("ttl", "1d")));
 
-    assertThatThrownBy(() -> cut.onUpdate(context))
+    assertThatThrownBy(() -> cut.onUpdate(context, entries))
         .isInstanceOfSatisfying(
             ServiceException.class,
             e -> assertThat(e.getErrorStatus()).isEqualTo(ErrorStatuses.BAD_REQUEST))
