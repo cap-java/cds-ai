@@ -68,27 +68,22 @@ public class MockAICoreServiceImpl extends AbstractCqnService implements AICoreS
     return retry;
   }
 
-  @Override
   public String getDefaultResourceGroup() {
     return defaultResourceGroup;
   }
 
-  @Override
   public String getResourceGroupPrefix() {
     return resourceGroupPrefix;
   }
 
-  @Override
   public Map<String, String> getTenantResourceGroupCache() {
     return tenantResourceGroupCache;
   }
 
-  @Override
   public Map<String, String> getResourceGroupDeploymentCache() {
     return resourceGroupDeploymentCache;
   }
 
-  @Override
   public void clearTenantCache(String tenantId) {
     String resourceGroupId = tenantResourceGroupCache.remove(tenantId);
     if (resourceGroupId != null) {
@@ -99,7 +94,6 @@ public class MockAICoreServiceImpl extends AbstractCqnService implements AICoreS
     }
   }
 
-  @Override
   public String resolveResourceGroupFromKeys(Map<String, Object> keys) {
     if (keys.containsKey("resourceGroup_resourceGroupId")) {
       return (String) keys.get("resourceGroup_resourceGroupId");

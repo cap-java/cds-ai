@@ -156,22 +156,18 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return retry;
   }
 
-  @Override
   public String getDefaultResourceGroup() {
     return defaultResourceGroup;
   }
 
-  @Override
   public String getResourceGroupPrefix() {
     return resourceGroupPrefix;
   }
 
-  @Override
   public Map<String, String> getTenantResourceGroupCache() {
     return tenantResourceGroupCache.asMap();
   }
 
-  @Override
   public Map<String, String> getResourceGroupDeploymentCache() {
     return resourceGroupDeploymentCache.asMap();
   }
@@ -192,7 +188,6 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return resourceGroupApi;
   }
 
-  @Override
   public String resolveResourceGroupFromKeys(Map<String, Object> keys) {
     if (keys.containsKey("resourceGroup_resourceGroupId")) {
       return (String) keys.get("resourceGroup_resourceGroupId");
@@ -205,7 +200,6 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return resourceGroupForTenant(tenantId);
   }
 
-  @Override
   public void clearTenantCache(String tenantId) {
     String resourceGroupId = tenantResourceGroupCache.asMap().remove(tenantId);
     if (resourceGroupId != null) {
