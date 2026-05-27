@@ -41,7 +41,8 @@ public class AICoreSetupHandler implements EventHandler {
     } catch (Exception e) {
       throw new ServiceException(
           ErrorStatuses.SERVER_ERROR,
-          "Failed to create AI Core resources for tenant: " + tenantId,
+          "Failed to create AI Core resources for tenant: {}",
+          tenantId,
           e);
     }
   }
@@ -79,7 +80,9 @@ public class AICoreSetupHandler implements EventHandler {
       }
       throw new ServiceException(
           ErrorStatuses.SERVER_ERROR,
-          "Failed to delete AI Core resource group " + resourceGroupId + " for tenant " + tenantId,
+          "Failed to delete AI Core resource group {} for tenant {}",
+          resourceGroupId,
+          tenantId,
           e);
     }
   }
@@ -103,7 +106,8 @@ public class AICoreSetupHandler implements EventHandler {
     } catch (OpenApiRequestException e) {
       throw new ServiceException(
           ErrorStatuses.SERVER_ERROR,
-          "Failed to look up AI Core resource group for tenant " + tenantId,
+          "Failed to look up AI Core resource group for tenant {}",
+          tenantId,
           e);
     }
     List<BckndResourceGroup> resources = result.getResources();

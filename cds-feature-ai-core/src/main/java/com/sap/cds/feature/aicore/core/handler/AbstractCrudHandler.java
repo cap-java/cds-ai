@@ -5,12 +5,10 @@ package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.services.handler.EventHandler;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 abstract class AbstractCrudHandler implements EventHandler {
 
@@ -34,7 +32,7 @@ abstract class AbstractCrudHandler implements EventHandler {
   }
 
   protected static <T, R> List<R> mapResources(List<T> resources, Function<T, R> mapper) {
-    if (resources == null) return new ArrayList<>();
-    return resources.stream().map(mapper).collect(Collectors.toList());
+    if (resources == null) return List.of();
+    return resources.stream().map(mapper).toList();
   }
 }
