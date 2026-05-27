@@ -96,7 +96,9 @@ jobs:
         run: |
           cds bind --exec -- node -e "
           const https = require('https');
-          const key = JSON.parse(process.env.AICORE_SERVICE_KEY);
+          const vcap = JSON.parse(process.env.VCAP_SERVICES || '{}');
+          const key = (vcap.aicore || vcap['ai-core'] || [{}])[0].credentials || JSON.parse(process.env.AICORE_SERVICE_KEY || 'null');
+          if (!key) { console.log('No AI Core credentials found, skipping cleanup'); process.exit(0); }
           const tokenUrl = key.url + '/oauth/token';
           const apiUrl = key.serviceurls.AI_API_URL;
           function fetch(url, opts) {
