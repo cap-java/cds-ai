@@ -12,7 +12,7 @@ import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
-import com.sap.cds.ql.cqn.CqnInsert;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +29,6 @@ class ResourceGroupHandlerTest {
   @Mock private AICoreServiceImpl service;
   @Mock private ResourceGroupApi resourceGroupApi;
   @Mock private CdsCreateEventContext context;
-  @Mock private CqnInsert insert;
 
   private ResourceGroupHandler handler;
 
@@ -42,10 +41,9 @@ class ResourceGroupHandlerTest {
   @Test
   void onCreate_withTenantIdOnly_setsOnlyTenantLabel() {
     Map<String, Object> entry = Map.of("resourceGroupId", "rg-1", "tenantId", "tenant-a");
-    when(context.getCqn()).thenReturn(insert);
-    when(insert.entries()).thenReturn(List.of(entry));
+    List<ResourceGroups> entries = List.of(ResourceGroups.of(entry));
 
-    handler.onCreate(context);
+    handler.onCreate(context, entries);
 
     BckndResourceGroupsPostRequest request = captureCreateRequest();
     assertThat(request.getResourceGroupId()).isEqualTo("rg-1");
@@ -62,10 +60,9 @@ class ResourceGroupHandlerTest {
             "rg-2",
             "labels",
             List.of(Map.of("key", "env", "value", "prod"), Map.of("key", "team", "value", "ai")));
-    when(context.getCqn()).thenReturn(insert);
-    when(insert.entries()).thenReturn(List.of(entry));
+    List<ResourceGroups> entries = List.of(ResourceGroups.of(entry));
 
-    handler.onCreate(context);
+    handler.onCreate(context, entries);
 
     BckndResourceGroupsPostRequest request = captureCreateRequest();
     assertThat(request.getResourceGroupId()).isEqualTo("rg-2");
@@ -84,10 +81,9 @@ class ResourceGroupHandlerTest {
             "tenant-b",
             "labels",
             List.of(Map.of("key", "env", "value", "prod")));
-    when(context.getCqn()).thenReturn(insert);
-    when(insert.entries()).thenReturn(List.of(entry));
+    List<ResourceGroups> entries = List.of(ResourceGroups.of(entry));
 
-    handler.onCreate(context);
+    handler.onCreate(context, entries);
 
     BckndResourceGroupsPostRequest request = captureCreateRequest();
     // Tenant label first, then user-supplied labels — and tenant label is NOT lost.
@@ -107,10 +103,9 @@ class ResourceGroupHandlerTest {
             "tenant-auto",
             "labels",
             List.of(Map.of("key", AICoreServiceImpl.TENANT_LABEL_KEY, "value", "tenant-user")));
-    when(context.getCqn()).thenReturn(insert);
-    when(insert.entries()).thenReturn(List.of(entry));
+    List<ResourceGroups> entries = List.of(ResourceGroups.of(entry));
 
-    handler.onCreate(context);
+    handler.onCreate(context, entries);
 
     BckndResourceGroupsPostRequest request = captureCreateRequest();
     assertThat(request.getLabels())
