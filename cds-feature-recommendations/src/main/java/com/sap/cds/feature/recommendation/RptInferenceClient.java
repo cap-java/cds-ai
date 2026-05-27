@@ -22,6 +22,22 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Client for invoking the SAP RPT-1 foundation model for tabular predictions. This class is part of
+ * the public API and can be used directly by applications that need to perform custom inference
+ * outside the automatic Fiori recommendation flow.
+ *
+ * <p>Example usage:
+ *
+ * <pre>{@code
+ * AICoreService service = ...;
+ * String rg = service.resourceGroupForTenant(tenantId);
+ * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
+ * RptInferenceClient client =
+ *     new RptInferenceClient(service.inferenceClient(rg, deploymentId), service.getRetry());
+ * List<CdsData> predictions = client.predict(rows, List.of("targetColumn"), "ID");
+ * }</pre>
+ */
 public class RptInferenceClient implements RecommendationClient {
 
   private static final Logger logger = LoggerFactory.getLogger(RptInferenceClient.class);
