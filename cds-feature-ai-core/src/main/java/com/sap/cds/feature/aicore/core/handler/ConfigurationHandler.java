@@ -11,6 +11,9 @@ import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
 import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.core.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ParameterArgumentBinding;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnInsert;
@@ -54,16 +57,16 @@ public class ConfigurationHandler extends AbstractCrudHandler {
         keys,
         values);
 
-    String id = (String) keys.get("id");
+    String id = (String) keys.get(Configurations.ID);
     if (id != null) {
       AiConfiguration config = configurationApi.get(resourceGroupId, id);
-      context.setResult(List.of(toMap(config, resourceGroupId)));
+      context.setResult(List.of(toConfigurations(config, resourceGroupId)));
     } else {
-      String scenarioId = (String) values.get("scenarioId");
+      String scenarioId = (String) values.get(Configurations.SCENARIO_ID);
       AiConfigurationList result =
           configurationApi.query(resourceGroupId, scenarioId, null, null, null, null, null, null);
       List<Map<String, Object>> results =
-          mapResources(result.getResources(), c -> toMap(c, resourceGroupId));
+          mapResources(result.getResources(), c -> toConfigurations(c, resourceGroupId));
       logger.debug("ConfigurationApi.query returned {} resources", results.size());
       context.setResult(results);
     }
@@ -77,9 +80,9 @@ public class ConfigurationHandler extends AbstractCrudHandler {
 
     for (Map<String, Object> entry : entries) {
       String resourceGroupId = resolveResourceGroup(entry);
-      String name = (String) entry.get("name");
-      String executableId = (String) entry.get("executableId");
-      String scenarioId = (String) entry.get("scenarioId");
+      String name = (String) entry.get(Configurations.NAME);
+      String executableId = (String) entry.get(Configurations.EXECUTABLE_ID);
+      String scenarioId = (String) entry.get(Configurations.SCENARIO_ID);
 
       AiConfigurationBaseData request =
           AiConfigurationBaseData.create()
@@ -89,22 +92,22 @@ public class ConfigurationHandler extends AbstractCrudHandler {
 
       @SuppressWarnings("unchecked")
       List<Map<String, Object>> paramBindings =
-          (List<Map<String, Object>>) entry.get("parameterBindings");
+          (List<Map<String, Object>>) entry.get(Configurations.PARAMETER_BINDINGS);
       if (paramBindings != null) {
         List<AiParameterArgumentBinding> sdkBindings =
             paramBindings.stream()
                 .map(
                     p ->
                         AiParameterArgumentBinding.create()
-                            .key((String) p.get("key"))
-                            .value((String) p.get("value")))
+                            .key((String) p.get(ParameterArgumentBinding.KEY))
+                            .value((String) p.get(ParameterArgumentBinding.VALUE)))
                 .toList();
         request.parameterBindings(sdkBindings);
       }
 
       var response = configurationApi.create(resourceGroupId, request);
       CdsData result = CdsData.create(entry);
-      result.put("id", response.getId());
+      result.put(Configurations.ID, response.getId());
       results.add(result);
       logger.debug(
           "Created configuration {} in resource group {}", response.getId(), resourceGroupId);
@@ -112,25 +115,25 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     context.setResult(results);
   }
 
-  private CdsData toMap(AiConfiguration config, String resourceGroupId) {
-    CdsData data = CdsData.create();
-    data.put("id", config.getId());
-    data.put("name", config.getName());
-    data.put("executableId", config.getExecutableId());
-    data.put("scenarioId", config.getScenarioId());
-    data.put("createdAt", config.getCreatedAt());
+  private Configurations toConfigurations(AiConfiguration config, String resourceGroupId) {
+    Configurations data = Configurations.create();
+    data.setId(config.getId());
+    data.setName(config.getName());
+    data.setExecutableId(config.getExecutableId());
+    data.setScenarioId(config.getScenarioId());
+    data.put(Configurations.CREATED_AT, config.getCreatedAt());
     if (config.getParameterBindings() != null) {
       List<CdsData> bindings =
           config.getParameterBindings().stream()
               .map(
                   b -> {
-                    CdsData bm = CdsData.create();
-                    bm.put("key", b.getKey());
-                    bm.put("value", b.getValue());
-                    return bm;
+                    var bm = ParameterArgumentBinding.create();
+                    bm.setKey(b.getKey());
+                    bm.setValue(b.getValue());
+                    return (CdsData) bm;
                   })
               .toList();
-      data.put("parameterBindings", bindings);
+      data.put(Configurations.PARAMETER_BINDINGS, bindings);
     }
     if (config.getInputArtifactBindings() != null) {
       List<CdsData> bindings =
@@ -138,14 +141,14 @@ public class ConfigurationHandler extends AbstractCrudHandler {
               .map(
                   b -> {
                     CdsData bm = CdsData.create();
-                    bm.put("key", b.getKey());
+                    bm.put(ParameterArgumentBinding.KEY, b.getKey());
                     bm.put("artifactId", b.getArtifactId());
                     return bm;
                   })
               .toList();
-      data.put("inputArtifactBindings", bindings);
+      data.put(Configurations.INPUT_ARTIFACT_BINDINGS, bindings);
     }
-    data.putPath("resourceGroup.resourceGroupId", resourceGroupId);
+    data.setResourceGroup(ResourceGroups.create(resourceGroupId));
     return data;
   }
 }

@@ -12,6 +12,7 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.core.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnDelete;
@@ -53,9 +54,9 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analysis.targetKeys();
     Map<String, Object> values = analysis.targetValues();
 
-    String resourceGroupId = (String) keys.get("resourceGroupId");
+    String resourceGroupId = (String) keys.get(ResourceGroups.RESOURCE_GROUP_ID);
     if (resourceGroupId == null) {
-      resourceGroupId = (String) values.get("resourceGroupId");
+      resourceGroupId = (String) values.get(ResourceGroups.RESOURCE_GROUP_ID);
     }
 
     if (resourceGroupId != null) {
@@ -63,8 +64,8 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
       context.setResult(List.of(toMap(rg)));
     } else {
       List<String> labelSelector = null;
-      if (values.containsKey("tenantId")) {
-        String tenantId = (String) values.get("tenantId");
+      if (values.containsKey(ResourceGroups.TENANT_ID)) {
+        String tenantId = (String) values.get(ResourceGroups.TENANT_ID);
         labelSelector = List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + tenantId);
       }
       BckndResourceGroupList result =
@@ -80,12 +81,13 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     List<Map<String, Object>> results = new ArrayList<>();
 
     for (Map<String, Object> entry : entries) {
-      String resourceGroupId = (String) entry.get("resourceGroupId");
+      String resourceGroupId = (String) entry.get(ResourceGroups.RESOURCE_GROUP_ID);
       BckndResourceGroupsPostRequest request =
           BckndResourceGroupsPostRequest.create().resourceGroupId(resourceGroupId);
 
       @SuppressWarnings("unchecked")
-      List<Map<String, Object>> labels = (List<Map<String, Object>>) entry.get("labels");
+      List<Map<String, Object>> labels =
+          (List<Map<String, Object>>) entry.get(ResourceGroups.LABELS);
       List<BckndResourceGroupLabel> mergedLabels = new ArrayList<>();
 
       // User-supplied labels take precedence: if they include the tenant label key, we skip
@@ -95,8 +97,8 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
               && labels.stream()
                   .anyMatch(l -> AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.get("key")));
 
-      if (entry.containsKey("tenantId") && !userSuppliedTenantLabel) {
-        String tenantId = (String) entry.get("tenantId");
+      if (entry.containsKey(ResourceGroups.TENANT_ID) && !userSuppliedTenantLabel) {
+        String tenantId = (String) entry.get(ResourceGroups.TENANT_ID);
         mergedLabels.add(
             BckndResourceGroupLabel.create()
                 .key(AICoreServiceImpl.TENANT_LABEL_KEY)
@@ -131,7 +133,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     BckndResourceGroupPatchRequest patchRequest = BckndResourceGroupPatchRequest.create();
 
     @SuppressWarnings("unchecked")
-    List<Map<String, Object>> labels = (List<Map<String, Object>>) data.get("labels");
+    List<Map<String, Object>> labels = (List<Map<String, Object>>) data.get(ResourceGroups.LABELS);
     if (labels != null) {
       patchRequest.labels(toSdkLabels(labels));
     }
@@ -155,11 +157,11 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
   }
 
   private String resolveResourceGroupId(Map<String, Object> keys) {
-    if (keys.containsKey("resourceGroupId")) {
-      return (String) keys.get("resourceGroupId");
+    if (keys.containsKey(ResourceGroups.RESOURCE_GROUP_ID)) {
+      return (String) keys.get(ResourceGroups.RESOURCE_GROUP_ID);
     }
-    if (keys.containsKey("tenantId")) {
-      return service.resourceGroupForTenant((String) keys.get("tenantId"));
+    if (keys.containsKey(ResourceGroups.TENANT_ID)) {
+      return service.resourceGroupForTenant((String) keys.get(ResourceGroups.TENANT_ID));
     }
     return service.getDefaultResourceGroup();
   }
@@ -174,24 +176,25 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
         .toList();
   }
 
-  private CdsData toMap(BckndResourceGroup rg) {
-    CdsData data = CdsData.create();
-    data.put("resourceGroupId", rg.getResourceGroupId());
-    data.put("status", rg.getStatus().getValue());
-    data.put("statusMessage", rg.getStatusMessage());
-    data.put("createdAt", rg.getCreatedAt());
+  private ResourceGroups toMap(BckndResourceGroup rg) {
+    ResourceGroups data = ResourceGroups.create();
+    data.setResourceGroupId(rg.getResourceGroupId());
+    data.setStatus(rg.getStatus().getValue());
+    data.setStatusMessage(rg.getStatusMessage());
+    data.put(ResourceGroups.CREATED_AT, rg.getCreatedAt());
     if (rg.getLabels() != null) {
       List<CdsData> labels = new ArrayList<>(rg.getLabels().size());
       for (BckndResourceGroupLabel l : rg.getLabels()) {
-        CdsData lm = CdsData.create();
-        lm.put("key", l.getKey());
-        lm.put("value", l.getValue());
+        var lm =
+            com.sap.cds.feature.aicore.generated.cds4j.aicore.BckndResourceGroupLabel.create();
+        lm.setKey(l.getKey());
+        lm.setValue(l.getValue());
         labels.add(lm);
         if (AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.getKey())) {
-          data.put("tenantId", l.getValue());
+          data.setTenantId(l.getValue());
         }
       }
-      data.put("labels", labels);
+      data.put(ResourceGroups.LABELS, labels);
     }
     return data;
   }

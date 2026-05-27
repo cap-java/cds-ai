@@ -3,6 +3,8 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
+
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
@@ -40,7 +42,7 @@ public class ActionHandler extends AbstractCrudHandler {
   @On(event = "stop", entity = AICoreService.DEPLOYMENTS)
   public void onStop(EventContext context) {
     Map<String, Object> keys = asMap(context.get("keys"));
-    String deploymentId = (String) keys.get("id");
+    String deploymentId = (String) keys.get(Deployments.ID);
     String resourceGroupId = resolveResourceGroup(keys);
 
     DeploymentApi api = service.getDeploymentApi();
