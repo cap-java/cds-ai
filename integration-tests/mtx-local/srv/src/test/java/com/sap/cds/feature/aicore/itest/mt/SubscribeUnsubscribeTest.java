@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +51,7 @@ class SubscribeUnsubscribeTest {
 
   @Test
   void subscribeTenant_createsResourceGroup() throws Exception {
-    AICoreService service = getService();
+    AbstractAICoreService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-3");
 
@@ -60,7 +61,7 @@ class SubscribeUnsubscribeTest {
 
   @Test
   void unsubscribeTenant_clearsCaches() throws Exception {
-    AICoreService service = getService();
+    AbstractAICoreService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-3");
 
@@ -94,7 +95,7 @@ class SubscribeUnsubscribeTest {
     }
   }
 
-  private AICoreService getService() {
-    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private AbstractAICoreService getService() {
+    return (AbstractAICoreService) runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 }

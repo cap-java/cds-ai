@@ -25,7 +25,6 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
-import com.sap.cds.services.utils.services.AbstractCqnService;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import io.github.resilience4j.core.IntervalFunction;
@@ -38,7 +37,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AICoreServiceImpl extends AbstractCqnService implements AICoreService {
+public class AICoreServiceImpl extends AbstractAICoreService {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreServiceImpl.class);
 
@@ -156,22 +155,18 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return retry;
   }
 
-  @Override
   public String getDefaultResourceGroup() {
     return defaultResourceGroup;
   }
 
-  @Override
   public String getResourceGroupPrefix() {
     return resourceGroupPrefix;
   }
 
-  @Override
   public Map<String, String> getTenantResourceGroupCache() {
     return tenantResourceGroupCache.asMap();
   }
 
-  @Override
   public Map<String, String> getResourceGroupDeploymentCache() {
     return resourceGroupDeploymentCache.asMap();
   }
@@ -192,7 +187,6 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return resourceGroupApi;
   }
 
-  @Override
   public String resolveResourceGroupFromKeys(Map<String, Object> keys) {
     if (keys.containsKey("resourceGroup_resourceGroupId")) {
       return (String) keys.get("resourceGroup_resourceGroupId");
@@ -205,7 +199,6 @@ public class AICoreServiceImpl extends AbstractCqnService implements AICoreServi
     return resourceGroupForTenant(tenantId);
   }
 
-  @Override
   public void clearTenantCache(String tenantId) {
     String resourceGroupId = tenantResourceGroupCache.asMap().remove(tenantId);
     if (resourceGroupId != null) {
