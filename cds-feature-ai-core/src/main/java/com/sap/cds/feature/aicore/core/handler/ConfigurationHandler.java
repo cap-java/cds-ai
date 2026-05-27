@@ -11,6 +11,7 @@ import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
 import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.core.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ArtifactArgumentBinding;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ParameterArgumentBinding;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
@@ -136,13 +137,13 @@ public class ConfigurationHandler extends AbstractCrudHandler {
       data.put(Configurations.PARAMETER_BINDINGS, bindings);
     }
     if (config.getInputArtifactBindings() != null) {
-      List<CdsData> bindings =
+      List<ArtifactArgumentBinding> bindings =
           config.getInputArtifactBindings().stream()
               .map(
                   b -> {
-                    CdsData bm = CdsData.create();
-                    bm.put(ParameterArgumentBinding.KEY, b.getKey());
-                    bm.put("artifactId", b.getArtifactId());
+                    ArtifactArgumentBinding bm = ArtifactArgumentBinding.create();
+                    bm.setKey(b.getKey());
+                    bm.setArtifactId(b.getArtifactId());
                     return bm;
                   })
               .toList();
