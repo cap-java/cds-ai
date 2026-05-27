@@ -16,6 +16,7 @@ import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.CqnService;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,6 +71,8 @@ class ActionTest extends BaseIntegrationTest {
     assertThat(second).isEqualTo(first);
   }
 
+  @Disabled("Stops the shared RPT deployment needed by subsequent Recommendation tests; "
+      + "re-enable once test creates its own isolated deployment")
   @Test
   void stop_deployment_changesTargetStatus() {
     CqnService service = getAICoreCqnService();
