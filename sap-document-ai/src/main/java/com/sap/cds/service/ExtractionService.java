@@ -1,4 +1,4 @@
-package com.sap.cds.orchestrator;
+package com.sap.cds.service;
 
 public interface ExtractionService {
 

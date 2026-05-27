@@ -3,7 +3,7 @@ package com.sap.cds.handlers;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.Attachments;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
-import com.sap.cds.orchestrator.ExtractionService;
+import com.sap.cds.service.ExtractionService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -27,9 +27,9 @@ public class AttachmentEventHandler implements EventHandler {
         String tenantId = context.getUserInfo().getTenant();
         if (attachmentId == null) {
             log.warn("[sap-document-ai] attachmentId is null, skipping extraction");
+            return;
         }
-        log.info("[sap-document-ai] Attachment persisted. Triggering extraction for attachmentId={}, tenantId={}",
-                attachmentId, tenantId);
+        log.info("[sap-document-ai] Attachment persisted. Triggering extraction for attachmentId={}, tenantId={}", attachmentId, tenantId);
         extractionService.startExtraction(attachmentId, tenantId);
     }
 

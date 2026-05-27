@@ -1,4 +1,4 @@
-package com.sap.cds.orchestrator;
+package com.sap.cds.service;
 
 import com.sap.cds.Result;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;
@@ -14,15 +14,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ExtractionOrchestrator implements ExtractionService {
+public class ExtractionServiceImpl implements ExtractionService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExtractionOrchestrator.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExtractionServiceImpl.class);
     private static final int MAX_PARALLEL_EXTRACTIONS = Runtime.getRuntime().availableProcessors();
     private static final ExecutorService executor = Executors.newFixedThreadPool(MAX_PARALLEL_EXTRACTIONS);
 
     private final PersistenceService persistenceService;
 
-    public ExtractionOrchestrator(PersistenceService persistenceService) {
+    public ExtractionServiceImpl(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 

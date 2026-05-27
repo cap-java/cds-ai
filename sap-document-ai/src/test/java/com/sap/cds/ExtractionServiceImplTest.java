@@ -2,7 +2,7 @@ package com.sap.cds;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionStatus;
-import com.sap.cds.orchestrator.ExtractionOrchestrator;
+import com.sap.cds.service.ExtractionServiceImpl;
 import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -22,7 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ExtractionOrchestratorTest {
+class ExtractionServiceImplTest {
 
     @Mock
     PersistenceService persistenceService;
@@ -30,7 +30,7 @@ class ExtractionOrchestratorTest {
     @Mock
     Result insertResult;
 
-    ExtractionOrchestrator orchestrator;
+    ExtractionServiceImpl orchestrator;
 
     @BeforeEach
     void setUp() {
@@ -39,7 +39,7 @@ class ExtractionOrchestratorTest {
         when(insertResult.single(ExtractionJob.class)).thenReturn(createdJob);
         when(persistenceService.run(any(CqnInsert.class))).thenReturn(insertResult);
         lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
-        orchestrator = new ExtractionOrchestrator(persistenceService);
+        orchestrator = new ExtractionServiceImpl(persistenceService);
     }
 
     @Test

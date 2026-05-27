@@ -2,7 +2,7 @@ package com.sap.cds;
 
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.handlers.AttachmentEventHandler;
-import com.sap.cds.orchestrator.ExtractionService;
+import com.sap.cds.service.ExtractionService;
 import com.sap.cds.services.request.UserInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
