@@ -123,14 +123,14 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     data.setScenarioId(config.getScenarioId());
     data.put(Configurations.CREATED_AT, config.getCreatedAt());
     if (config.getParameterBindings() != null) {
-      List<CdsData> bindings =
+      List<ParameterArgumentBinding> bindings =
           config.getParameterBindings().stream()
               .map(
                   b -> {
-                    var bm = ParameterArgumentBinding.create();
+                    ParameterArgumentBinding bm = ParameterArgumentBinding.create();
                     bm.setKey(b.getKey());
                     bm.setValue(b.getValue());
-                    return (CdsData) bm;
+                    return bm;
                   })
               .toList();
       data.put(Configurations.PARAMETER_BINDINGS, bindings);
