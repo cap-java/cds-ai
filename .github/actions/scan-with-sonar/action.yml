@@ -49,7 +49,7 @@ runs:
       shell: bash
 
     - name: Generate aggregate coverage report
-      run: mvn verify -ntp -B -pl coverage-report -Dcds.install-node.skip
+      run: mvn verify -ntp -B -pl coverage-report -am -DskipTests -Dcds.install-node.skip
       shell: bash
 
     - name: Verify JaCoCo reports exist
@@ -74,7 +74,7 @@ runs:
         -Dsonar.qualitygate.wait=true
         -Dsonar.java.source=17
         -Dsonar.exclusions=**/samples/**,**/integration-tests/**
-        -Dsonar.coverage.jacoco.xmlReportPaths=${{ github.workspace }}/coverage-report/target/site/jacoco-aggregate/jacoco.xml
+        -Dsonar.coverage.jacoco.xmlReportPaths=${{ github.workspace }}/cds-feature-ai-core/target/site/jacoco/jacoco.xml,${{ github.workspace }}/cds-feature-recommendations/target/site/jacoco/jacoco.xml,${{ github.workspace }}/integration-tests/spring/target/site/jacoco/jacoco.xml,${{ github.workspace }}/coverage-report/target/site/jacoco-aggregate/jacoco.xml
         -Dsonar.coverage.exclusions=**/src/test/**,**/src/gen/**
         -B -ntp
       shell: bash
