@@ -5,7 +5,6 @@ package com.sap.cds.feature.aicore.core;
 
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.runtime.CdsRuntime;
-import com.sap.cds.services.utils.services.AbstractCqnService;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
@@ -14,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MockAICoreServiceImpl extends AbstractCqnService implements AICoreService {
+public class MockAICoreServiceImpl extends AbstractAICoreService {
 
   private static final Logger logger = LoggerFactory.getLogger(MockAICoreServiceImpl.class);
 

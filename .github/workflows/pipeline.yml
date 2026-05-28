@@ -73,7 +73,7 @@ jobs:
     name: Cleanup Integration Test Resources
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [integration-tests]
+    needs: [integration-tests, sonarqube-scan]
     if: always()
     permissions:
       contents: read
@@ -118,10 +118,10 @@ jobs:
             const tokenRes = await fetch(tokenUrl+'?'+tokenParams.toString(), {headers:{'Authorization':authHeader}});
             const token = JSON.parse(tokenRes.body).access_token;
             const headers = {'Authorization':'Bearer '+token, 'AI-Resource-Group':'default'};
-            const prefix = 'itest-${{ github.run_id }}-${{ github.run_attempt }}';
+            const prefixes = ['itest-${{ github.run_id }}-${{ github.run_attempt }}', 'sonar-${{ github.run_id }}-${{ github.run_attempt }}'];
             const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
             const groups = JSON.parse(rgRes.body).resources || [];
-            const toDelete = groups.filter(rg => rg.resourceGroupId && rg.resourceGroupId.startsWith(prefix));
+            const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));
             for (const rg of toDelete) {
               const res = await fetch(apiUrl+'/v2/admin/resourceGroups/'+rg.resourceGroupId, {method:'DELETE', headers});
               console.log('Delete', rg.resourceGroupId, '->', res.status);

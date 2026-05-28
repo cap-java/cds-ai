@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ class MultiTenancyTest extends BaseIntegrationTest {
 
   @AfterEach
   void cleanup() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     if (tenantA != null) {
       service.clearTenantCache(tenantA);
       tenantA = null;
@@ -31,7 +32,7 @@ class MultiTenancyTest extends BaseIntegrationTest {
 
   @Test
   void differentTenants_getDifferentResourceGroups() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeTrue(service.isMultiTenancyEnabled(), "Multi-tenancy is not enabled");
     tenantA = "itest-mt-a-" + System.currentTimeMillis();
     tenantB = "itest-mt-b-" + System.currentTimeMillis();
@@ -46,7 +47,7 @@ class MultiTenancyTest extends BaseIntegrationTest {
 
   @Test
   void resourceGroupPrefix_appliedCorrectly() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeTrue(service.isMultiTenancyEnabled(), "Multi-tenancy is not enabled");
     tenantA = "itest-prefix-" + System.currentTimeMillis();
 
@@ -56,7 +57,7 @@ class MultiTenancyTest extends BaseIntegrationTest {
 
   @Test
   void cacheIsolation_perTenant() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeTrue(service.isMultiTenancyEnabled(), "Multi-tenancy is not enabled");
     tenantA = "itest-cache-a-" + System.currentTimeMillis();
     tenantB = "itest-cache-b-" + System.currentTimeMillis();
@@ -70,7 +71,7 @@ class MultiTenancyTest extends BaseIntegrationTest {
 
   @Test
   void clearTenantCache_onlyAffectsTargetTenant() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeTrue(service.isMultiTenancyEnabled(), "Multi-tenancy is not enabled");
     tenantA = "itest-clear-a-" + System.currentTimeMillis();
     tenantB = "itest-clear-b-" + System.currentTimeMillis();
@@ -86,7 +87,7 @@ class MultiTenancyTest extends BaseIntegrationTest {
 
   @Test
   void singleTenancy_alwaysReturnsDefault() {
-    AICoreService service = getAICoreService();
+    AbstractAICoreService service = getAICoreServiceImpl();
     assumeFalse(service.isMultiTenancyEnabled(), "Multi-tenancy is enabled");
     String rg1 = service.resourceGroupForTenant("tenant-x");
     String rg2 = service.resourceGroupForTenant("tenant-y");

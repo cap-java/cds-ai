@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.CqnService;
@@ -20,7 +21,7 @@ class DeploymentTest extends BaseIntegrationTest {
   @Test
   void readAll_returnsDeployments() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
     Result result =
         service.run(
             Select.from("AICore.deployments")
@@ -32,7 +33,7 @@ class DeploymentTest extends BaseIntegrationTest {
   @Test
   void readSingle_returnsDeploymentDetails() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
     Result all =
         service.run(
             Select.from("AICore.deployments")
@@ -62,7 +63,7 @@ class DeploymentTest extends BaseIntegrationTest {
   @Test
   void update_targetStatus_stopsRunningDeployment() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreService().getDefaultResourceGroup();
+    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
 
     Result deployments =
         service.run(
