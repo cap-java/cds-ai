@@ -126,6 +126,13 @@ class ResourceGroupTest extends BaseIntegrationTest {
 
     service.run(Delete.from("AICore.resourceGroups").where(r -> r.get("resourceGroupId").eq(rgId)));
 
+    Result result = service.run(
+        Select.from("AICore.resourceGroups").where(r -> r.get("resourceGroupId").eq(rgId)));
+    assertThat(result.list()).satisfiesAnyOf(
+        list -> assertThat(list).isEmpty(),
+        list -> assertThat((String) list.get(0).get("status")).isNotEqualTo("PROVISIONED")
+    );
+
     createdResourceGroupId = null; // already deleted
   }
 
