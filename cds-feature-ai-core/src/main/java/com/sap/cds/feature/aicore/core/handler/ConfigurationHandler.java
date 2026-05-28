@@ -8,15 +8,15 @@ import com.sap.ai.sdk.core.model.AiConfiguration;
 import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
-import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.core.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ArtifactArgumentBinding;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ParameterArgumentBinding;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ParameterArgumentBindingList;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
-import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.cds.CdsCreateEventContext;
@@ -25,6 +25,7 @@ import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -73,42 +74,35 @@ public class ConfigurationHandler extends AbstractCrudHandler {
   }
 
   @On(event = CqnService.EVENT_CREATE, entity = AICoreService.CONFIGURATIONS)
-  public void onCreate(CdsCreateEventContext context) {
-    CqnInsert insert = context.getCqn();
-    List<Map<String, Object>> entries = insert.entries();
+  public void onCreate(CdsCreateEventContext context, List<Configurations> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
-    for (Map<String, Object> entry : entries) {
+    for (Configurations entry : entries) {
       String resourceGroupId = resolveResourceGroup(entry);
-      String name = (String) entry.get(Configurations.NAME);
-      String executableId = (String) entry.get(Configurations.EXECUTABLE_ID);
-      String scenarioId = (String) entry.get(Configurations.SCENARIO_ID);
 
       AiConfigurationBaseData request =
           AiConfigurationBaseData.create()
-              .name(name)
-              .executableId(executableId)
-              .scenarioId(scenarioId);
+              .name(entry.getName())
+              .executableId(entry.getExecutableId())
+              .scenarioId(entry.getScenarioId());
 
-      @SuppressWarnings("unchecked")
-      List<Map<String, Object>> paramBindings =
-          (List<Map<String, Object>>) entry.get(Configurations.PARAMETER_BINDINGS);
+      Collection<ParameterArgumentBindingList.Item> paramBindings =
+          entry.getParameterBindings();
       if (paramBindings != null) {
         List<AiParameterArgumentBinding> sdkBindings =
             paramBindings.stream()
                 .map(
                     p ->
                         AiParameterArgumentBinding.create()
-                            .key((String) p.get(ParameterArgumentBinding.KEY))
-                            .value((String) p.get(ParameterArgumentBinding.VALUE)))
+                            .key(p.getKey())
+                            .value(p.getValue()))
                 .toList();
         request.parameterBindings(sdkBindings);
       }
 
       var response = configurationApi.create(resourceGroupId, request);
-      CdsData result = CdsData.create(entry);
-      result.put(Configurations.ID, response.getId());
-      results.add(result);
+      entry.setId(response.getId());
+      results.add(entry);
       logger.debug(
           "Created configuration {} in resource group {}", response.getId(), resourceGroupId);
     }
@@ -123,26 +117,26 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     data.setScenarioId(config.getScenarioId());
     data.put(Configurations.CREATED_AT, config.getCreatedAt());
     if (config.getParameterBindings() != null) {
-      List<CdsData> bindings =
+      List<ParameterArgumentBinding> bindings =
           config.getParameterBindings().stream()
               .map(
                   b -> {
-                    var bm = ParameterArgumentBinding.create();
+                    ParameterArgumentBinding bm = ParameterArgumentBinding.create();
                     bm.setKey(b.getKey());
                     bm.setValue(b.getValue());
-                    return (CdsData) bm;
+                    return bm;
                   })
               .toList();
       data.put(Configurations.PARAMETER_BINDINGS, bindings);
     }
     if (config.getInputArtifactBindings() != null) {
-      List<CdsData> bindings =
+      List<ArtifactArgumentBinding> bindings =
           config.getInputArtifactBindings().stream()
               .map(
                   b -> {
-                    CdsData bm = CdsData.create();
-                    bm.put(ParameterArgumentBinding.KEY, b.getKey());
-                    bm.put("artifactId", b.getArtifactId());
+                    ArtifactArgumentBinding bm = ArtifactArgumentBinding.create();
+                    bm.setKey(b.getKey());
+                    bm.setArtifactId(b.getArtifactId());
                     return bm;
                   })
               .toList();

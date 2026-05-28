@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
@@ -36,13 +37,13 @@ class TenantIsolationTest {
 
   @Test
   void multiTenancyEnabled() {
-    AICoreService service = getService();
+    AbstractAICoreService service = getService();
     assertThat(service.isMultiTenancyEnabled()).isTrue();
   }
 
   @Test
   void differentTenants_getDifferentResourceGroups() throws Exception {
-    AICoreService service = getService();
+    AbstractAICoreService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-1");
     subscriptionEndpointClient.subscribeTenant("tenant-2");
@@ -57,7 +58,7 @@ class TenantIsolationTest {
 
   @Test
   void resourceGroupPrefix_applied() throws Exception {
-    AICoreService service = getService();
+    AbstractAICoreService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-1");
     String rg = service.getTenantResourceGroupCache().get("tenant-1");
@@ -67,7 +68,7 @@ class TenantIsolationTest {
 
   @Test
   void clearTenantCache_onlyAffectsTarget() throws Exception {
-    AICoreService service = getService();
+    AbstractAICoreService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-1");
     subscriptionEndpointClient.subscribeTenant("tenant-2");
@@ -80,8 +81,8 @@ class TenantIsolationTest {
     assertThat(service.getTenantResourceGroupCache()).containsEntry("tenant-2", rg2);
   }
 
-  private AICoreService getService() {
-    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private AbstractAICoreService getService() {
+    return (AbstractAICoreService) runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 
   @AfterEach
