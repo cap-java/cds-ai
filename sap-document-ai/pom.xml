@@ -100,9 +100,8 @@
               <goal>cds</goal>
             </goals>
             <configuration>
-              <workingDirectory>./src/main/resources/cds/com.sap.cds/sap-document-ai</workingDirectory>
               <commands>
-                <command>build --for java --src ./ --dest ../../../../../../../gen/srv</command>
+                <command>build --for java --src ${project.basedir}/src/main/resources/cds/com.sap.cds/sap-document-ai --dest ${project.basedir}/gen/srv</command>
               </commands>
             </configuration>
           </execution>
