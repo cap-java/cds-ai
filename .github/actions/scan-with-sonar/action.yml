@@ -69,7 +69,7 @@ runs:
         mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
         -Dsonar.host.url=https://sonar.tools.sap
         -Dsonar.token="${SONAR_TOKEN}"
-        -Dsonar.projectKey=cds-ai
+        -Dsonar.projectKey=com.sap.cds.cds-ai
         -Dsonar.projectVersion=${{ steps.get-revision.outputs.REVISION }}
         -Dsonar.qualitygate.wait=true
         -Dsonar.java.source=17
