@@ -133,7 +133,7 @@ class RecommendationContextBuilder {
     return CdsData.create(predictRow);
   }
 
-  String computeSyntheticKey(Map<String, Object> row) {
+  private String computeSyntheticKey(Map<String, Object> row) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < keyNames.size(); i++) {
       if (i > 0) {
