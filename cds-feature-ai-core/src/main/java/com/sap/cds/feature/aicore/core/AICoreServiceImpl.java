@@ -65,17 +65,6 @@ public class AICoreServiceImpl extends AbstractAICoreService {
   private final ResourceGroupApi resourceGroupApi;
   private final AiCoreService sdkService;
 
-  public AICoreServiceImpl(String name, CdsRuntime runtime, boolean multiTenancyEnabled) {
-    this(
-        name,
-        runtime,
-        multiTenancyEnabled,
-        new DeploymentApi(),
-        new ConfigurationApi(),
-        new ResourceGroupApi(),
-        new AiCoreService());
-  }
-
   public AICoreServiceImpl(
       String name,
       CdsRuntime runtime,
