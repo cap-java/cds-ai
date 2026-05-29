@@ -1,9 +1,0 @@
-{
-  "name": "sap-document-ai-cds",
-  "version": "1.0.0",
-  "description": "CDS model for sap-document-ai plugin",
-  "license": "ISC",
-  "devDependencies": {
-    "@sap/cds-dk": "^9"
-  }
-}

@@ -13,10 +13,8 @@ import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 public class AttachmentEventHandlerRegistration implements CdsRuntimeConfiguration {
     @Override
     public void eventHandlers(CdsRuntimeConfigurer configurer) {
-        ServiceCatalog serviceCatalog = configurer.getCdsRuntime()
-                .getServiceCatalog();
-        PersistenceService persistenceService = serviceCatalog
-                .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
+        ServiceCatalog serviceCatalog = configurer.getCdsRuntime().getServiceCatalog();
+        PersistenceService persistenceService = serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
         DocumentAiProcessingService documentAiProcessingService = new DefaultDocumentAiProcessingService();
         ExtractionService extractionService = new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
         configurer.eventHandler(new AttachmentEventHandler(extractionService));

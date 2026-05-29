@@ -62,4 +62,5 @@ public class ExtractionServiceImpl implements ExtractionService {
         persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
         logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
     }
+
  }
