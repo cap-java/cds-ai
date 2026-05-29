@@ -1,4 +1,4 @@
-[![REUSE status](https://api.reuse.software/badge/github.com/cap-java/cds-feature-ai)](https://api.reuse.software/info/github.com/cap-java/cds-feature-ai)
+[![REUSE status](https://api.reuse.software/badge/github.com/cap-java/cds-ai)](https://api.reuse.software/info/github.com/cap-java/cds-ai)
 
 # SAP Cloud Application Programming Model - AI Plugins for Java
 
