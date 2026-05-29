@@ -9,13 +9,8 @@
   },
   "cds": {
     "requires": {
-      "db-ext": {
-        "[development]": {
-          "model": "db/sqlite"
-        },
-        "[production]": {
-          "model": "db/hana"
-        }
+      "com.sap.cds/sap-document-ai": {
+        "model": "com.sap.cds/sap-document-ai"
       }
     }
   }

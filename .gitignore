@@ -25,6 +25,12 @@ replay_pid*
 
 # Maven build output
 target/
+.flattened-pom.xml
+
+# CDS build output
+**/gen/
+**/node_modules/
+**/package-lock.json
 
 # IDE
 .idea/
