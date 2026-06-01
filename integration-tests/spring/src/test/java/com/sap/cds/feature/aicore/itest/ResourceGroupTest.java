@@ -1,9 +1,10 @@
 /*
- * © 2026 SAP SE or an SAP affiliate company and cds-feature-ai contributors.
+ * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
 package com.sap.cds.feature.aicore.itest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
@@ -124,7 +125,9 @@ class ResourceGroupTest extends BaseIntegrationTest {
 
     waitForResourceGroupProvisioned(service, rgId);
 
-    service.run(Delete.from("AICore.resourceGroups").where(r -> r.get("resourceGroupId").eq(rgId)));
+    assertThatCode(() ->
+        service.run(Delete.from("AICore.resourceGroups").where(r -> r.get("resourceGroupId").eq(rgId)))
+    ).doesNotThrowAnyException();
 
     createdResourceGroupId = null; // already deleted
   }

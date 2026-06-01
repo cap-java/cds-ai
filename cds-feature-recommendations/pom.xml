@@ -26,6 +26,11 @@
     </dependency>
 
     <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>com.sap.ai.sdk.foundationmodels</groupId>
       <artifactId>sap-rpt</artifactId>
       <version>${ai-sdk.version}</version>

@@ -31,9 +31,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git@github.com:cap-java/cds-feature-ai.git</connection>
-    <developerConnection>scm:git:git@github.com:cap-java/cds-feature-ai.git</developerConnection>
-    <url>https://github.com/cap-java/cds-feature-ai</url>
+    <connection>scm:git:git@github.com:cap-java/cds-ai.git</connection>
+    <developerConnection>scm:git:git@github.com:cap-java/cds-ai.git</developerConnection>
+    <url>https://github.com/cap-java/cds-ai</url>
   </scm>
 
   <modules>
@@ -71,7 +71,7 @@
     <!-- https://central.sonatype.com/artifact/org.jacoco/jacoco-maven-plugin/versions -->
     <jacoco.version>0.8.14</jacoco.version>
     <!-- https://central.sonatype.com/artifact/org.junit/junit-bom/versions -->
-    <junit.version>6.0.3</junit.version>
+    <junit.version>6.1.0</junit.version>
     <!-- https://central.sonatype.com/artifact/org.mockito/mockito-bom/versions -->
     <mockito.version>5.23.0</mockito.version>
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-clean-plugin/versions -->
@@ -386,7 +386,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>3.5.1</version>
         <configuration>
           <java>
             <googleJavaFormat>
@@ -394,7 +394,7 @@
             </googleJavaFormat>
             <licenseHeader>
               <content>/*
- * © $YEAR SAP SE or an SAP affiliate company and cds-feature-ai contributors.
+ * © $YEAR SAP SE or an SAP affiliate company and cds-ai contributors.
  */</content>
             </licenseHeader>
           </java>

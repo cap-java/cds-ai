@@ -1,5 +1,5 @@
 /*
- * © 2026 SAP SE or an SAP affiliate company and cds-feature-ai contributors.
+ * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
 package com.sap.cds.feature.aicore.core;
 
@@ -65,7 +65,14 @@ public class AICoreServiceImpl extends AbstractAICoreService {
   private final ResourceGroupApi resourceGroupApi;
   private final AiCoreService sdkService;
 
-  public AICoreServiceImpl(String name, CdsRuntime runtime, boolean multiTenancyEnabled) {
+  public AICoreServiceImpl(
+      String name,
+      CdsRuntime runtime,
+      boolean multiTenancyEnabled,
+      DeploymentApi deploymentApi,
+      ConfigurationApi configurationApi,
+      ResourceGroupApi resourceGroupApi,
+      AiCoreService sdkService) {
     super(name, runtime);
     this.multiTenancyEnabled = multiTenancyEnabled;
     CdsEnvironment env = runtime.getEnvironment();
@@ -82,10 +89,10 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     this.tenantResourceGroupCache = newCache();
     this.resourceGroupDeploymentCache = newCache();
     this.deploymentLocks = newCache();
-    this.deploymentApi = new DeploymentApi();
-    this.configurationApi = new ConfigurationApi();
-    this.resourceGroupApi = new ResourceGroupApi();
-    this.sdkService = new AiCoreService();
+    this.deploymentApi = deploymentApi;
+    this.configurationApi = configurationApi;
+    this.resourceGroupApi = resourceGroupApi;
+    this.sdkService = sdkService;
   }
 
   private static <V> Cache<String, V> newCache() {

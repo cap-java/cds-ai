@@ -1,8 +1,12 @@
 /*
- * © 2026 SAP SE or an SAP affiliate company and cds-feature-ai contributors.
+ * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
 package com.sap.cds.feature.aicore.core;
 
+import com.sap.ai.sdk.core.AiCoreService;
+import com.sap.ai.sdk.core.client.ConfigurationApi;
+import com.sap.ai.sdk.core.client.DeploymentApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.cds.feature.aicore.core.handler.AICoreApplicationServiceHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
 import com.sap.cds.feature.aicore.core.handler.ConfigurationHandler;
@@ -48,7 +52,14 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
 
     if (hasBinding) {
       AICoreServiceImpl service =
-          new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime, multiTenancyEnabled);
+          new AICoreServiceImpl(
+              AICoreService.DEFAULT_NAME,
+              runtime,
+              multiTenancyEnabled,
+              new DeploymentApi(),
+              new ConfigurationApi(),
+              new ResourceGroupApi(),
+              new AiCoreService());
       configurer.service(service);
       logger.info("Registered AICoreService backed by AI Core binding.");
     } else {
