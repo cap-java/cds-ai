@@ -31,9 +31,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git@github.com:cap-java/cds-feature-ai.git</connection>
-    <developerConnection>scm:git:git@github.com:cap-java/cds-feature-ai.git</developerConnection>
-    <url>https://github.com/cap-java/cds-feature-ai</url>
+    <connection>scm:git:git@github.com:cap-java/cds-ai.git</connection>
+    <developerConnection>scm:git:git@github.com:cap-java/cds-ai.git</developerConnection>
+    <url>https://github.com/cap-java/cds-ai</url>
   </scm>
 
   <modules>
@@ -394,7 +394,7 @@
             </googleJavaFormat>
             <licenseHeader>
               <content>/*
- * © $YEAR SAP SE or an SAP affiliate company and cds-feature-ai contributors.
+ * © $YEAR SAP SE or an SAP affiliate company and cds-ai contributors.
  */</content>
             </licenseHeader>
           </java>

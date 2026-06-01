@@ -1,5 +1,5 @@
 /*
- * © 2026 SAP SE or an SAP affiliate company and cds-feature-ai contributors.
+ * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
 package com.sap.cds.feature.recommendation.itest;
 
