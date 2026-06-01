@@ -24,3 +24,7 @@ annotate adminService.Books with @(UI.Facets: [{
   Label : '{i18n>attachments}',
   Target: 'attachments/@UI.LineItem'
 }]);
+
+service nonDraftService {
+  entity Books as projection on my.Books;
+}

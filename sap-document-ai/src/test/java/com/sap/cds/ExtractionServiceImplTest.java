@@ -2,6 +2,7 @@ package com.sap.cds;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionStatus;
+import com.sap.cds.service.DocumentAiProcessingService;
 import com.sap.cds.service.ExtractionServiceImpl;
 import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnUpdate;
@@ -13,6 +14,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -23,14 +26,18 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ExtractionServiceImplTest {
-
     @Mock
     PersistenceService persistenceService;
 
     @Mock
+    DocumentAiProcessingService documentAiProcessingService;
+
+    @Mock
     Result insertResult;
 
-    ExtractionServiceImpl orchestrator;
+    ExtractionServiceImpl extractionService;
+
+    InputStream mockContent;
 
     @BeforeEach
     void setUp() {
@@ -39,17 +46,19 @@ class ExtractionServiceImplTest {
         when(insertResult.single(ExtractionJob.class)).thenReturn(createdJob);
         when(persistenceService.run(any(CqnInsert.class))).thenReturn(insertResult);
         lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
-        orchestrator = new ExtractionServiceImpl(persistenceService);
+        mockContent = new ByteArrayInputStream("test-content".getBytes());
+        extractionService = new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
     }
 
     @Test
     void startExtraction_createsOneJobWithCorrectFields() {
         // Arrange
         String attachmentId = "att-123";
+        String contentId = "cnt-123";
         String tenantId = "tenant-1";
 
         // Act
-        orchestrator.startExtraction(attachmentId, tenantId);
+        extractionService.startExtraction(attachmentId, contentId, tenantId, mockContent);
 
         // Assert
         ArgumentCaptor<CqnInsert> insertCaptor = ArgumentCaptor.forClass(CqnInsert.class);
@@ -65,7 +74,7 @@ class ExtractionServiceImplTest {
         ArgumentCaptor<CqnUpdate> updateCaptor = ArgumentCaptor.forClass(CqnUpdate.class);
 
         // Act
-        orchestrator.startExtraction("att-123", "tenant-1");
+        extractionService.startExtraction("att-123", "cnt-123", "tenant-1", mockContent);
 
         // Assert
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() ->
@@ -86,7 +95,7 @@ class ExtractionServiceImplTest {
         ArgumentCaptor<CqnUpdate> updateCaptor = ArgumentCaptor.forClass(CqnUpdate.class);
 
         // Act
-        orchestrator.startExtraction("att-123", "tenant-1");
+        extractionService.startExtraction("att-123", "cnt-123", "tenant-1", mockContent);
 
         // Assert
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() ->
