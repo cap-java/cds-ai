@@ -1,0 +1,12 @@
+{
+  "name": "cds-feature-ai-integration-tests",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@cap-js/ai": "^1",
+    "@sap/cds": "^9"
+  },
+  "devDependencies": {
+    "@sap/cds-dk": "^9"
+  }
+}

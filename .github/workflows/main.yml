@@ -1,0 +1,37 @@
+name: CI - MAIN
+
+env:
+  MAVEN_VERSION: '3.9.15'
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  blackduck:
+    name: Blackduck Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Scan With Black Duck
+        uses: ./.github/actions/scan-with-blackduck
+        with:
+          blackduck_token: ${{ secrets.BLACK_DUCK_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          maven-version: ${{ env.MAVEN_VERSION }}
+          scan_mode: FULL
+
+  build-and-test:
+    uses: ./.github/workflows/pipeline.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    secrets: inherit

@@ -1,0 +1,14 @@
+{
+  "requires": {
+    "db": "hana",
+    "AICore": {
+      "model": "com.sap.cds/ai"
+    },
+    "[production]": {
+      "auth": "xsuaa"
+    }
+  },
+  "cdsc": {
+    "moduleLookupDirectories": ["node_modules/", "target/cds/"]
+  }
+}
