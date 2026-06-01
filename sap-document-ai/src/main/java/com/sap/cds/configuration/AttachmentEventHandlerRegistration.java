@@ -1,3 +1,6 @@
+/*
+* © 2026 SAP SE or an SAP affiliate company and cds-feature-notifications contributors.
+*/
 package com.sap.cds.configuration;
 
 import com.sap.cds.handlers.AttachmentEventHandler;
@@ -12,28 +15,23 @@ import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 
 public class AttachmentEventHandlerRegistration implements CdsRuntimeConfiguration {
-    @Override
-    public void eventHandlers(CdsRuntimeConfigurer configurer) {
-        CdsRuntime runtime = configurer.getCdsRuntime();
-        ServiceCatalog serviceCatalog = runtime.getServiceCatalog();
+  @Override
+  public void eventHandlers(CdsRuntimeConfigurer configurer) {
+    CdsRuntime runtime = configurer.getCdsRuntime();
+    ServiceCatalog serviceCatalog = runtime.getServiceCatalog();
 
-        // framework-managed dependency
-        PersistenceService persistenceService =
-                serviceCatalog.getService(
-                        PersistenceService.class,
-                        PersistenceService.DEFAULT_NAME);
+    // framework-managed dependency
+    PersistenceService persistenceService =
+        serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
 
-        // internal
-        DocumentAiProcessingService documentAiProcessingService =
-                new DefaultDocumentAiProcessingService();
+    // internal
+    DocumentAiProcessingService documentAiProcessingService =
+        new DefaultDocumentAiProcessingService();
 
-        ExtractionService extractionService =
-                new ExtractionServiceImpl(
-                        persistenceService,
-                        documentAiProcessingService);
+    ExtractionService extractionService =
+        new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
 
-        // register event handler with CAP runtime
-        configurer.eventHandler(
-                new AttachmentEventHandler(extractionService));
-    }
+    // register event handler with CAP runtime
+    configurer.eventHandler(new AttachmentEventHandler(extractionService));
+  }
 }

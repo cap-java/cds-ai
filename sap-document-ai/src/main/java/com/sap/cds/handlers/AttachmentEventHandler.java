@@ -1,3 +1,6 @@
+/*
+* © 2026 SAP SE or an SAP affiliate company and cds-feature-notifications contributors.
+*/
 package com.sap.cds.handlers;
 
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.Attachments;
@@ -7,36 +10,38 @@ import com.sap.cds.service.ExtractionService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.ServiceName;
+import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.InputStream;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class AttachmentEventHandler implements EventHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(AttachmentEventHandler.class);
+  private static final Logger log = LoggerFactory.getLogger(AttachmentEventHandler.class);
 
-    private final ExtractionService extractionService;
+  private final ExtractionService extractionService;
 
-    public AttachmentEventHandler(ExtractionService extractionService) {
-        this.extractionService = extractionService;
+  public AttachmentEventHandler(ExtractionService extractionService) {
+    this.extractionService = extractionService;
+  }
+
+  @After(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
+  public void afterCreateAttachment(AttachmentCreateEventContext context) {
+    String attachmentId = (String) context.getAttachmentIds().get(Attachments.ID);
+    String tenantId = context.getUserInfo().getTenant();
+    if (attachmentId == null) {
+      log.warn("[sap-document-ai] attachmentId is null, skipping extraction");
+      return;
     }
 
-    @After(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
-    public void afterCreateAttachment(AttachmentCreateEventContext context) {
-        String attachmentId = (String) context.getAttachmentIds().get(Attachments.ID);
-        String tenantId = context.getUserInfo().getTenant();
-        if (attachmentId == null) {
-            log.warn("[sap-document-ai] attachmentId is null, skipping extraction");
-            return;
-        }
+    String contentId = context.getContentId();
+    InputStream content = context.getData().getContent();
 
-        String contentId = context.getContentId();
-        InputStream content = context.getData().getContent();
-
-        log.info("[sap-document-ai] Attachment persisted. Triggering extraction for attachmentId={}, contentId={}, tenantId={}", attachmentId, contentId, tenantId);
-        extractionService.startExtraction(attachmentId, contentId, tenantId, content);
-    }
-
+    log.info(
+        "[sap-document-ai] Attachment persisted. Triggering extraction for attachmentId={}, contentId={}, tenantId={}",
+        attachmentId,
+        contentId,
+        tenantId);
+    extractionService.startExtraction(attachmentId, contentId, tenantId, content);
+  }
 }
