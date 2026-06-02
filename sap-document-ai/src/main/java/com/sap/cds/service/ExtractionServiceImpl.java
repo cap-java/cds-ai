@@ -1,5 +1,5 @@
 /*
-* © 2026 SAP SE or an SAP affiliate company and cds-feature-notifications contributors.
+* © 2026 SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
 */
 package com.sap.cds.service;
 
@@ -50,6 +50,11 @@ public class ExtractionServiceImpl implements ExtractionService {
             documentAiProcessingService.processDocument(jobId, content);
             updateStatus(jobId, ExtractionStatus.COMPLETED);
           } catch (Exception e) {
+            logger.info(
+                "[sap-document-ai] Something went wrong while triggering orchestration - for attachmentId={}, tenantId={}, error={}",
+                attachmentId,
+                tenantId,
+                e);
             updateStatus(jobId, ExtractionStatus.FAILED);
           }
         },
