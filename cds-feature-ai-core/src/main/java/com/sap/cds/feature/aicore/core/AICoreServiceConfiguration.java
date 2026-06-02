@@ -20,6 +20,16 @@ import com.sap.cds.services.utils.environment.ServiceBindingUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * {@link CdsRuntimeConfiguration} that wires the {@code AICore} service and its event handlers into
+ * the CAP Java runtime.
+ *
+ * <p>Detects the presence of an SAP AI Core service binding (either a regular service binding or
+ * the {@code AICORE_SERVICE_KEY} environment variable used for hybrid local testing) and registers
+ * either {@link AICoreServiceImpl} (when a binding is found) or {@link MockAICoreServiceImpl}
+ * (no-binding fallback). Picked up automatically through {@code ServiceLoader}; applications do not
+ * need to instantiate this class directly.
+ */
 public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreServiceConfiguration.class);

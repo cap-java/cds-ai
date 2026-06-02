@@ -30,17 +30,17 @@
     </developer>
   </developers>
 
-  <scm>
-    <connection>scm:git:git@github.com:cap-java/cds-ai.git</connection>
-    <developerConnection>scm:git:git@github.com:cap-java/cds-ai.git</developerConnection>
-    <url>https://github.com/cap-java/cds-ai</url>
-  </scm>
-
   <modules>
     <module>cds-feature-ai-core</module>
     <module>cds-feature-recommendations</module>
     <module>cds-starter-ai</module>
   </modules>
+
+  <scm>
+    <connection>scm:git:git@github.com:cap-java/cds-ai.git</connection>
+    <developerConnection>scm:git:git@github.com:cap-java/cds-ai.git</developerConnection>
+    <url>https://github.com/cap-java/cds-ai</url>
+  </scm>
 
   <distributionManagement>
     <repository>

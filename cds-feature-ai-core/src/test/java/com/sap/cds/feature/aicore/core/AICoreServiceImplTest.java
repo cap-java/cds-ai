@@ -12,7 +12,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import java.lang.reflect.Field;
-import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.Test;
 
 class AICoreServiceImplTest {
@@ -70,19 +70,21 @@ class AICoreServiceImplTest {
   }
 
   @Test
-  void deploymentLocksFieldIsBoundedCaffeineCache() throws NoSuchFieldException {
+  void deploymentLocksFieldIsConcurrentHashMap() throws NoSuchFieldException {
+    // Locks must live in a non-evicting map: a Caffeine cache could evict an entry between two
+    // threads' lookups, causing them to synchronize on different objects for the same cache key
+    // and race to create duplicate AI Core deployments.
     Field field = AICoreServiceImpl.class.getDeclaredField("deploymentLocks");
-    assertThat(field.getType()).isEqualTo(Cache.class);
+    assertThat(field.getType()).isEqualTo(ConcurrentHashMap.class);
   }
 
   @Test
-  void caffeineGetReturnsSameLockObjectForSameKey() {
-    Cache<String, Object> locks =
-        Caffeine.newBuilder().maximumSize(10_000).expireAfterAccess(Duration.ofHours(1)).build();
+  void concurrentHashMapComputeIfAbsentReturnsSameLockObjectForSameKey() {
+    ConcurrentHashMap<String, Object> locks = new ConcurrentHashMap<>();
 
-    Object lock1 = locks.get("rg-1", k -> new Object());
-    Object lock2 = locks.get("rg-1", k -> new Object());
-    Object differentRg = locks.get("rg-2", k -> new Object());
+    Object lock1 = locks.computeIfAbsent("rg-1", k -> new Object());
+    Object lock2 = locks.computeIfAbsent("rg-1", k -> new Object());
+    Object differentRg = locks.computeIfAbsent("rg-2", k -> new Object());
 
     assertThat(lock1).isSameAs(lock2);
     assertThat(lock1).isNotSameAs(differentRg);
@@ -96,7 +98,7 @@ class AICoreServiceImplTest {
     AICoreServiceImpl service = freshService();
     Cache<String, String> tenantCache = readCache(service, "tenantResourceGroupCache");
     Cache<String, String> deploymentCache = readCache(service, "resourceGroupDeploymentCache");
-    Cache<String, Object> deploymentLocks = readCache(service, "deploymentLocks");
+    ConcurrentHashMap<String, Object> deploymentLocks = readLocks(service);
 
     tenantCache.put(tenantId, resourceGroupId);
     deploymentCache.put(resourceGroupId, "deployment-id");
@@ -106,7 +108,7 @@ class AICoreServiceImplTest {
 
     assertThat(tenantCache.asMap()).doesNotContainKey(tenantId);
     assertThat(deploymentCache.asMap()).doesNotContainKey(resourceGroupId);
-    assertThat(deploymentLocks.asMap()).doesNotContainKey(resourceGroupId);
+    assertThat(deploymentLocks).doesNotContainKey(resourceGroupId);
   }
 
   @Test
@@ -119,7 +121,7 @@ class AICoreServiceImplTest {
     AICoreServiceImpl service = freshService();
     Cache<String, String> tenantCache = readCache(service, "tenantResourceGroupCache");
     Cache<String, String> deploymentCache = readCache(service, "resourceGroupDeploymentCache");
-    Cache<String, Object> deploymentLocks = readCache(service, "deploymentLocks");
+    ConcurrentHashMap<String, Object> deploymentLocks = readLocks(service);
 
     tenantCache.put(tenantA, resourceGroupA);
     tenantCache.put(tenantB, resourceGroupB);
@@ -134,9 +136,7 @@ class AICoreServiceImplTest {
     assertThat(deploymentCache.asMap())
         .doesNotContainKey(resourceGroupA)
         .containsKey(resourceGroupB);
-    assertThat(deploymentLocks.asMap())
-        .doesNotContainKey(resourceGroupA)
-        .containsKey(resourceGroupB);
+    assertThat(deploymentLocks).doesNotContainKey(resourceGroupA).containsKey(resourceGroupB);
   }
 
   @Test
@@ -145,7 +145,7 @@ class AICoreServiceImplTest {
 
     AICoreServiceImpl service = freshService();
     Cache<String, String> deploymentCache = readCache(service, "resourceGroupDeploymentCache");
-    Cache<String, Object> deploymentLocks = readCache(service, "deploymentLocks");
+    ConcurrentHashMap<String, Object> deploymentLocks = readLocks(service);
 
     deploymentCache.put(resourceGroupId, "deployment-id");
     deploymentLocks.put(resourceGroupId, new Object());
@@ -153,14 +153,14 @@ class AICoreServiceImplTest {
     service.clearTenantCache("unknown-tenant");
 
     assertThat(deploymentCache.asMap()).containsKey(resourceGroupId);
-    assertThat(deploymentLocks.asMap()).containsKey(resourceGroupId);
+    assertThat(deploymentLocks).containsKey(resourceGroupId);
   }
 
   private static AICoreServiceImpl freshService() throws Exception {
     AICoreServiceImpl service = mock(AICoreServiceImpl.class, CALLS_REAL_METHODS);
     setField(service, "tenantResourceGroupCache", Caffeine.newBuilder().build());
     setField(service, "resourceGroupDeploymentCache", Caffeine.newBuilder().build());
-    setField(service, "deploymentLocks", Caffeine.newBuilder().build());
+    setField(service, "deploymentLocks", new ConcurrentHashMap<>());
     return service;
   }
 
@@ -170,6 +170,14 @@ class AICoreServiceImplTest {
     Field field = AICoreServiceImpl.class.getDeclaredField(fieldName);
     field.setAccessible(true);
     return (Cache<K, V>) field.get(service);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ConcurrentHashMap<String, Object> readLocks(AICoreServiceImpl service)
+      throws Exception {
+    Field field = AICoreServiceImpl.class.getDeclaredField("deploymentLocks");
+    field.setAccessible(true);
+    return (ConcurrentHashMap<String, Object>) field.get(service);
   }
 
   private static void setField(Object target, String fieldName, Object value) throws Exception {

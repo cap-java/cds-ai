@@ -86,16 +86,11 @@ public class ConfigurationHandler extends AbstractCrudHandler {
               .executableId(entry.getExecutableId())
               .scenarioId(entry.getScenarioId());
 
-      Collection<ParameterArgumentBindingList.Item> paramBindings =
-          entry.getParameterBindings();
+      Collection<ParameterArgumentBindingList.Item> paramBindings = entry.getParameterBindings();
       if (paramBindings != null) {
         List<AiParameterArgumentBinding> sdkBindings =
             paramBindings.stream()
-                .map(
-                    p ->
-                        AiParameterArgumentBinding.create()
-                            .key(p.getKey())
-                            .value(p.getValue()))
+                .map(p -> AiParameterArgumentBinding.create().key(p.getKey()).value(p.getValue()))
                 .toList();
         request.parameterBindings(sdkBindings);
       }
