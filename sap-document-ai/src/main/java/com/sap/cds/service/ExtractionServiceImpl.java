@@ -50,7 +50,7 @@ public class ExtractionServiceImpl implements ExtractionService {
             documentAiProcessingService.processDocument(jobId, content);
             updateStatus(jobId, ExtractionStatus.COMPLETED);
           } catch (Exception e) {
-            logger.info(
+            logger.error(
                 "[sap-document-ai] Something went wrong while triggering orchestration - for attachmentId={}, tenantId={}, error={}",
                 attachmentId,
                 tenantId,
