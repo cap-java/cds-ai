@@ -41,6 +41,12 @@ public class ExtractionServiceImpl implements ExtractionService {
         "[sap-document-ai] Orchestrator triggered for attachmentId={}, tenantId={}",
         attachmentId,
         tenantId);
+
+    if (!documentAiProcessingService.isAvailable()) {
+      logger.warn("[sap-document-ai] Document AI client is not available, skipping submission");
+      return;
+    }
+
     String jobId = createExtractionJob(attachmentId, tenantId);
 
     CompletableFuture.runAsync(

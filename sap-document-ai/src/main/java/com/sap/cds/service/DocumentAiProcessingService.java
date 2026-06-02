@@ -7,5 +7,7 @@ import java.io.InputStream;
 
 public interface DocumentAiProcessingService {
 
+  boolean isAvailable();
+
   void processDocument(String jobId, InputStream content);
 }

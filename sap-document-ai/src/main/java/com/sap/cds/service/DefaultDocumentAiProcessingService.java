@@ -25,12 +25,6 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
     logger.info(
         "[sap-document-ai] Processing document for jobId={} and content={}", jobId, content);
     try {
-      if (documentAiClient == null) {
-        logger.warn(
-            "[sap-document-ai] Document AI client is not available, skipping submission for jobId={}",
-            jobId);
-        return;
-      }
       Thread.sleep(3000);
       // TODO: Replace mock delay with real Document AI integration
       String result = documentAiClient.submitDocument(content);
@@ -44,5 +38,10 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
     } catch (Exception e) {
       logger.error("[sap-document-ai] Extraction failed for jobId={}", jobId, e);
     }
+  }
+
+  @Override
+  public boolean isAvailable() {
+    return documentAiClient != null;
   }
 }
