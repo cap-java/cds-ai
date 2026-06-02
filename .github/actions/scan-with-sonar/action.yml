@@ -38,18 +38,18 @@ runs:
       shell: bash
 
     - name: Build and test main modules
-      run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am -Dcds.install-node.skip
+      run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am
       shell: bash
 
     - name: Run integration tests
       env:
         CDS_AICORE_TEST_RESOURCE_GROUP: sonar-${{ github.run_id }}-${{ github.run_attempt }}
-      run: cds bind --exec -- mvn clean verify install -ntp -B -Dcds.install-node.skip
+      run: cds bind --exec -- mvn clean verify install -ntp -B
       working-directory: integration-tests
       shell: bash
 
     - name: Generate aggregate coverage report
-      run: mvn verify -ntp -B -pl coverage-report -am -DskipTests -Dcds.install-node.skip
+      run: mvn verify -ntp -B -pl coverage-report -am -DskipTests
       shell: bash
 
     - name: Verify JaCoCo reports exist
