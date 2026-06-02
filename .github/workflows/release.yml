@@ -71,11 +71,13 @@ jobs:
           ref: ${{ github.event.release.tag_name }}
 
       - name: Scan With Black Duck
-        uses: ./.github/actions/scan-with-blackduck
+        uses: cap-java/.github/actions/scan-with-blackduck@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
         with:
           blackduck_token: ${{ secrets.BLACK_DUCK_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           maven-version: ${{ env.MAVEN_VERSION }}
+          project-name: com.sap.cds.cds-ai
+          included-modules: cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai
           version: ${{ github.event.release.tag_name }}
 
   build:
@@ -92,10 +94,11 @@ jobs:
           ref: ${{ github.event.release.tag_name }}
 
       - name: Build
-        uses: ./.github/actions/build
+        uses: cap-java/.github/actions/build@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
         with:
           java-version: ${{ env.JAVA_VERSION }}
           maven-version: ${{ env.MAVEN_VERSION }}
+          maven-args: "-P '!with-integration-tests'"
 
   deploy:
     name: Deploy to Maven Central
@@ -112,12 +115,13 @@ jobs:
           ref: ${{ github.event.release.tag_name }}
 
       - name: Deploy
-        uses: ./.github/actions/deploy-release
+        uses: cap-java/.github/actions/deploy-release@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
         with:
           user: ${{ secrets.CENTRAL_REPOSITORY_USER }}
           password: ${{ secrets.CENTRAL_REPOSITORY_PASS }}
-          pgp-pub-key: ${{ secrets.PGP_PUBKEY_ID }}
-          pgp-private-key: ${{ secrets.PGP_PRIVATE_KEY }}
-          pgp-passphrase: ${{ secrets.PGP_PASSPHRASE }}
+          gpg-pub-key: ${{ secrets.PGP_PUBKEY_ID }}
+          gpg-private-key: ${{ secrets.PGP_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.PGP_PASSPHRASE }}
           revision: ${{ github.event.release.tag_name }}
           maven-version: ${{ env.MAVEN_VERSION }}
+          maven-profiles: "deploy-release,'!with-integration-tests'"

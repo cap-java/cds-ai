@@ -8,18 +8,6 @@ on:
 
 jobs:
   remove_new_label:
-    runs-on: ubuntu-latest
+    uses: cap-java/.github/.github/workflows/prevent-issue-labeling.yml@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
     permissions:
       issues: write
-    steps:
-      - name: Remove "New" label if applied by non-bot user
-        if: >
-          contains(github.event.issue.labels.*.name, 'New') &&
-          github.event.label.name == 'New' &&
-          github.event.sender.login != 'github-actions[bot]'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          gh issue edit "$ISSUE_NUMBER" --remove-label "New"
