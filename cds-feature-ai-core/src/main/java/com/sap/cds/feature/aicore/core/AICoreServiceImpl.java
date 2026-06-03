@@ -145,14 +145,20 @@ public class AICoreServiceImpl extends AbstractAICoreService {
             return cached;
           }
         } catch (OpenApiRequestException e) {
-          // The cached deployment was deleted out-of-band (404) or is otherwise no longer
-          // reachable. Drop the stale entry and fall through to discover or create a new one.
+          // Only 404 means the cached deployment was deleted out-of-band — drop the stale entry
+          // and fall through to discover or create a new one. Any other status (5xx, 401, 412,
+          // network errors, …) is propagated so the caller's retry/backoff policy can handle it
+          // rather than silently invalidating a potentially valid cache entry and triggering a
+          // duplicate deployment.
+          Integer status = e.statusCode();
+          if (status == null || status != 404) {
+            throw e;
+          }
           logger.debug(
-              "Cached deployment {} in resource group {} is no longer accessible ({}), "
+              "Cached deployment {} in resource group {} no longer exists (404), "
                   + "invalidating cache entry",
               cached,
-              resourceGroupId,
-              e.statusCode());
+              resourceGroupId);
         }
         resourceGroupDeploymentCache.invalidate(cacheKey);
       }
@@ -252,7 +258,12 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     }
   }
 
-  private static String deploymentCacheKey(String resourceGroupId, ModelDeploymentSpec spec) {
+  /**
+   * Builds the cache key for the {@code resourceGroupDeploymentCache} and {@code deploymentLocks}
+   * maps. Package-private so tests can derive the same key the production code uses, instead of
+   * duplicating the format inline.
+   */
+  static String deploymentCacheKey(String resourceGroupId, ModelDeploymentSpec spec) {
     return resourceGroupId + "::" + spec.configurationName();
   }
 

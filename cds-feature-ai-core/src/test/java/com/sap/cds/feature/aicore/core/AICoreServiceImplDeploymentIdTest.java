@@ -49,6 +49,12 @@ class AICoreServiceImplDeploymentIdTest {
   private final ModelDeploymentSpec spec =
       new ModelDeploymentSpec(SCENARIO, "exec", CONFIG_NAME, List.of(), d -> true);
 
+  private String cacheKey() {
+    // Derive via the production helper rather than hardcoding RG + "::" + CONFIG_NAME so a
+    // change to the cache-key format is caught here instead of silently passing wrong-path.
+    return AICoreServiceImpl.deploymentCacheKey(RG, spec);
+  }
+
   @BeforeEach
   void setUp() {
     deploymentApi = mock(DeploymentApi.class);
@@ -82,7 +88,7 @@ class AICoreServiceImplDeploymentIdTest {
 
   @Test
   void cacheHit_runningDeployment_returnsCachedIdWithoutQuery() {
-    service.getResourceGroupDeploymentCache().put(RG + "::" + CONFIG_NAME, DEPLOYMENT_ID);
+    service.getResourceGroupDeploymentCache().put(cacheKey(), DEPLOYMENT_ID);
 
     AiDeploymentResponseWithDetails running = mock(AiDeploymentResponseWithDetails.class);
     when(running.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
@@ -99,7 +105,7 @@ class AICoreServiceImplDeploymentIdTest {
   @Test
   void cacheStale_404OnGet_invalidatesAndReturnsExistingFromQuery() {
     String otherDeployment = "dep-456";
-    service.getResourceGroupDeploymentCache().put(RG + "::" + CONFIG_NAME, "stale-id");
+    service.getResourceGroupDeploymentCache().put(cacheKey(), "stale-id");
 
     OpenApiRequestException notFound = new OpenApiRequestException("gone").statusCode(404);
     when(deploymentApi.get(RG, "stale-id")).thenThrow(notFound);
@@ -117,7 +123,25 @@ class AICoreServiceImplDeploymentIdTest {
 
     assertThat(result).isEqualTo(otherDeployment);
     assertThat(service.getResourceGroupDeploymentCache())
-        .containsEntry(RG + "::" + CONFIG_NAME, otherDeployment);
+        .containsEntry(cacheKey(), otherDeployment);
+    verify(deploymentApi, never()).create(any(), any());
+  }
+
+  @Test
+  void cacheStale_5xxOnGet_propagatesAndPreservesCacheEntry() {
+    // Transient 5xx must NOT invalidate a potentially valid cache entry. The exception is
+    // propagated so the caller's retry/backoff policy can handle it.
+    service.getResourceGroupDeploymentCache().put(cacheKey(), "still-valid-id");
+
+    OpenApiRequestException serverError = new OpenApiRequestException("boom").statusCode(503);
+    when(deploymentApi.get(RG, "still-valid-id")).thenThrow(serverError);
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.deploymentId(RG, spec))
+        .isSameAs(serverError);
+
+    assertThat(service.getResourceGroupDeploymentCache())
+        .containsEntry(cacheKey(), "still-valid-id");
+    verify(deploymentApi, never()).query(any(), any(), any(), any(), any(), any(), any(), any());
     verify(deploymentApi, never()).create(any(), any());
   }
 
@@ -135,8 +159,7 @@ class AICoreServiceImplDeploymentIdTest {
     String result = service.deploymentId(RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
-    assertThat(service.getResourceGroupDeploymentCache())
-        .containsEntry(RG + "::" + CONFIG_NAME, DEPLOYMENT_ID);
+    assertThat(service.getResourceGroupDeploymentCache()).containsEntry(cacheKey(), DEPLOYMENT_ID);
     verify(deploymentApi, never()).create(any(), any());
     verify(deploymentApi, never()).get(any(), any());
   }
@@ -195,8 +218,7 @@ class AICoreServiceImplDeploymentIdTest {
     String result = service.deploymentId(RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
-    assertThat(service.getResourceGroupDeploymentCache())
-        .containsEntry(RG + "::" + CONFIG_NAME, DEPLOYMENT_ID);
+    assertThat(service.getResourceGroupDeploymentCache()).containsEntry(cacheKey(), DEPLOYMENT_ID);
     verify(configurationApi, never()).create(any(), any());
     verify(deploymentApi).create(eq(RG), any());
   }
