@@ -121,7 +121,7 @@ annotate Books with {
 ```yaml
 cds:
   requires:
-    AICore:
+    recommendations:
       contextRowLimit: 2000 # Max historical rows used as training context
 ```
 

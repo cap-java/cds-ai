@@ -33,12 +33,8 @@ jobs:
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
 
-      - name: Install @sap/cds-dk
-        run: npm i -g @sap/cds-dk@9.9.1
-        shell: bash
-
       - name: Run Tests
-        run: mvn test -ntp -B -P '!with-integration-tests' -Dcds.install-node.skip
+        run: mvn test -ntp -B -P '!with-integration-tests'
 
   integration-tests:
     name: Integration Tests (Java ${{ matrix.java-version }})
@@ -156,12 +152,8 @@ jobs:
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
 
-      - name: Install @sap/cds-dk
-        run: npm i -g @sap/cds-dk@9.9.1
-        shell: bash
-
       - name: Run Local MTX Tests
-        run: mvn clean verify -ntp -B -pl integration-tests/mtx-local/srv -am -P mtx-integration-tests -Dcds.install-node.skip
+        run: mvn clean verify -ntp -B -pl integration-tests/mtx-local/srv -am -P mtx-integration-tests
 
   sonarqube-scan:
     name: SonarQube Scan

@@ -25,12 +25,12 @@ runs:
         maven-version: ${{ inputs.maven-version }}
 
     - name: Build dependencies for integration tests
-      run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am -DskipTests -Dcds.install-node.skip
+      run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am -DskipTests
       shell: bash
 
     - name: Integration Tests (spring)
       env:
         CDS_AICORE_TEST_RESOURCE_GROUP: itest-${{ github.run_id }}-${{ github.run_attempt }}-j${{ inputs.java-version }}
-      run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml -Dcds.install-node.skip
+      run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml
       working-directory: integration-tests
       shell: bash

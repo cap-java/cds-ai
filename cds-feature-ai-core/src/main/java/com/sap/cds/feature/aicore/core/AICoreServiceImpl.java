@@ -34,9 +34,22 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Production implementation of {@link AICoreService} backed by an SAP AI Core service binding.
+ *
+ * <p>Provides resource-group, configuration and deployment lifecycle management together with a
+ * factory for inference {@link ApiClient}s scoped to a specific deployment. Resource group lookup
+ * results, deployment IDs and per-cache-key locks are cached in bounded {@link Caffeine} caches so
+ * repeated calls within a tenant or resource group avoid round-trips to AI Core.
+ *
+ * <p>Most state-changing AI Core calls are wrapped in a Resilience4j {@link Retry} that retries
+ * known transient errors (HTTP 403/404/412, see {@link #notReadyYet(OpenApiRequestException)}) with
+ * exponential backoff capped at 30 seconds.
+ */
 public class AICoreServiceImpl extends AbstractAICoreService {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreServiceImpl.class);
@@ -52,7 +65,15 @@ public class AICoreServiceImpl extends AbstractAICoreService {
 
   private final Cache<String, String> tenantResourceGroupCache;
   private final Cache<String, String> resourceGroupDeploymentCache;
-  private final Cache<String, Object> deploymentLocks;
+
+  /**
+   * Per-cache-key monitors guarding deployment lookup/creation. Stored in a {@link
+   * ConcurrentHashMap} (not a Caffeine cache) so that two threads asking for the same key are
+   * guaranteed to obtain the <em>same</em> monitor instance — locks must never live in a
+   * size/time-evicting cache, otherwise concurrent callers can synchronize on different objects and
+   * race to create duplicate AI Core deployments.
+   */
+  private final ConcurrentHashMap<String, Object> deploymentLocks = new ConcurrentHashMap<>();
 
   private final int maxRetries;
   private final long initialDelayMs;
@@ -88,7 +109,6 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     this.retry = buildRetry(maxRetries, initialDelayMs);
     this.tenantResourceGroupCache = newCache();
     this.resourceGroupDeploymentCache = newCache();
-    this.deploymentLocks = newCache();
     this.deploymentApi = deploymentApi;
     this.configurationApi = configurationApi;
     this.resourceGroupApi = resourceGroupApi;
@@ -114,14 +134,31 @@ public class AICoreServiceImpl extends AbstractAICoreService {
   @Override
   public String deploymentId(String resourceGroupId, ModelDeploymentSpec spec) {
     String cacheKey = deploymentCacheKey(resourceGroupId, spec);
-    Object lock = deploymentLocks.get(cacheKey, k -> new Object());
+    Object lock = deploymentLocks.computeIfAbsent(cacheKey, k -> new Object());
     synchronized (lock) {
       String cached = resourceGroupDeploymentCache.getIfPresent(cacheKey);
       if (cached != null) {
-        var current = deploymentApi.get(resourceGroupId, cached);
-        if (AiDeploymentStatus.RUNNING.equals(current.getStatus())
-            || AiDeploymentStatus.PENDING.equals(current.getStatus())) {
-          return cached;
+        try {
+          var current = deploymentApi.get(resourceGroupId, cached);
+          if (AiDeploymentStatus.RUNNING.equals(current.getStatus())
+              || AiDeploymentStatus.PENDING.equals(current.getStatus())) {
+            return cached;
+          }
+        } catch (OpenApiRequestException e) {
+          // Only 404 means the cached deployment was deleted out-of-band — drop the stale entry
+          // and fall through to discover or create a new one. Any other status (5xx, 401, 412,
+          // network errors, …) is propagated so the caller's retry/backoff policy can handle it
+          // rather than silently invalidating a potentially valid cache entry and triggering a
+          // duplicate deployment.
+          Integer status = e.statusCode();
+          if (status == null || status != 404) {
+            throw e;
+          }
+          logger.debug(
+              "Cached deployment {} in resource group {} no longer exists (404), "
+                  + "invalidating cache entry",
+              cached,
+              resourceGroupId);
         }
         resourceGroupDeploymentCache.invalidate(cacheKey);
       }
@@ -153,6 +190,7 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     return ApiClient.create(destination);
   }
 
+  @Override
   public boolean isMultiTenancyEnabled() {
     return multiTenancyEnabled;
   }
@@ -162,24 +200,24 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     return retry;
   }
 
+  @Override
   public String getDefaultResourceGroup() {
     return defaultResourceGroup;
   }
 
+  @Override
   public String getResourceGroupPrefix() {
     return resourceGroupPrefix;
   }
 
+  @Override
   public Map<String, String> getTenantResourceGroupCache() {
     return tenantResourceGroupCache.asMap();
   }
 
+  @Override
   public Map<String, String> getResourceGroupDeploymentCache() {
     return resourceGroupDeploymentCache.asMap();
-  }
-
-  public CdsRuntime getRuntime() {
-    return runtime;
   }
 
   public DeploymentApi getDeploymentApi() {
@@ -194,6 +232,7 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     return resourceGroupApi;
   }
 
+  @Override
   public String resolveResourceGroupFromKeys(Map<String, Object> keys) {
     if (keys.containsKey("resourceGroup_resourceGroupId")) {
       return (String) keys.get("resourceGroup_resourceGroupId");
@@ -206,6 +245,7 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     return resourceGroupForTenant(tenantId);
   }
 
+  @Override
   public void clearTenantCache(String tenantId) {
     String resourceGroupId = tenantResourceGroupCache.asMap().remove(tenantId);
     if (resourceGroupId != null) {
@@ -214,14 +254,16 @@ public class AICoreServiceImpl extends AbstractAICoreService {
           .asMap()
           .keySet()
           .removeIf(k -> k.equals(resourceGroupId) || k.startsWith(prefix));
-      deploymentLocks
-          .asMap()
-          .keySet()
-          .removeIf(k -> k.equals(resourceGroupId) || k.startsWith(prefix));
+      deploymentLocks.keySet().removeIf(k -> k.equals(resourceGroupId) || k.startsWith(prefix));
     }
   }
 
-  private static String deploymentCacheKey(String resourceGroupId, ModelDeploymentSpec spec) {
+  /**
+   * Builds the cache key for the {@code resourceGroupDeploymentCache} and {@code deploymentLocks}
+   * maps. Package-private so tests can derive the same key the production code uses, instead of
+   * duplicating the format inline.
+   */
+  static String deploymentCacheKey(String resourceGroupId, ModelDeploymentSpec spec) {
     return resourceGroupId + "::" + spec.configurationName();
   }
 

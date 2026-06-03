@@ -65,6 +65,10 @@ class RecommendationResultParser {
       Map<String, Object> values = new HashMap<>();
       values.put("RecommendedFieldValue", recommendedValue);
       values.put("RecommendedFieldDescription", descriptions.getOrDefault(col, ""));
+      // The RPT-1 prediction response does not currently expose a per-prediction confidence
+      // score in a stable form. We emit a constant placeholder so Fiori Elements still renders
+      // the suggestion with a non-null score; replace with the real probability once the AI SDK
+      // surfaces it (see SAP-RPT-1 model docs for `prediction_proba`).
       values.put("RecommendedFieldScoreValue", 0.5);
       values.put("RecommendedFieldIsSuggestion", true);
       recommendations.put(col, List.of(values));

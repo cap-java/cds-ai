@@ -18,6 +18,11 @@ public abstract class AbstractAICoreService extends AbstractCqnService implement
     super(name, runtime);
   }
 
+  /** Returns the {@link CdsRuntime} that this service was created with. */
+  public CdsRuntime getRuntime() {
+    return runtime;
+  }
+
   /** Returns the configured default resource group identifier. */
   public abstract String getDefaultResourceGroup();
 

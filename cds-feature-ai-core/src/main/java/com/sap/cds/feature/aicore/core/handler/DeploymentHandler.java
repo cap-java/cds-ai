@@ -28,6 +28,7 @@ import com.sap.cds.services.cds.CdsUpdateEventContext;
 import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -140,52 +141,102 @@ public class DeploymentHandler extends AbstractCrudHandler {
     context.setResult(List.of());
   }
 
-  // CPD-OFF - SDK types AiDeploymentResponseWithDetails and AiDeployment share no common interface
+  // The two AI SDK input types AiDeploymentResponseWithDetails and AiDeployment have identical
+  // accessor signatures but share no common interface, so we extract values into a unified
+  // intermediate record (DeploymentValues) before applying them to the generated Deployments
+  // target via applyTo(). The set-on-target logic is shared; the extraction below is the
+  // unavoidable structural duplicate that CPD picks up. getStatus()/getTargetStatus() are
+  // declared @Nonnull by the SDK; getLastOperation() is @Nullable and explicitly null-checked.
+
+  // CPD-OFF
   private static Deployments toDeployments(
       AiDeploymentResponseWithDetails d, String resourceGroupId) {
+    return applyTo(
+        new DeploymentValues(
+            d.getId(),
+            d.getDeploymentUrl(),
+            d.getConfigurationId(),
+            d.getConfigurationName(),
+            d.getExecutableId(),
+            d.getScenarioId(),
+            d.getStatus().getValue(),
+            d.getStatusMessage(),
+            d.getTargetStatus().getValue(),
+            d.getLastOperation() != null ? d.getLastOperation().getValue() : null,
+            d.getLatestRunningConfigurationId(),
+            d.getTtl(),
+            d.getCreatedAt(),
+            d.getModifiedAt(),
+            d.getSubmissionTime(),
+            d.getStartTime(),
+            d.getCompletionTime()),
+        resourceGroupId);
+  }
+
+  private static Deployments toDeployments(AiDeployment d, String resourceGroupId) {
+    return applyTo(
+        new DeploymentValues(
+            d.getId(),
+            d.getDeploymentUrl(),
+            d.getConfigurationId(),
+            d.getConfigurationName(),
+            d.getExecutableId(),
+            d.getScenarioId(),
+            d.getStatus().getValue(),
+            d.getStatusMessage(),
+            d.getTargetStatus().getValue(),
+            d.getLastOperation() != null ? d.getLastOperation().getValue() : null,
+            d.getLatestRunningConfigurationId(),
+            d.getTtl(),
+            d.getCreatedAt(),
+            d.getModifiedAt(),
+            d.getSubmissionTime(),
+            d.getStartTime(),
+            d.getCompletionTime()),
+        resourceGroupId);
+  }
+
+  // CPD-ON
+
+  private static Deployments applyTo(DeploymentValues v, String resourceGroupId) {
     Deployments data = Deployments.create();
-    data.setId(d.getId());
-    data.setDeploymentUrl(d.getDeploymentUrl());
-    data.setConfigurationId(d.getConfigurationId());
-    data.setConfigurationName(d.getConfigurationName());
-    data.setExecutableId(d.getExecutableId());
-    data.setScenarioId(d.getScenarioId());
-    data.setStatus(d.getStatus().getValue());
-    data.setStatusMessage(d.getStatusMessage());
-    data.setTargetStatus(d.getTargetStatus().getValue());
-    data.setLastOperation(d.getLastOperation() != null ? d.getLastOperation().getValue() : null);
-    data.setLatestRunningConfigurationId(d.getLatestRunningConfigurationId());
-    data.setTtl(d.getTtl());
-    data.put(Deployments.CREATED_AT, d.getCreatedAt());
-    data.put(Deployments.MODIFIED_AT, d.getModifiedAt());
-    data.put(Deployments.SUBMISSION_TIME, d.getSubmissionTime());
-    data.put(Deployments.START_TIME, d.getStartTime());
-    data.put(Deployments.COMPLETION_TIME, d.getCompletionTime());
+    data.setId(v.id);
+    data.setDeploymentUrl(v.deploymentUrl);
+    data.setConfigurationId(v.configurationId);
+    data.setConfigurationName(v.configurationName);
+    data.setExecutableId(v.executableId);
+    data.setScenarioId(v.scenarioId);
+    data.setStatus(v.status);
+    data.setStatusMessage(v.statusMessage);
+    data.setTargetStatus(v.targetStatus);
+    data.setLastOperation(v.lastOperation);
+    data.setLatestRunningConfigurationId(v.latestRunningConfigurationId);
+    data.setTtl(v.ttl);
+    data.put(Deployments.CREATED_AT, v.createdAt);
+    data.put(Deployments.MODIFIED_AT, v.modifiedAt);
+    data.put(Deployments.SUBMISSION_TIME, v.submissionTime);
+    data.put(Deployments.START_TIME, v.startTime);
+    data.put(Deployments.COMPLETION_TIME, v.completionTime);
     data.setResourceGroup(ResourceGroups.create(resourceGroupId));
     return data;
   }
 
-  private static Deployments toDeployments(AiDeployment d, String resourceGroupId) {
-    Deployments data = Deployments.create();
-    data.setId(d.getId());
-    data.setDeploymentUrl(d.getDeploymentUrl());
-    data.setConfigurationId(d.getConfigurationId());
-    data.setConfigurationName(d.getConfigurationName());
-    data.setExecutableId(d.getExecutableId());
-    data.setScenarioId(d.getScenarioId());
-    data.setStatus(d.getStatus().getValue());
-    data.setStatusMessage(d.getStatusMessage());
-    data.setTargetStatus(d.getTargetStatus().getValue());
-    data.setLastOperation(d.getLastOperation() != null ? d.getLastOperation().getValue() : null);
-    data.setLatestRunningConfigurationId(d.getLatestRunningConfigurationId());
-    data.setTtl(d.getTtl());
-    data.put(Deployments.CREATED_AT, d.getCreatedAt());
-    data.put(Deployments.MODIFIED_AT, d.getModifiedAt());
-    data.put(Deployments.SUBMISSION_TIME, d.getSubmissionTime());
-    data.put(Deployments.START_TIME, d.getStartTime());
-    data.put(Deployments.COMPLETION_TIME, d.getCompletionTime());
-    data.setResourceGroup(ResourceGroups.create(resourceGroupId));
-    return data;
-  }
-  // CPD-ON
+  private record DeploymentValues(
+      String id,
+      String deploymentUrl,
+      String configurationId,
+      String configurationName,
+      String executableId,
+      String scenarioId,
+      String status,
+      String statusMessage,
+      String targetStatus,
+      String lastOperation,
+      String latestRunningConfigurationId,
+      String ttl,
+      OffsetDateTime createdAt,
+      OffsetDateTime modifiedAt,
+      OffsetDateTime submissionTime,
+      OffsetDateTime startTime,
+      OffsetDateTime completionTime) {}
 }

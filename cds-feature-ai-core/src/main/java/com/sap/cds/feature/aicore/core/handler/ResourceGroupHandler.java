@@ -83,7 +83,8 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
           BckndResourceGroupsPostRequest.create().resourceGroupId(resourceGroupId);
 
       @SuppressWarnings("unchecked")
-      List<Map<String, Object>> labels = (List<Map<String, Object>>) entry.get(ResourceGroups.LABELS);
+      List<Map<String, Object>> labels =
+          (List<Map<String, Object>>) entry.get(ResourceGroups.LABELS);
       List<BckndResourceGroupLabel> mergedLabels = new ArrayList<>();
 
       // User-supplied labels take precedence: if they include the tenant label key, we skip
@@ -180,8 +181,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     if (rg.getLabels() != null) {
       List<CdsData> labels = new ArrayList<>(rg.getLabels().size());
       for (BckndResourceGroupLabel l : rg.getLabels()) {
-        var lm =
-            com.sap.cds.feature.aicore.generated.cds4j.aicore.BckndResourceGroupLabel.create();
+        var lm = com.sap.cds.feature.aicore.generated.cds4j.aicore.BckndResourceGroupLabel.create();
         lm.setKey(l.getKey());
         lm.setValue(l.getValue());
         labels.add(lm);

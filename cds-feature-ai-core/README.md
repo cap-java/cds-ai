@@ -6,8 +6,8 @@ Bridges CAP Java applications to [SAP AI Core](https://help.sap.com/docs/sap-ai-
 
 - **`AICore` CDS Service** - Exposes resource groups, deployments, and configurations as CDS entities with full CRUD support
 - **Multi-Tenancy** - Automatic per-tenant resource group creation/deletion on subscribe/unsubscribe
-- **RPT-1 Deployment Management** - Auto-creates configurations and deployments for the SAP-RPT-1 model
-- **Prediction Client** - `AIClient` interface for calling the RPT-1 prediction API with retry and backoff
+- **Deployment Management** - Auto-creates configurations and deployments for AI Core models with retry and backoff
+- **Inference Client Factory** - Provides ready-to-use `ApiClient` instances scoped to a deployment for downstream foundation-model SDKs
 - **Mock Fallback** - When no AI Core binding is detected, a mock implementation enables local development
 
 ## Setup
@@ -67,8 +67,8 @@ The plugin registers a CAP service named `AICore` that proxies AI Core REST APIs
 // Get the resource group ID for a CDS tenant
 String rgId = aiCoreService.resourceGroupForTenant(tenantId);
 
-// Get (or auto-create) the RPT-1 deployment ID for a resource group
-String deploymentId = aiCoreService.rpt1DeploymentId(resourceGroupId);
+// Get (or auto-create) a deployment ID for a model spec in the given resource group
+String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
 ```
 
 ## Multi-Tenancy
@@ -91,10 +91,15 @@ AICoreService aiCore = runtime.getServiceCatalog()
 // Use for entity operations (AICoreService extends CqnService)
 Result rgs = aiCore.run(Select.from("AICore.resourceGroups"));
 
-// Use the prediction client
-AIClient client = new AICoreClient(aiCore, runtime);
-List<CdsData> predictions = client.fetchPredictions(rows, targetColumns, indexColumn);
+// Resolve a deployment and obtain a configured ApiClient for it
+String resourceGroupId = aiCore.resourceGroupForTenant(tenantId);
+String deploymentId = aiCore.deploymentId(resourceGroupId, RptModelSpec.rpt1());
+ApiClient client = aiCore.inferenceClient(resourceGroupId, deploymentId);
 ```
+
+The `ApiClient` returned by `inferenceClient` is preconfigured with the AI Core
+destination and the deployment URL; use it to construct foundation-model SDK
+clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
 
 ## Related
 
