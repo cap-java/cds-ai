@@ -1,5 +1,5 @@
 /*
-* © 2026 SAP SE or an SAP affiliate company and cds-feature-notifications contributors.
+* © 2026 SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
 */
 package com.sap.cds;
 
@@ -48,6 +48,7 @@ class ExtractionServiceImplTest {
     when(insertResult.single(ExtractionJob.class)).thenReturn(createdJob);
     when(persistenceService.run(any(CqnInsert.class))).thenReturn(insertResult);
     lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
+    lenient().when(documentAiProcessingService.isAvailable()).thenReturn(true);
     mockContent = new ByteArrayInputStream("test-content".getBytes());
     extractionService = new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
   }

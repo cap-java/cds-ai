@@ -1,10 +1,14 @@
 /*
-* © 2026 SAP SE or an SAP affiliate company and cds-feature-notifications contributors.
+* © 2026 SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
 */
 package com.sap.cds.service;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.sap.cds.service.documentai.client.DocumentAiClient;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,11 +20,14 @@ import org.junit.jupiter.api.Test;
 class DefaultDocumentAiProcessingServiceTest {
 
   public static final String TEST = "test";
+  DocumentAiClient documentAiClient;
   DefaultDocumentAiProcessingService service;
 
   @BeforeEach
-  void setUp() {
-    service = new DefaultDocumentAiProcessingService();
+  void setUp() throws Exception {
+    documentAiClient = mock(DocumentAiClient.class);
+    when(documentAiClient.submitDocument(any())).thenReturn("mock-result");
+    service = new DefaultDocumentAiProcessingService(documentAiClient);
   }
 
   @Test

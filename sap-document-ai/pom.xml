@@ -219,7 +219,7 @@
             </googleJavaFormat>
             <licenseHeader>
               <content>/*
-* © $YEAR SAP SE or an SAP affiliate company and cds-feature-notifications contributors.
+* © $YEAR SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
 */</content>
             </licenseHeader>
           </java>
