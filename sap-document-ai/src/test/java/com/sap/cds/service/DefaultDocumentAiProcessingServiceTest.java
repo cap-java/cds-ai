@@ -48,11 +48,11 @@ class DefaultDocumentAiProcessingServiceTest {
   }
 
   @Test
-  void processDocumentHandlesSubmitDocumentException() {
+  void processDocumentThrowsWhenSubmitDocumentFails() {
     Mockito.when(documentAiClient.submitDocument(ArgumentMatchers.any()))
         .thenThrow(new RuntimeException("submit failed"));
     InputStream content = new ByteArrayInputStream(TEST.getBytes());
-    Assertions.assertThatCode(() -> service.processDocument("job-1", content))
-        .doesNotThrowAnyException();
+    Assertions.assertThatThrownBy(() -> service.processDocument("job-1", content))
+        .isInstanceOf(DocumentAiProcessingException.class);
   }
 }

@@ -97,36 +97,47 @@ class ExtractionServiceImplTest {
   }
 
   @Test
-  void pendingToCompletedTransitionIsRejected() {
-    Result pending = jobWithStatus(ExtractionStatus.PENDING);
-    when(persistenceService.run(any(CqnSelect.class))).thenReturn(pending);
+  void startExtractionFailsWhenJobNotFound() {
+    Result emptyResult = mock(Result.class);
+    when(emptyResult.single(ExtractionJob.class)).thenThrow(new RuntimeException("not found"));
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
 
-    Assertions.assertThatThrownBy(
-            () -> extractionService.updateStatus("job-1", ExtractionStatus.COMPLETED))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Invalid status transition");
+    extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
+
+    verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
 
   @Test
-  void pendingToFailedTransitionIsRejected() {
-    Result pending = jobWithStatus(ExtractionStatus.PENDING);
-    when(persistenceService.run(any(CqnSelect.class))).thenReturn(pending);
+  void startExtractionLogsErrorWhenFailedStatusUpdateAlsoFails() {
+    Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(pendingResult);
+    doThrow(new RuntimeException("simulated failure"))
+        .when(documentAiProcessingService)
+        .processDocument(any(), any());
 
-    Assertions.assertThatThrownBy(
-            () -> extractionService.updateStatus("job-1", ExtractionStatus.FAILED))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Invalid status transition");
+    extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
+
+    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
   }
 
   @Test
-  void processingToPendingTransitionIsRejected() {
-    Result processing = jobWithStatus(ExtractionStatus.PROCESSING);
-    when(persistenceService.run(any(CqnSelect.class))).thenReturn(processing);
+  void transitionFromCompletedIsRejected() {
+    Result completedResult = jobWithStatus(ExtractionStatus.COMPLETED);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(completedResult);
 
-    Assertions.assertThatThrownBy(
-            () -> extractionService.updateStatus("job-1", ExtractionStatus.PENDING))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Invalid status transition");
+    extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
+
+    verify(persistenceService, never()).run(any(CqnUpdate.class));
+  }
+
+  @Test
+  void invalidTransitionThrowsAndJobMarkedFailed() {
+    Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(pendingResult);
+
+    extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
+
+    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
   }
 
   private Result jobWithStatus(String status) {

@@ -30,8 +30,8 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
           "[sap-document-ai] Document submitted successfully for jobId={}, result={}",
           jobId,
           result);
-    } catch (Exception e) {
-      logger.error("[sap-document-ai] Extraction failed for jobId={}", jobId, e);
+    } catch (RuntimeException e) {
+      throw new DocumentAiProcessingException("Failed to process document for jobId=" + jobId, e);
     }
   }
 
