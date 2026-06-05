@@ -3,6 +3,7 @@
 */
 package com.sap.cds.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 /*
  * Temporary tests until the real implementation is done
  * */
+@SuppressWarnings("PMD.TooManyStaticImports")
 class DefaultDocumentAiProcessingServiceTest {
 
   public static final String TEST = "test";
@@ -24,14 +26,31 @@ class DefaultDocumentAiProcessingServiceTest {
   DefaultDocumentAiProcessingService service;
 
   @BeforeEach
-  void setUp() throws Exception {
+  void setUp() {
     documentAiClient = mock(DocumentAiClient.class);
     when(documentAiClient.submitDocument(any())).thenReturn("mock-result");
     service = new DefaultDocumentAiProcessingService(documentAiClient);
   }
 
   @Test
+  void isAvailableReturnsTrueWhenClientPresent() {
+    assertThat(service.isAvailable()).isTrue();
+  }
+
+  @Test
+  void isAvailableReturnsFalseWhenClientNull() {
+    assertThat(new DefaultDocumentAiProcessingService(null).isAvailable()).isFalse();
+  }
+
+  @Test
   void processDocumentCompletesWithoutException() {
+    InputStream content = new ByteArrayInputStream(TEST.getBytes());
+    assertThatCode(() -> service.processDocument("job-1", content)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void processDocumentHandlesSubmitDocumentException() {
+    when(documentAiClient.submitDocument(any())).thenThrow(new RuntimeException("submit failed"));
     InputStream content = new ByteArrayInputStream(TEST.getBytes());
     assertThatCode(() -> service.processDocument("job-1", content)).doesNotThrowAnyException();
   }

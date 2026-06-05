@@ -8,21 +8,16 @@ import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.Extraction
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob_;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionStatus;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.InputStream;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ExtractionServiceImpl implements ExtractionService {
 
   private static final Logger logger = LoggerFactory.getLogger(ExtractionServiceImpl.class);
-  private static final int MAX_PARALLEL_EXTRACTIONS = Runtime.getRuntime().availableProcessors();
-  private static final ExecutorService executor =
-      Executors.newFixedThreadPool(MAX_PARALLEL_EXTRACTIONS);
 
   private final PersistenceService persistenceService;
   private final DocumentAiProcessingService documentAiProcessingService;
@@ -49,22 +44,19 @@ public class ExtractionServiceImpl implements ExtractionService {
 
     String jobId = createExtractionJob(attachmentId, tenantId);
 
-    CompletableFuture.runAsync(
-        () -> {
-          try {
-            updateStatus(jobId, ExtractionStatus.PROCESSING);
-            documentAiProcessingService.processDocument(jobId, content);
-            updateStatus(jobId, ExtractionStatus.COMPLETED);
-          } catch (Exception e) {
-            logger.error(
-                "[sap-document-ai] Something went wrong while triggering orchestration - for attachmentId={}, tenantId={}, error={}",
-                attachmentId,
-                tenantId,
-                e);
-            updateStatus(jobId, ExtractionStatus.FAILED);
-          }
-        },
-        executor);
+    try {
+      // process document
+      updateStatus(jobId, ExtractionStatus.PROCESSING);
+      documentAiProcessingService.processDocument(jobId, content);
+      updateStatus(jobId, ExtractionStatus.COMPLETED);
+    } catch (Exception e) {
+      logger.error(
+          "[sap-document-ai] Something went wrong while triggering orchestration - for attachmentId={}, tenantId={}, error={}",
+          attachmentId,
+          tenantId,
+          e);
+      updateStatus(jobId, ExtractionStatus.FAILED);
+    }
   }
 
   private String createExtractionJob(String attachmentId, String tenantId) {
@@ -81,10 +73,28 @@ public class ExtractionServiceImpl implements ExtractionService {
     return jobId;
   }
 
-  private void updateStatus(String jobId, String status) {
-    ExtractionJob extractionJob = ExtractionJob.create();
-    extractionJob.setStatus(status);
-    persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
-    logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
+  void updateStatus(String jobId, String status) {
+    // get current status
+    Result current = persistenceService.run(Select.from(ExtractionJob_.class).byId(jobId));
+    String currentStatus = current.single(ExtractionJob.class).getStatus();
+
+    // validate status
+    boolean isStatusUpdateValid =
+        (currentStatus.equals(ExtractionStatus.PENDING)
+                && status.equals(ExtractionStatus.PROCESSING))
+            || (currentStatus.equals(ExtractionStatus.PROCESSING)
+                && (status.equals(ExtractionStatus.COMPLETED)
+                    || status.equals(ExtractionStatus.FAILED)));
+    if (isStatusUpdateValid) {
+      // update to new status
+      ExtractionJob extractionJob = ExtractionJob.create();
+      extractionJob.setStatus(status);
+      persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
+      logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
+    } else {
+      // reject
+      throw new IllegalStateException(
+          "Invalid status transition: " + currentStatus + " -> " + status);
+    }
   }
 }
