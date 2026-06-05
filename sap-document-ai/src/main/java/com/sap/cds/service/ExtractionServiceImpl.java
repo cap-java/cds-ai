@@ -48,12 +48,16 @@ public class ExtractionServiceImpl implements ExtractionService {
       updateStatus(jobId, ExtractionStatus.PROCESSING);
       documentAiProcessingService.processDocument(jobId, content);
       updateStatus(jobId, ExtractionStatus.COMPLETED);
-    } catch (Exception e) {
+    } catch (IllegalStateException e) { // example: COMPLETED -> FAILED
+      logger.error("[sap-document-ai] Invalid state transition for jobId={}", jobId, e);
+
+    } catch (Exception e) { // example : PROCESSING -> FAILED
       logger.error(
-          "[sap-document-ai] Something went wrong while triggering orchestration - for attachmentId={}, tenantId={}",
+          "[sap-document-ai] Processing failed for attachmentId={}, tenantId={}",
           attachmentId,
           tenantId,
           e);
+
       markJobAsFailed(jobId);
     }
   }
@@ -84,14 +88,14 @@ public class ExtractionServiceImpl implements ExtractionService {
     Result current = persistenceService.run(Select.from(ExtractionJob_.class).byId(jobId));
     String currentStatus = current.single(ExtractionJob.class).getStatus();
 
-    if (StatusTransitionValidator.isValid(currentStatus, status)) {
-      ExtractionJob extractionJob = ExtractionJob.create();
-      extractionJob.setStatus(status);
-      persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
-      logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
-    } else {
+    if (!StatusTransitionValidator.isValid(currentStatus, status)) {
       throw new IllegalStateException(
           "Invalid status transition: " + currentStatus + " -> " + status);
     }
+
+    ExtractionJob extractionJob = ExtractionJob.create();
+    extractionJob.setStatus(status);
+    persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
+    logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
   }
 }

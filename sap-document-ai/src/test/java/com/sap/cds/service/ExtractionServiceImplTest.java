@@ -108,7 +108,7 @@ class ExtractionServiceImplTest {
   }
 
   @Test
-  void startExtractionLogsErrorWhenFailedStatusUpdateAlsoFails() {
+  void markJobAsFailedIsSkippedWhenTransitionFromPendingToFailedIsInvalid() {
     Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(pendingResult);
     doThrow(new RuntimeException("simulated failure"))
@@ -121,23 +121,14 @@ class ExtractionServiceImplTest {
   }
 
   @Test
-  void transitionFromCompletedIsRejected() {
+  void invalidTransitionIsLoggedAndNoStatusUpdateOccurs() {
+    // COMPLETED has no valid outgoing transitions — PROCESSING update throws IllegalStateException
     Result completedResult = jobWithStatus(ExtractionStatus.COMPLETED);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(completedResult);
 
     extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
 
     verify(persistenceService, never()).run(any(CqnUpdate.class));
-  }
-
-  @Test
-  void invalidTransitionThrowsAndJobMarkedFailed() {
-    Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
-    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(pendingResult);
-
-    extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
-
-    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
   }
 
   private Result jobWithStatus(String status) {
