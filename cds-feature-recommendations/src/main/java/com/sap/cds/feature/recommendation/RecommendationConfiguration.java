@@ -34,7 +34,9 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
             ? (service, tenantId) -> new MockRecommendationClient()
             : RecommendationConfiguration::resolveRptClient;
 
-    configurer.eventHandler(new FioriRecommendationHandler(aiCoreService, resolver));
+    FioriRecommendationHandler handler = new FioriRecommendationHandler(aiCoreService, resolver);
+    configurer.eventHandler(handler);
+    configurer.eventHandler(new RecommendationModelChangedHandler(handler));
   }
 
   private static RecommendationClient resolveRptClient(AICoreService service, String tenantId) {
