@@ -40,9 +40,12 @@ Or use the starter that bundles this with `cds-feature-ai-core`:
 - An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (see [`cds-feature-ai-core`](../cds-feature-ai-core/README.md))
 - Entity must be **draft-enabled** (`@odata.draft.enabled`)
 - At least one field annotated with a **value list**
-- The `@cap-js/ai` CDS plugin must be installed (provides the model enhancement that adds `SAP_Recommendations` as a navigation property)
+- The `SAP_Recommendations` navigation property must be added to the entities that should receive recommendations by
+  - either installing the `@cap-js/ai` CDS plugin (automatically provides the model enhancement that adds `SAP_Recommendations` as a navigation property)
+  - or adding the `SAP_Recommendations`property manually.
+  Without the `SAP_Recommendations` navigation property, the predictions will be computed but not serialized in OData responses.
 
-### CDS Plugin
+#### CDS Plugin
 
 Add `@cap-js/ai` to your project's `package.json`:
 
@@ -55,7 +58,7 @@ Add `@cap-js/ai` to your project's `package.json`:
 }
 ```
 
-Then run `npm install`. The plugin hooks into the CDS compiler and automatically adds the `SAP_Recommendations` navigation property to draft-enabled entities that have value-list fields. Without this plugin, predictions will be computed but not serialized in OData responses.
+Then run `npm install`. The plugin hooks into the CDS compiler and automatically adds the `SAP_Recommendations` navigation property to draft-enabled entities that have value-list fields. 
 
 Since the Java module `cds-feature-ai-core` already provides the `AICore` service CDS model, disable the duplicate model from `@cap-js/ai` in your `.cdsrc.json`:
 
@@ -68,6 +71,41 @@ Since the Java module `cds-feature-ai-core` already provides the `AICore` servic
   }
 }
 ```
+#### Adding the SAP_Recommendations navigation property manually
+
+If you cannot use the CDS plugin, add the `SAP_Recommendations` navigation property directly in your CDS model. You need to:
+
+1. **Define a `RecommendationItem_*` type** for each CDS primitive type used by your value-list fields. Each type must contain the four fixed fields shown below — only `RecommendedFieldValue` varies by type.
+2. **Extend each target entity** with a `SAP_Recommendations` composition that has one entry per value-list field, using the field name as the property name and the matching `RecommendationItem_*` type.
+
+The property names inside `SAP_Recommendations` must exactly match the field names on the entity (e.g. `genre_ID`, `author_ID`).
+
+```cds
+// Define one type per CDS primitive used by your value-list fields
+type RecommendationItem_Integer {
+  RecommendedFieldValue       : Integer;
+  RecommendedFieldDescription : String;
+  RecommendedFieldScoreValue  : Decimal;
+  RecommendedFieldIsSuggestion: Boolean;
+}
+
+type RecommendationItem_UUID {
+  RecommendedFieldValue       : UUID;
+  RecommendedFieldDescription : String;
+  RecommendedFieldScoreValue  : Decimal;
+  RecommendedFieldIsSuggestion: Boolean;
+}
+
+// Extend your entity — one entry per value-list field
+extend my.Books with {
+  SAP_Recommendations: Composition of one {
+    genre_ID : many RecommendationItem_Integer;
+    author_ID: many RecommendationItem_UUID;
+  }
+}
+```
+
+See also the [SAP Fiori Elements – Recommendations documentation](https://help.sap.com/docs/SAPUI5/b2f662dd9d7a4ec680056733050b4d34/1a6324d5ad7f4034a93f911b4e53e080.html).
 
 ## Enabling Recommendations
 
