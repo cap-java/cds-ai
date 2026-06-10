@@ -193,6 +193,40 @@ class AICoreServiceImplDeploymentIdTest {
   }
 
   @Test
+  void resourceGroupForTenant_nullTenantId_returnsDefault() {
+    // Even with MT enabled, a null tenantId should fall back to the default resource group.
+    CdsRuntime rtMt = mock(CdsRuntime.class);
+    CdsEnvironment envMt = mock(CdsEnvironment.class);
+    when(rtMt.getEnvironment()).thenReturn(envMt);
+    when(envMt.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any())).thenReturn(1);
+    when(envMt.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any())).thenReturn(1L);
+    when(envMt.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
+        .thenReturn("my-default");
+    when(envMt.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
+        .thenReturn("cds-");
+
+    AICoreServiceImpl mtService =
+        new AICoreServiceImpl(
+            AICoreService.DEFAULT_NAME,
+            rtMt,
+            true, // multi-tenancy enabled
+            deploymentApi,
+            configurationApi,
+            resourceGroupApi,
+            mock(AiCoreService.class));
+
+    String result = mtService.resourceGroupForTenant(null);
+    assertThat(result).isEqualTo("my-default");
+  }
+
+  @Test
+  void resourceGroupForTenant_multiTenancyDisabled_returnsDefault() {
+    // Single-tenancy always returns default regardless of the tenantId passed.
+    String result = service.resourceGroupForTenant("any-tenant");
+    assertThat(result).isEqualTo("default");
+  }
+
+  @Test
   void noCacheNoExistingDeployment_createsNewDeploymentWhenConfigExists() {
     // Empty deployment list → falls through to create path.
     AiDeploymentList emptyList = mock(AiDeploymentList.class);
