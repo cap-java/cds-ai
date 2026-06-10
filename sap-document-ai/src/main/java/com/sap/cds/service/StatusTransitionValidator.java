@@ -3,19 +3,18 @@
 */
 package com.sap.cds.service;
 
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionStatus;
+import static com.sap.cds.service.ExtractionStatus.*;
 
 class StatusTransitionValidator {
 
   private StatusTransitionValidator() {}
 
-  static boolean isValid(String current, String next) {
+  static boolean isValid(ExtractionStatus current, ExtractionStatus next) {
     if (current.equals(next)) return true; // idempotent
 
     return switch (current) {
-      case ExtractionStatus.PENDING -> ExtractionStatus.PROCESSING.equals(next);
-      case ExtractionStatus.PROCESSING ->
-          ExtractionStatus.COMPLETED.equals(next) || ExtractionStatus.FAILED.equals(next);
+      case PENDING -> PROCESSING.equals(next);
+      case PROCESSING -> COMPLETED.equals(next) || FAILED.equals(next);
       default -> false;
     };
   }

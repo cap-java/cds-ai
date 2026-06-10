@@ -3,7 +3,8 @@
 */
 package com.sap.cds.service;
 
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionStatus;
+import static com.sap.cds.service.ExtractionStatus.*;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -11,55 +12,36 @@ class StatusTransitionValidatorTest {
 
   @Test
   void pendingToProcessingIsValid() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(
-                ExtractionStatus.PENDING, ExtractionStatus.PROCESSING))
-        .isTrue();
+    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, PROCESSING)).isTrue();
   }
 
   @Test
   void processingToCompletedIsValid() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(
-                ExtractionStatus.PROCESSING, ExtractionStatus.COMPLETED))
-        .isTrue();
+    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, COMPLETED)).isTrue();
   }
 
   @Test
   void processingToFailedIsValid() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(ExtractionStatus.PROCESSING, ExtractionStatus.FAILED))
-        .isTrue();
+    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, FAILED)).isTrue();
   }
 
   @Test
   void pendingToCompletedIsInvalid() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(ExtractionStatus.PENDING, ExtractionStatus.COMPLETED))
-        .isFalse();
+    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, COMPLETED)).isFalse();
   }
 
   @Test
   void processingToPendingIsInvalid() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(
-                ExtractionStatus.PROCESSING, ExtractionStatus.PENDING))
-        .isFalse();
+    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, PENDING)).isFalse();
   }
 
   @Test
   void completedToProcessingIsInvalid() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(
-                ExtractionStatus.COMPLETED, ExtractionStatus.PROCESSING))
-        .isFalse();
+    Assertions.assertThat(StatusTransitionValidator.isValid(COMPLETED, PROCESSING)).isFalse();
   }
 
   @Test
   void sameTransitionIsIdempotent() {
-    Assertions.assertThat(
-            StatusTransitionValidator.isValid(
-                ExtractionStatus.PROCESSING, ExtractionStatus.PROCESSING))
-        .isTrue();
+    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, PROCESSING)).isTrue();
   }
 }

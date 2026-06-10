@@ -3,13 +3,13 @@
 */
 package com.sap.cds.service;
 
+import static com.sap.cds.service.ExtractionStatus.*;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
 import com.sap.cds.Struct;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionStatus;
 import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
@@ -47,8 +47,8 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnInsert.class))).thenReturn(insertResult);
     lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
     lenient().when(documentAiProcessingService.isAvailable()).thenReturn(true);
-    Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
-    Result processingResult = jobWithStatus(ExtractionStatus.PROCESSING);
+    Result pendingResult = jobWithStatus(PENDING);
+    Result processingResult = jobWithStatus(PROCESSING);
     lenient()
         .when(persistenceService.run(any(CqnSelect.class)))
         .thenReturn(pendingResult, processingResult);
@@ -75,13 +75,14 @@ class ExtractionServiceImplTest {
         Struct.access(insertCaptor.getValue().entries().get(0)).as(ExtractionJob.class);
     Assertions.assertThat(inserted.getAttachmentId()).isEqualTo(ATT_123);
     Assertions.assertThat(inserted.getTenantId()).isEqualTo(TENANT_1);
+    Assertions.assertThat(inserted.getStatus()).isEqualTo(PENDING.name());
   }
 
   @Test
   void startExtractionTransitionsStatusToProcessingThenCompleted() {
     extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
     List<CqnUpdate> updates = captureStatusUpdates(2);
-    assertStatusSequence(updates, ExtractionStatus.PROCESSING, ExtractionStatus.COMPLETED);
+    assertStatusSequence(updates, PROCESSING, COMPLETED);
   }
 
   @Test
@@ -93,7 +94,7 @@ class ExtractionServiceImplTest {
     extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
 
     List<CqnUpdate> updates = captureStatusUpdates(2);
-    assertStatusSequence(updates, ExtractionStatus.PROCESSING, ExtractionStatus.FAILED);
+    assertStatusSequence(updates, PROCESSING, FAILED);
   }
 
   @Test
@@ -110,7 +111,7 @@ class ExtractionServiceImplTest {
   @Test
   void updateStatusWithSameStateDoesNotRunJobAgain() {
     // Job is already PROCESSING — calling updateStatus(PROCESSING) should be a no-op
-    Result processingResult = jobWithStatus(ExtractionStatus.PROCESSING);
+    Result processingResult = jobWithStatus(PROCESSING);
     when(persistenceService.run(any(CqnSelect.class))).thenReturn(processingResult);
     doThrow(new RuntimeException("simulated failure"))
         .when(documentAiProcessingService)
@@ -127,7 +128,7 @@ class ExtractionServiceImplTest {
 
   @Test
   void markJobAsFailedIsSkippedWhenTransitionFromPendingToFailedIsInvalid() {
-    Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
+    Result pendingResult = jobWithStatus(PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(pendingResult);
     doThrow(new RuntimeException("simulated failure"))
         .when(documentAiProcessingService)
@@ -141,7 +142,7 @@ class ExtractionServiceImplTest {
   @Test
   void invalidTransitionIsLoggedAndNoStatusUpdateOccurs() {
     // COMPLETED has no valid outgoing transitions — PROCESSING update throws IllegalStateException
-    Result completedResult = jobWithStatus(ExtractionStatus.COMPLETED);
+    Result completedResult = jobWithStatus(COMPLETED);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(completedResult);
 
     extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent);
@@ -149,9 +150,9 @@ class ExtractionServiceImplTest {
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
 
-  private Result jobWithStatus(String status) {
+  private Result jobWithStatus(ExtractionStatus status) {
     ExtractionJob job = ExtractionJob.create();
-    job.setStatus(status);
+    job.setStatus(status.name());
     Result result = mock(Result.class);
     lenient().when(result.single(ExtractionJob.class)).thenReturn(job);
     return result;
@@ -163,12 +164,13 @@ class ExtractionServiceImplTest {
     return captor.getAllValues();
   }
 
-  private void assertStatusSequence(List<CqnUpdate> updates, String first, String second) {
+  private void assertStatusSequence(
+      List<CqnUpdate> updates, ExtractionStatus first, ExtractionStatus second) {
     Assertions.assertThat(
             Struct.access(updates.get(0).entries().get(0)).as(ExtractionJob.class).getStatus())
-        .isEqualTo(first);
+        .isEqualTo(first.name());
     Assertions.assertThat(
             Struct.access(updates.get(1).entries().get(0)).as(ExtractionJob.class).getStatus())
-        .isEqualTo(second);
+        .isEqualTo(second.name());
   }
 }
