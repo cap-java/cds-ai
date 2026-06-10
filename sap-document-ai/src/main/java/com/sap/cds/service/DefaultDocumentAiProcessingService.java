@@ -4,6 +4,7 @@
 package com.sap.cds.service;
 
 import com.sap.cds.service.documentai.client.DocumentAiClient;
+import com.sap.cds.service.exceptions.DocumentAiProcessingException;
 import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

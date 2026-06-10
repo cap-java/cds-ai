@@ -54,4 +54,12 @@ class StatusTransitionValidatorTest {
                 ExtractionStatus.COMPLETED, ExtractionStatus.PROCESSING))
         .isFalse();
   }
+
+  @Test
+  void sameTransitionTwice() {
+    Assertions.assertThat(
+            StatusTransitionValidator.isValid(
+                ExtractionStatus.PROCESSING, ExtractionStatus.PROCESSING))
+        .isFalse();
+  }
 }

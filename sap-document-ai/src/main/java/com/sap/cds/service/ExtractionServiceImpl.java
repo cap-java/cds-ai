@@ -10,6 +10,7 @@ import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.Extraction
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.InputStream;
 import org.slf4j.Logger;
@@ -48,9 +49,8 @@ public class ExtractionServiceImpl implements ExtractionService {
       updateStatus(jobId, ExtractionStatus.PROCESSING);
       documentAiProcessingService.processDocument(jobId, content);
       updateStatus(jobId, ExtractionStatus.COMPLETED);
-    } catch (IllegalStateException e) { // example: COMPLETED -> FAILED
+    } catch (IllegalStatusTransitionException e) { // example: COMPLETED -> FAILED
       logger.error("[sap-document-ai] Invalid state transition for jobId={}", jobId, e);
-
     } catch (Exception e) { // example : PROCESSING -> FAILED
       logger.error(
           "[sap-document-ai] Processing failed for attachmentId={}, tenantId={}",
@@ -89,8 +89,8 @@ public class ExtractionServiceImpl implements ExtractionService {
     String currentStatus = current.single(ExtractionJob.class).getStatus();
 
     if (!StatusTransitionValidator.isValid(currentStatus, status)) {
-      throw new IllegalStateException(
-          "Invalid status transition: " + currentStatus + " -> " + status);
+      throw new IllegalStatusTransitionException(
+          "Invalid status transition from " + currentStatus + " to " + status);
     }
 
     ExtractionJob extractionJob = ExtractionJob.create();

@@ -4,6 +4,7 @@
 package com.sap.cds.service;
 
 import com.sap.cds.service.documentai.client.DocumentAiClient;
+import com.sap.cds.service.exceptions.DocumentAiProcessingException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import org.assertj.core.api.Assertions;
