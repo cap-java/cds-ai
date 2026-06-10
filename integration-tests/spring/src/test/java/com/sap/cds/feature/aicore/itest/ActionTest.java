@@ -9,9 +9,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AbstractAICoreService;
-import com.sap.cds.feature.recommendation.RptModelSpec;
+import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.CqnService;

@@ -1,11 +1,11 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.recommendation;
+package com.sap.cds.feature.recommendation.api;
 
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
 import com.sap.ai.sdk.foundationmodels.rpt.RptModel;
-import com.sap.cds.feature.aicore.core.ModelDeploymentSpec;
+import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import java.util.List;
 import java.util.Map;
 

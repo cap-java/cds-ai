@@ -20,6 +20,8 @@ import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
+import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsEnvironment;

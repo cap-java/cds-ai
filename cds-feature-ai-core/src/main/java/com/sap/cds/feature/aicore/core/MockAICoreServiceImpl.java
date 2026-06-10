@@ -3,6 +3,7 @@
  */
 package com.sap.cds.feature.aicore.core;
 
+import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;

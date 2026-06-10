@@ -3,8 +3,12 @@
  */
 package com.sap.cds.feature.recommendation;
 
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.MockAICoreServiceImpl;
+import com.sap.cds.feature.recommendation.api.RecommendationClient;
+import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
+import com.sap.cds.feature.recommendation.api.RptInferenceClient;
+import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;

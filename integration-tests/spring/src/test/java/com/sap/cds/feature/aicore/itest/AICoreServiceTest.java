@@ -5,9 +5,9 @@ package com.sap.cds.feature.aicore.itest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AbstractAICoreService;
-import com.sap.cds.feature.recommendation.RptModelSpec;
+import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
