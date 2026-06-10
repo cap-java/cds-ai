@@ -125,8 +125,8 @@ public class AICoreServiceImpl extends AbstractAICoreService {
 
   @Override
   public String resourceGroupForTenant(String tenantId) {
-    if (!multiTenancyEnabled) {
-      logger.debug("Multi-tenancy disabled, using resource group {}", defaultResourceGroup);
+    if (!multiTenancyEnabled || tenantId == null) {
+      logger.debug("Using default resource group {}", defaultResourceGroup);
       return defaultResourceGroup;
     }
     return getOrCreateResourceGroupForTenant(tenantId);
