@@ -4,6 +4,7 @@
 package com.sap.cds.service;
 
 import com.sap.cds.service.documentai.client.DocumentAiClient;
+import com.sap.cds.service.exceptions.DocumentAiProcessingException;
 import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,18 +26,13 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
     logger.info(
         "[sap-document-ai] Processing document for jobId={} and content={}", jobId, content);
     try {
-      Thread.sleep(3000);
-      // TODO: Replace mock delay with real Document AI integration
       String result = documentAiClient.submitDocument(content);
       logger.info(
           "[sap-document-ai] Document submitted successfully for jobId={}, result={}",
           jobId,
           result);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      logger.error("[sap-document-ai] Interrupted during extraction for jobId={}", jobId, e);
-    } catch (Exception e) {
-      logger.error("[sap-document-ai] Extraction failed for jobId={}", jobId, e);
+    } catch (RuntimeException e) {
+      throw new DocumentAiProcessingException("Failed to process document for jobId=" + jobId, e);
     }
   }
 

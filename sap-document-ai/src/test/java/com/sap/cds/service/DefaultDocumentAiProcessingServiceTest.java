@@ -3,20 +3,19 @@
 */
 package com.sap.cds.service;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.sap.cds.service.documentai.client.DocumentAiClient;
+import com.sap.cds.service.exceptions.DocumentAiProcessingException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 /*
  * Temporary tests until the real implementation is done
- * */
+ */
 class DefaultDocumentAiProcessingServiceTest {
 
   public static final String TEST = "test";
@@ -24,29 +23,37 @@ class DefaultDocumentAiProcessingServiceTest {
   DefaultDocumentAiProcessingService service;
 
   @BeforeEach
-  void setUp() throws Exception {
-    documentAiClient = mock(DocumentAiClient.class);
-    when(documentAiClient.submitDocument(any())).thenReturn("mock-result");
+  void setUp() {
+    documentAiClient = Mockito.mock(DocumentAiClient.class);
+    Mockito.when(documentAiClient.submitDocument(ArgumentMatchers.any())).thenReturn("mock-result");
     service = new DefaultDocumentAiProcessingService(documentAiClient);
   }
 
+  // ----- isAvailable() -------
   @Test
-  void processDocumentCompletesWithoutException() {
-    InputStream content = new ByteArrayInputStream(TEST.getBytes());
-    assertThatCode(() -> service.processDocument("job-1", content)).doesNotThrowAnyException();
+  void isAvailableReturnsTrueWhenClientPresent() {
+    Assertions.assertThat(service.isAvailable()).isTrue();
   }
 
   @Test
-  void processDocumentHandlesInterruption() throws InterruptedException {
+  void isAvailableReturnsFalseWhenClientNull() {
+    Assertions.assertThat(new DefaultDocumentAiProcessingService(null).isAvailable()).isFalse();
+  }
+
+  // ------- processDocument() -------
+  @Test
+  void processDocumentCompletesWithoutException() {
     InputStream content = new ByteArrayInputStream(TEST.getBytes());
-    Thread thread =
-        new Thread(
-            () -> {
-              assertThatCode(() -> service.processDocument("job-2", content))
-                  .doesNotThrowAnyException();
-            });
-    thread.start();
-    thread.interrupt();
-    thread.join();
+    Assertions.assertThatCode(() -> service.processDocument("job-1", content))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void processDocumentThrowsWhenSubmitDocumentFails() {
+    Mockito.when(documentAiClient.submitDocument(ArgumentMatchers.any()))
+        .thenThrow(new RuntimeException("submit failed"));
+    InputStream content = new ByteArrayInputStream(TEST.getBytes());
+    Assertions.assertThatThrownBy(() -> service.processDocument("job-1", content))
+        .isInstanceOf(DocumentAiProcessingException.class);
   }
 }
