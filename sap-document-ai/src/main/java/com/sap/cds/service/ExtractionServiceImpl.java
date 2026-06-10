@@ -88,6 +88,14 @@ public class ExtractionServiceImpl implements ExtractionService {
     Result current = persistenceService.run(Select.from(ExtractionJob_.class).byId(jobId));
     String currentStatus = current.single(ExtractionJob.class).getStatus();
 
+    if (currentStatus.equals(status)) {
+      logger.debug(
+          "[sap-document-ai] ExtractionJob jobId={} already in status {}, skipping update",
+          jobId,
+          status);
+      return;
+    }
+
     if (!StatusTransitionValidator.isValid(currentStatus, status)) {
       throw new IllegalStatusTransitionException(
           "Invalid status transition from " + currentStatus + " to " + status);

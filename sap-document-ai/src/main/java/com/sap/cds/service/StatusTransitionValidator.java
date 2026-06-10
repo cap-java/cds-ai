@@ -10,6 +10,8 @@ class StatusTransitionValidator {
   private StatusTransitionValidator() {}
 
   static boolean isValid(String current, String next) {
+    if (current.equals(next)) return true; // idempotent
+
     return switch (current) {
       case ExtractionStatus.PENDING -> ExtractionStatus.PROCESSING.equals(next);
       case ExtractionStatus.PROCESSING ->

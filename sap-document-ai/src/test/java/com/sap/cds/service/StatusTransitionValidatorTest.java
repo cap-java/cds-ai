@@ -56,10 +56,10 @@ class StatusTransitionValidatorTest {
   }
 
   @Test
-  void sameTransitionTwice() {
+  void sameTransitionIsIdempotent() {
     Assertions.assertThat(
             StatusTransitionValidator.isValid(
                 ExtractionStatus.PROCESSING, ExtractionStatus.PROCESSING))
-        .isFalse();
+        .isTrue();
   }
 }

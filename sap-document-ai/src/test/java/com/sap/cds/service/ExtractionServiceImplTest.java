@@ -108,6 +108,24 @@ class ExtractionServiceImplTest {
   }
 
   @Test
+  void updateStatusWithSameStateDoesNotRunJobAgain() {
+    // Job is already PROCESSING — calling updateStatus(PROCESSING) should be a no-op
+    Result processingResult = jobWithStatus(ExtractionStatus.PROCESSING);
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(processingResult);
+    doThrow(new RuntimeException("simulated failure"))
+        .when(documentAiProcessingService)
+        .processDocument(any(), any());
+
+    Assertions.assertThatNoException()
+        .isThrownBy(
+            () -> extractionService.startExtraction(ATT_123, CNT_123, TENANT_1, mockContent));
+
+    // PENDING→PROCESSING update happened before processDocument threw,
+    // but PROCESSING→FAILED is skipped because the job reads back as PROCESSING (same state)
+    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
+  }
+
+  @Test
   void markJobAsFailedIsSkippedWhenTransitionFromPendingToFailedIsInvalid() {
     Result pendingResult = jobWithStatus(ExtractionStatus.PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(pendingResult);
