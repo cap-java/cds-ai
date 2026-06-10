@@ -114,7 +114,9 @@ jobs:
             const tokenRes = await fetch(tokenUrl+'?'+tokenParams.toString(), {headers:{'Authorization':authHeader}});
             const token = JSON.parse(tokenRes.body).access_token;
             const headers = {'Authorization':'Bearer '+token, 'AI-Resource-Group':'default'};
-            const prefixes = ['itest-${{ github.run_id }}-${{ github.run_attempt }}', 'sonar-${{ github.run_id }}-${{ github.run_attempt }}'];
+            // Match ALL attempts for this run (not just current attempt) plus cds-itest- RGs
+            const runId = '${{ github.run_id }}';
+            const prefixes = ['itest-' + runId + '-', 'sonar-' + runId + '-', 'cds-itest-'];
             const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
             const groups = JSON.parse(rgRes.body).resources || [];
             const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));
@@ -122,7 +124,7 @@ jobs:
               const res = await fetch(apiUrl+'/v2/admin/resourceGroups/'+rg.resourceGroupId, {method:'DELETE', headers});
               console.log('Delete', rg.resourceGroupId, '->', res.status);
             }
-            console.log('Cleaned up', toDelete.length, 'resource groups for run ${{ github.run_id }}');
+            console.log('Cleaned up', toDelete.length, 'resource groups for run ' + runId + ' (all attempts)');
           })().catch(e => { console.error(e.message); process.exit(1); });
           "
 
