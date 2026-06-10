@@ -2,9 +2,9 @@ package customer.bookshop.handlers;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.core.AICoreService;
-import com.sap.cds.feature.recommendation.RptInferenceClient;
-import com.sap.cds.feature.recommendation.RptModelSpec;
+import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.recommendation.api.RptInferenceClient;
+import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;

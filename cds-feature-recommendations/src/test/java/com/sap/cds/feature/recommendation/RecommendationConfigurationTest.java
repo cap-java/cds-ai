@@ -5,7 +5,7 @@ package com.sap.cds.feature.recommendation;
 
 import static org.mockito.Mockito.*;
 
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;

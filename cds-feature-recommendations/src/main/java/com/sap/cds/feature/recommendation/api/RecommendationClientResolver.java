@@ -1,12 +1,12 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.recommendation;
+package com.sap.cds.feature.recommendation.api;
 
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 
 @FunctionalInterface
-interface RecommendationClientResolver {
+public interface RecommendationClientResolver {
 
   RecommendationClient resolve(AICoreService aiCoreService, String tenantId);
 }

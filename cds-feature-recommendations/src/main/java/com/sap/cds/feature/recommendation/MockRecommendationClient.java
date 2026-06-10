@@ -4,6 +4,7 @@
 package com.sap.cds.feature.recommendation;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

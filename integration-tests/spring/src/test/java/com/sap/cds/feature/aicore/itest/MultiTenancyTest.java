@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

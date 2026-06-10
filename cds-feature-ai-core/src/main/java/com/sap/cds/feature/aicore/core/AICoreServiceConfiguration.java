@@ -7,6 +7,7 @@ import com.sap.ai.sdk.core.AiCoreService;
 import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.handler.AICoreApplicationServiceHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
 import com.sap.cds.feature.aicore.core.handler.ConfigurationHandler;

@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
 import com.sap.cds.services.runtime.CdsRuntime;

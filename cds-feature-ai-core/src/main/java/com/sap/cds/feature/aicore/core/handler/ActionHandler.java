@@ -6,7 +6,7 @@ package com.sap.cds.feature.aicore.core.handler;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.services.EventContext;

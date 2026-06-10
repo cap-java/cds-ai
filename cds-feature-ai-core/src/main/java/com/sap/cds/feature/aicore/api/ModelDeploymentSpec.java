@@ -1,7 +1,7 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.aicore.core;
+package com.sap.cds.feature.aicore.api;
 
 import com.sap.ai.sdk.core.model.AiDeployment;
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;

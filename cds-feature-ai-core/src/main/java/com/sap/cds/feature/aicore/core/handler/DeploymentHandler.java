@@ -10,7 +10,7 @@ import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;

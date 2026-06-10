@@ -10,7 +10,7 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupPatchRequest;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.ql.cqn.AnalysisResult;

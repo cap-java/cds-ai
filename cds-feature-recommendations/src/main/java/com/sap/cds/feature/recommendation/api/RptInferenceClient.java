@@ -1,7 +1,7 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.recommendation;
+package com.sap.cds.feature.recommendation.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.sap.ai.sdk.core.JacksonConfiguration;

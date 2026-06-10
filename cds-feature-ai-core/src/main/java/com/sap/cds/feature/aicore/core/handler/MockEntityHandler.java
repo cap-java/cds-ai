@@ -4,7 +4,7 @@
 package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.core.AICoreService;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnDelete;
 import com.sap.cds.ql.cqn.CqnInsert;

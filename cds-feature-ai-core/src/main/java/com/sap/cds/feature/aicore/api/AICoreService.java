@@ -1,7 +1,7 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.aicore.core;
+package com.sap.cds.feature.aicore.api;
 
 import com.sap.cds.services.cds.CqnService;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
@@ -25,8 +25,9 @@ import io.github.resilience4j.retry.Retry;
  *       consistent transient-error handling.
  * </ul>
  *
- * <p>Two implementations are provided: {@link AICoreServiceImpl} (when an SAP AI Core service
- * binding is detected) and {@link MockAICoreServiceImpl} (in-memory fallback for local
+ * <p>Two implementations are provided: {@link com.sap.cds.feature.aicore.core.AICoreServiceImpl}
+ * (when an SAP AI Core service binding is detected) and {@link
+ * com.sap.cds.feature.aicore.core.MockAICoreServiceImpl} (in-memory fallback for local
  * development).
  */
 public interface AICoreService extends CqnService {
