@@ -19,6 +19,8 @@ import com.sap.cds.ql.cqn.CqnDelete;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.services.ErrorStatuses;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
@@ -60,13 +62,10 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
 
     if (resourceGroupId != null) {
       BckndResourceGroup rg = resourceGroupApi.get(resourceGroupId);
+      ensureOwnedByCurrentTenant(rg);
       context.setResult(List.of(toMap(rg)));
     } else {
-      List<String> labelSelector = null;
-      if (values.containsKey(ResourceGroups.TENANT_ID)) {
-        String tenantId = (String) values.get(ResourceGroups.TENANT_ID);
-        labelSelector = List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + tenantId);
-      }
+      List<String> labelSelector = buildTenantLabelSelector(values);
       BckndResourceGroupList result =
           resourceGroupApi.getAll(null, null, null, null, null, null, labelSelector);
       context.setResult(mapResources(result.getResources(), this::toMap));
@@ -124,6 +123,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analyzer.analyze(update).targetKeys();
 
     String resourceGroupId = resolveResourceGroupId(keys);
+    ensureOwnedByCurrentTenant(resourceGroupApi.get(resourceGroupId));
 
     Map<String, Object> data = update.entries().get(0);
     BckndResourceGroupPatchRequest patchRequest = BckndResourceGroupPatchRequest.create();
@@ -147,6 +147,8 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analyzer.analyze(delete).targetKeys();
 
     String resourceGroupId = resolveResourceGroupId(keys);
+    ensureOwnedByCurrentTenant(resourceGroupApi.get(resourceGroupId));
+
     resourceGroupApi.delete(resourceGroupId);
     logger.debug("Deleted resource group {}", resourceGroupId);
     context.setResult(List.of());
@@ -160,6 +162,53 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
       return service.resourceGroupForTenant((String) keys.get(ResourceGroups.TENANT_ID));
     }
     return service.resourceGroup();
+  }
+
+  /**
+   * Builds a tenant-scoped label selector for list queries. In multi-tenancy mode, non-provider
+   * users are restricted to their own tenant's resource groups.
+   */
+  private List<String> buildTenantLabelSelector(Map<String, Object> values) {
+    // If a specific tenantId is requested in the query, use that
+    if (values.containsKey(ResourceGroups.TENANT_ID)) {
+      String tenantId = (String) values.get(ResourceGroups.TENANT_ID);
+      return List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + tenantId);
+    }
+    // In MT mode, restrict non-provider users to their own tenant
+    if (service.isMultiTenancyEnabled() && !service.isProviderUser()) {
+      String currentTenant = service.currentTenantId();
+      if (currentTenant != null) {
+        return List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + currentTenant);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Verifies that the given resource group is owned by the current tenant. Provider/system users
+   * are allowed to access any resource group. Throws 404 if the resource group belongs to a
+   * different tenant.
+   */
+  private void ensureOwnedByCurrentTenant(BckndResourceGroup rg) {
+    if (service.isProviderUser()) {
+      return;
+    }
+    if (!service.isMultiTenancyEnabled()) {
+      return;
+    }
+    String currentTenant = service.currentTenantId();
+    if (currentTenant == null) {
+      return;
+    }
+    if (rg.getLabels() != null
+        && rg.getLabels().stream()
+            .anyMatch(
+                l ->
+                    AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.getKey())
+                        && currentTenant.equals(l.getValue()))) {
+      return;
+    }
+    throw new ServiceException(ErrorStatuses.NOT_FOUND, "Resource group not found");
   }
 
   private static List<BckndResourceGroupLabel> toSdkLabels(List<Map<String, Object>> labels) {

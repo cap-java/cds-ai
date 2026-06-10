@@ -5,6 +5,7 @@ package com.sap.cds.feature.aicore.core;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.services.request.RequestContext;
+import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.utils.services.AbstractCqnService;
 import io.github.resilience4j.retry.Retry;
@@ -30,8 +31,17 @@ public abstract class AbstractAICoreService extends AbstractCqnService implement
    * Returns the tenant ID from the current {@link RequestContext}. May return {@code null} if no
    * tenant is set (e.g. in single-tenant mode).
    */
-  protected String currentTenantId() {
+  public String currentTenantId() {
     return RequestContext.getCurrent(runtime).getUserInfo().getTenant();
+  }
+
+  /**
+   * Returns whether the current request is running as a system/provider user. Provider users are
+   * allowed to see all tenants' resources.
+   */
+  public boolean isProviderUser() {
+    UserInfo userInfo = RequestContext.getCurrent(runtime).getUserInfo();
+    return userInfo.isSystemUser() || userInfo.isInternalUser();
   }
 
   /**
