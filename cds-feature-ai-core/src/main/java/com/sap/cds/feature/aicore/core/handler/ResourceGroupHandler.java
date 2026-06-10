@@ -159,7 +159,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     if (keys.containsKey(ResourceGroups.TENANT_ID)) {
       return service.resourceGroupForTenant((String) keys.get(ResourceGroups.TENANT_ID));
     }
-    return service.getDefaultResourceGroup();
+    return service.resourceGroup();
   }
 
   private static List<BckndResourceGroupLabel> toSdkLabels(List<Map<String, Object>> labels) {

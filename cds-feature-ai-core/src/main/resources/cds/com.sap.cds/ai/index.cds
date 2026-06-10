@@ -90,8 +90,6 @@ service AICore {
                                   on 1 = 1;
   };
 
-  function resourceGroupForTenant(tenant: String) returns String;
-
   type BckndResourceGroupLabels     : many BckndResourceGroupLabel;
 
   type BckndResourceGroupLabel {

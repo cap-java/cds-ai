@@ -25,7 +25,6 @@ import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsEnvironment;
-import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
@@ -243,8 +242,7 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     if (rgObj instanceof Map<?, ?> rgMap && rgMap.containsKey("resourceGroupId")) {
       return (String) rgMap.get("resourceGroupId");
     }
-    String tenantId = RequestContext.getCurrent(runtime).getUserInfo().getTenant();
-    return resourceGroupForTenant(tenantId);
+    return resourceGroup();
   }
 
   @Override

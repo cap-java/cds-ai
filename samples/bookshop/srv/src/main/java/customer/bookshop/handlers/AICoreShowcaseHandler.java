@@ -3,6 +3,7 @@ package customer.bookshop.handlers;
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
@@ -14,7 +15,6 @@ import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,16 +43,14 @@ public class AICoreShowcaseHandler implements EventHandler {
 
   @On(event = "setupTenantResources")
   public void onSetupTenantResources(EventContext context) {
-    String tenantId = (String) context.get("tenantId");
-    String rgId = getAICoreService().resourceGroupForTenant(tenantId);
+    String rgId = getAICoreService().resourceGroup();
     context.put("result", rgId);
     context.setCompleted();
   }
 
   @On(event = "getMyResourceGroup")
   public void onGetMyResourceGroup(EventContext context) {
-    String tenant = RequestContext.getCurrent(runtime).getUserInfo().getTenant();
-    String rgId = getAICoreService().resourceGroupForTenant(tenant);
+    String rgId = getAICoreService().resourceGroup();
     context.put("result", rgId);
     context.setCompleted();
   }
@@ -139,11 +137,12 @@ public class AICoreShowcaseHandler implements EventHandler {
     }
 
     AICoreService service = getAICoreService();
-    String tenant = RequestContext.getCurrent(runtime).getUserInfo().getTenant();
-    String rg = service.resourceGroupForTenant(tenant);
+    String rg = service.resourceGroup();
     String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
     RptInferenceClient client =
-        new RptInferenceClient(service.inferenceClient(rg, deploymentId), service.getRetry());
+        new RptInferenceClient(
+            service.inferenceClient(rg, deploymentId),
+            ((AbstractAICoreService) service).getRetry());
     List<CdsData> predictions = client.predict(rows, List.of("category"), "ID");
 
     List<Map<String, Object>> results = new ArrayList<>();

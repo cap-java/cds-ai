@@ -12,7 +12,6 @@ import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import com.sap.cds.services.request.RequestContext;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,18 +23,6 @@ public class ActionHandler extends AbstractCrudHandler {
 
   public ActionHandler(AICoreServiceImpl service) {
     super(service);
-  }
-
-  @On(event = "resourceGroupForTenant")
-  public void onResourceGroupForTenant(EventContext context) {
-    Map<String, Object> params = asMap(context.get("data"));
-    String tenant = (String) params.get("tenant");
-    if (tenant == null) {
-      tenant = RequestContext.getCurrent(service.getRuntime()).getUserInfo().getTenant();
-    }
-    String result = service.resourceGroupForTenant(tenant);
-    context.put("result", result);
-    context.setCompleted();
   }
 
   @On(event = "stop", entity = AICoreService.DEPLOYMENTS)

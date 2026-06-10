@@ -4,6 +4,7 @@
 package com.sap.cds.feature.recommendation;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.core.MockAICoreServiceImpl;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
@@ -35,7 +36,7 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
 
     RecommendationClientResolver resolver =
         aiCoreService instanceof MockAICoreServiceImpl
-            ? (service, tenantId) -> new MockRecommendationClient()
+            ? service -> new MockRecommendationClient()
             : RecommendationConfiguration::resolveRptClient;
 
     FioriRecommendationHandler handler = new FioriRecommendationHandler(aiCoreService, resolver);
@@ -43,10 +44,11 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
     configurer.eventHandler(new RecommendationModelChangedHandler(handler));
   }
 
-  private static RecommendationClient resolveRptClient(AICoreService service, String tenantId) {
-    String resourceGroup = service.resourceGroupForTenant(tenantId);
+  private static RecommendationClient resolveRptClient(AICoreService service) {
+    String resourceGroup = service.resourceGroup();
     String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
     return new RptInferenceClient(
-        service.inferenceClient(resourceGroup, deploymentId), service.getRetry());
+        service.inferenceClient(resourceGroup, deploymentId),
+        ((AbstractAICoreService) service).getRetry());
   }
 }

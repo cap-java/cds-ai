@@ -26,6 +26,10 @@ public class MockAICoreServiceImpl extends AbstractAICoreService {
   private final boolean multiTenancyEnabled;
 
   public MockAICoreServiceImpl(String name, CdsRuntime runtime) {
+    this(name, runtime, false);
+  }
+
+  public MockAICoreServiceImpl(String name, CdsRuntime runtime, boolean multiTenancyEnabled) {
     super(name, runtime);
     logger.info("MockAICoreService initialized - all operations use in-memory storage.");
     this.retry = Retry.of("mock-aicore", RetryConfig.custom().maxAttempts(1).build());
@@ -34,8 +38,7 @@ public class MockAICoreServiceImpl extends AbstractAICoreService {
         env.getProperty("cds.requires.AICore.resourceGroup", String.class, "default");
     this.resourceGroupPrefix =
         env.getProperty("cds.requires.AICore.resourceGroupPrefix", String.class, "cds-");
-    this.multiTenancyEnabled =
-        env.getProperty("cds.requires.AICore.multiTenancy", Boolean.class, false);
+    this.multiTenancyEnabled = multiTenancyEnabled;
   }
 
   @Override

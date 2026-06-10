@@ -125,7 +125,7 @@ class FioriRecommendationHandler implements EventHandler {
 
     List<CdsData> allRows = builder.assembleRows(contextRows, predictRow, row);
 
-    RecommendationClient client = clientResolver.resolve(aiCoreService, tenantId);
+    RecommendationClient client = clientResolver.resolve(aiCoreService);
     List<CdsData> predictions =
         client.predict(allRows, builder.predictionElementNames(), builder.indexColumn());
 
