@@ -99,14 +99,14 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     this.multiTenancyEnabled = multiTenancyEnabled;
     CdsEnvironment env = runtime.getEnvironment();
     this.maxRetries =
-        env.getProperty("cds.requires.AICore.maxRetries", Integer.class, DEFAULT_MAX_RETRIES);
+        env.getProperty("cds.ai.core.maxRetries", Integer.class, DEFAULT_MAX_RETRIES);
     this.initialDelayMs =
-        env.getProperty("cds.requires.AICore.initialDelayMs", Long.class, DEFAULT_INITIAL_DELAY_MS);
+        env.getProperty("cds.ai.core.initialDelayMs", Long.class, DEFAULT_INITIAL_DELAY_MS);
     this.defaultResourceGroup =
-        env.getProperty("cds.requires.AICore.resourceGroup", String.class, DEFAULT_RESOURCE_GROUP);
+        env.getProperty("cds.ai.core.resourceGroup", String.class, DEFAULT_RESOURCE_GROUP);
     this.resourceGroupPrefix =
         env.getProperty(
-            "cds.requires.AICore.resourceGroupPrefix", String.class, DEFAULT_RESOURCE_GROUP_PREFIX);
+            "cds.ai.core.resourceGroupPrefix", String.class, DEFAULT_RESOURCE_GROUP_PREFIX);
     this.retry = buildRetry(maxRetries, initialDelayMs);
     this.tenantResourceGroupCache = newCache();
     this.resourceGroupDeploymentCache = newCache();

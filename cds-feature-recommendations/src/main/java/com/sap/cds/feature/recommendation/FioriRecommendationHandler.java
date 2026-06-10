@@ -91,7 +91,7 @@ class FioriRecommendationHandler implements EventHandler {
             .getCdsRuntime()
             .getEnvironment()
             .getProperty(
-                "cds.requires.recommendations.contextRowLimit",
+                "cds.ai.recommendations.contextRowLimit",
                 Integer.class,
                 DEFAULT_CONTEXT_ROW_LIMIT);
 

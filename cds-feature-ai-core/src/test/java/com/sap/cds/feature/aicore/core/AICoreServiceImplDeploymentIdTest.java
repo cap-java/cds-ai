@@ -68,13 +68,13 @@ class AICoreServiceImplDeploymentIdTest {
     CdsEnvironment env = mock(CdsEnvironment.class);
     when(runtime.getEnvironment()).thenReturn(env);
     // Use small retry counts so failures don't slow tests.
-    when(env.getProperty(eq("cds.requires.AICore.maxRetries"), eq(Integer.class), any()))
+    when(env.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any()))
         .thenReturn(1);
-    when(env.getProperty(eq("cds.requires.AICore.initialDelayMs"), eq(Long.class), any()))
+    when(env.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any()))
         .thenReturn(1L);
-    when(env.getProperty(eq("cds.requires.AICore.resourceGroup"), eq(String.class), any()))
+    when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
         .thenReturn("default");
-    when(env.getProperty(eq("cds.requires.AICore.resourceGroupPrefix"), eq(String.class), any()))
+    when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
         .thenReturn("cds-");
 
     service =

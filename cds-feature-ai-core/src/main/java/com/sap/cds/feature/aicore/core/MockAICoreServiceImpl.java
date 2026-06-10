@@ -35,9 +35,9 @@ public class MockAICoreServiceImpl extends AbstractAICoreService {
     this.retry = Retry.of("mock-aicore", RetryConfig.custom().maxAttempts(1).build());
     CdsEnvironment env = runtime.getEnvironment();
     this.defaultResourceGroup =
-        env.getProperty("cds.requires.AICore.resourceGroup", String.class, "default");
+        env.getProperty("cds.ai.core.resourceGroup", String.class, "default");
     this.resourceGroupPrefix =
-        env.getProperty("cds.requires.AICore.resourceGroupPrefix", String.class, "cds-");
+        env.getProperty("cds.ai.core.resourceGroupPrefix", String.class, "cds-");
     this.multiTenancyEnabled = multiTenancyEnabled;
   }
 

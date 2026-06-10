@@ -36,18 +36,20 @@ Without a binding the plugin registers a mock implementation.
 
 ## Configuration
 
-All configuration is under the `cds.requires.AICore` namespace in `application.yaml`:
+All configuration is under the `cds.ai.core` namespace in `application.yaml`:
 
 ```yaml
 cds:
-  requires:
-    AICore:
+  ai:
+    core:
       resourceGroup: default # Resource group for single-tenant mode
       resourceGroupPrefix: "cds-" # Prefix for auto-created tenant resource groups
-      multiTenancy: false # Enable per-tenant resource groups
       maxRetries: 10 # Max retry attempts for transient AI Core errors
       initialDelayMs: 300 # Initial backoff delay (ms)
 ```
+
+Multi-tenancy is auto-detected from CAP Java's standard `cds.multiTenancy.sidecar.url` setting
+and the presence of a `DeploymentService`. No additional configuration flag is required.
 
 ## CDS Service: `AICore`
 
@@ -61,11 +63,11 @@ The plugin registers a CAP service named `AICore` that proxies AI Core REST APIs
 | `AICore.deployments`    | READ, CREATE, DELETE | Deployment management with status tracking                       |
 | `AICore.configurations` | READ, CREATE         | Configuration management for scenarios and executables           |
 
-### Functions & Actions
+### Programmatic API
 
 ```java
-// Get the resource group ID for a CDS tenant
-String rgId = aiCoreService.resourceGroupForTenant(tenantId);
+// Get the resource group for the current tenant
+String rgId = aiCoreService.resourceGroup();
 
 // Get (or auto-create) a deployment ID for a model spec in the given resource group
 String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
@@ -73,7 +75,7 @@ String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
 
 ## Multi-Tenancy
 
-When `cds.requires.AICore.multiTenancy=true`:
+When multi-tenancy is active (detected via `cds.multiTenancy.sidecar.url`):
 
 1. **Subscribe** - Creates resource group `{prefix}{tenantId}` with label `ext.ai.sap.com/CDS_TENANT_ID`
 2. **Unsubscribe** - Deletes the tenant's resource group
@@ -92,7 +94,7 @@ AICoreService aiCore = runtime.getServiceCatalog()
 Result rgs = aiCore.run(Select.from("AICore.resourceGroups"));
 
 // Resolve a deployment and obtain a configured ApiClient for it
-String resourceGroupId = aiCore.resourceGroupForTenant(tenantId);
+String resourceGroupId = aiCore.resourceGroup();
 String deploymentId = aiCore.deploymentId(resourceGroupId, RptModelSpec.rpt1());
 ApiClient client = aiCore.inferenceClient(resourceGroupId, deploymentId);
 ```
