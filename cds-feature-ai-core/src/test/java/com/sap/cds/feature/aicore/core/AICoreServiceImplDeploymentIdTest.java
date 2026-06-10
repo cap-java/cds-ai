@@ -22,6 +22,8 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
+import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;

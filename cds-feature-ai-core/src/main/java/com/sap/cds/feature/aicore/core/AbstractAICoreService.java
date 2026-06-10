@@ -3,6 +3,7 @@
  */
 package com.sap.cds.feature.aicore.core;
 
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.utils.services.AbstractCqnService;
 import java.util.Map;
