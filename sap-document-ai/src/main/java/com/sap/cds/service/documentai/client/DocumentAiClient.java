@@ -3,8 +3,8 @@
 */
 package com.sap.cds.service.documentai.client;
 
-import java.io.InputStream;
+import com.sap.cds.service.model.DocumentInput;
 
 public interface DocumentAiClient {
-  String submitDocument(InputStream content);
+  String submitDocument(DocumentInput documentInput);
 }

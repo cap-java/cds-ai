@@ -3,11 +3,11 @@
 */
 package com.sap.cds.service;
 
-import java.io.InputStream;
+import com.sap.cds.service.model.DocumentInput;
 
 public interface DocumentAiProcessingService {
 
   boolean isAvailable();
 
-  void processDocument(String jobId, InputStream content);
+  String processDocument(String jobId, DocumentInput documentInput);
 }

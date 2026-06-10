@@ -56,7 +56,7 @@ public class AttachmentEventHandlerRegistration implements CdsRuntimeConfigurati
         new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
 
     // register event handler with CAP runtime
-    configurer.eventHandler(new AttachmentEventHandler(extractionService));
+    configurer.eventHandler(new AttachmentEventHandler(extractionService, persistenceService));
   }
 
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {

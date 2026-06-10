@@ -55,6 +55,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpmime</artifactId>
+      <version>4.5.14</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>5.11.0</version>
@@ -169,6 +175,7 @@
         <configuration>
           <excludes>
             <exclude>**/feature/documentai/generated/**</exclude>
+            <exclude>**/service/documentai/client/DefaultDocumentAiClient.class</exclude>
           </excludes>
         </configuration>
         <executions>

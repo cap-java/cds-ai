@@ -5,7 +5,7 @@ package com.sap.cds.service;
 
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.service.exceptions.DocumentAiProcessingException;
-import java.io.InputStream;
+import com.sap.cds.service.model.DocumentInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,16 +22,20 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
   }
 
   @Override
-  public void processDocument(String jobId, InputStream content) {
+  public String processDocument(String jobId, DocumentInput documentInput) {
     logger.info(
-        "[sap-document-ai] Processing document for jobId={} and content={}", jobId, content);
+        "[sap-document-ai] Processing document for jobId={}, fileName={}",
+        jobId,
+        documentInput.fileName());
+
     try {
-      String result = documentAiClient.submitDocument(content);
+      String documentAiJobId = documentAiClient.submitDocument(documentInput);
       logger.info(
-          "[sap-document-ai] Document submitted successfully for jobId={}, result={}",
+          "[sap-document-ai] Document submitted successfully for jobId={}, DIE jobId={}",
           jobId,
-          result);
-    } catch (RuntimeException e) {
+          documentAiJobId);
+      return documentAiJobId;
+    } catch (Exception e) {
       throw new DocumentAiProcessingException("Failed to process document for jobId=" + jobId, e);
     }
   }

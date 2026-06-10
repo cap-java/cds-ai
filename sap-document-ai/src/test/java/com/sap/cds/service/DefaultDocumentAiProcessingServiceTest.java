@@ -3,14 +3,16 @@
 */
 package com.sap.cds.service;
 
+import static org.mockito.ArgumentMatchers.any;
+
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.service.exceptions.DocumentAiProcessingException;
+import com.sap.cds.service.model.DocumentInput;
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 /*
@@ -18,15 +20,27 @@ import org.mockito.Mockito;
  */
 class DefaultDocumentAiProcessingServiceTest {
 
-  public static final String TEST = "test";
+  public static final String TEST_PDF = "test.pdf";
+  public static final String CNT_ID_1 = "cnt_id_1";
+  public static final String CONTENT_TYPE = "application/pdf";
+  public static final String TEST_CONTENT = "test";
+  public static final String JOB_1 = "job-1";
+  public static final String MOCK_RESULT = "mock-result";
   DocumentAiClient documentAiClient;
   DefaultDocumentAiProcessingService service;
+  DocumentInput documentInput;
 
   @BeforeEach
   void setUp() {
     documentAiClient = Mockito.mock(DocumentAiClient.class);
-    Mockito.when(documentAiClient.submitDocument(ArgumentMatchers.any())).thenReturn("mock-result");
+    Mockito.when(documentAiClient.submitDocument(any())).thenReturn(MOCK_RESULT);
     service = new DefaultDocumentAiProcessingService(documentAiClient);
+    documentInput =
+        new DocumentInput(
+            TEST_PDF,
+            CNT_ID_1,
+            CONTENT_TYPE,
+            new ByteArrayInputStream(TEST_CONTENT.getBytes(StandardCharsets.UTF_8)));
   }
 
   // ----- isAvailable() -------
@@ -43,17 +57,15 @@ class DefaultDocumentAiProcessingServiceTest {
   // ------- processDocument() -------
   @Test
   void processDocumentCompletesWithoutException() {
-    InputStream content = new ByteArrayInputStream(TEST.getBytes());
-    Assertions.assertThatCode(() -> service.processDocument("job-1", content))
+    Assertions.assertThatCode(() -> service.processDocument(JOB_1, documentInput))
         .doesNotThrowAnyException();
   }
 
   @Test
   void processDocumentThrowsWhenSubmitDocumentFails() {
-    Mockito.when(documentAiClient.submitDocument(ArgumentMatchers.any()))
+    Mockito.when(documentAiClient.submitDocument(any()))
         .thenThrow(new RuntimeException("submit failed"));
-    InputStream content = new ByteArrayInputStream(TEST.getBytes());
-    Assertions.assertThatThrownBy(() -> service.processDocument("job-1", content))
+    Assertions.assertThatThrownBy(() -> service.processDocument(JOB_1, documentInput))
         .isInstanceOf(DocumentAiProcessingException.class);
   }
 }

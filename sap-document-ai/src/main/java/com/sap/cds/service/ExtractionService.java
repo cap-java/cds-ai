@@ -3,9 +3,9 @@
 */
 package com.sap.cds.service;
 
-import java.io.InputStream;
+import com.sap.cds.service.model.DocumentInput;
 
 public interface ExtractionService {
 
-  void startExtraction(String attachmentId, String contentId, String tenantId, InputStream content);
+  void startExtraction(String attachmentId, DocumentInput documentInput, String tenantId);
 }

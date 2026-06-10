@@ -12,8 +12,8 @@ import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
+import com.sap.cds.service.model.DocumentInput;
 import com.sap.cds.services.persistence.PersistenceService;
-import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +32,7 @@ public class ExtractionServiceImpl implements ExtractionService {
   }
 
   @Override
-  public void startExtraction(
-      String attachmentId, String contentId, String tenantId, InputStream content) {
+  public void startExtraction(String attachmentId, DocumentInput documentInput, String tenantId) {
     logger.info(
         "[sap-document-ai] Orchestrator triggered for attachmentId={}, tenantId={}",
         attachmentId,
@@ -45,11 +44,14 @@ public class ExtractionServiceImpl implements ExtractionService {
     }
 
     String jobId = createExtractionJob(attachmentId, tenantId);
-
     try {
-      updateStatus(jobId, PROCESSING);
-      documentAiProcessingService.processDocument(jobId, content);
-      updateStatus(jobId, COMPLETED);
+      String documentAiJobId = documentAiProcessingService.processDocument(jobId, documentInput);
+      updateStatus(jobId, SUBMITTED);
+      updateDocumentAiJobId(jobId, documentAiJobId);
+
+      // TODO: transition to PROCESSING and COMPLETED via async polling callback, not here
+      //      updateStatus(jobId, PROCESSING);
+      //      updateStatus(jobId, COMPLETED);
     } catch (IllegalStatusTransitionException e) { // example: COMPLETED -> FAILED
       logger.error("[sap-document-ai] Invalid state transition for jobId={}", jobId, e);
     } catch (Exception e) { // example : PROCESSING -> FAILED
@@ -58,7 +60,6 @@ public class ExtractionServiceImpl implements ExtractionService {
           attachmentId,
           tenantId,
           e);
-
       markJobAsFailed(jobId);
     }
   }
@@ -107,6 +108,21 @@ public class ExtractionServiceImpl implements ExtractionService {
     ExtractionJob extractionJob = ExtractionJob.create();
     extractionJob.setStatus(status.name());
     persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
-    logger.info("[sap-document-ai] ExtractionJob jobId={} status updated to {}", jobId, status);
+    logger.info(
+        "[sap-document-ai] ExtractionJob jobId={} status updated from {} to {}",
+        jobId,
+        currentStatus,
+        status);
+  }
+
+  private void updateDocumentAiJobId(String jobId, String documentAiJobId) {
+    ExtractionJob extractionJob = ExtractionJob.create();
+    extractionJob.setDocumentAiJobId(documentAiJobId);
+
+    persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
+    logger.info(
+        "[sap-document-ai] ExtractionJob jobId={} has been updated with documentAiJobId now={}",
+        jobId,
+        documentAiJobId);
   }
 }

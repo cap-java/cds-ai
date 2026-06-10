@@ -13,7 +13,8 @@ class StatusTransitionValidator {
     if (current.equals(next)) return true; // idempotent
 
     return switch (current) {
-      case PENDING -> PROCESSING.equals(next);
+      case PENDING -> SUBMITTED.equals(next) || FAILED.equals(next);
+      case SUBMITTED -> PROCESSING.equals(next) || FAILED.equals(next);
       case PROCESSING -> COMPLETED.equals(next) || FAILED.equals(next);
       default -> false;
     };
