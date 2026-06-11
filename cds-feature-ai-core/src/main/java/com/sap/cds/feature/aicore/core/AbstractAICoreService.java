@@ -28,7 +28,7 @@ public abstract class AbstractAICoreService extends AbstractCqnService implement
 
   @Override
   public CdsService getDefinition() {
-    return RequestContext.getCurrent(runtime).getModel().getService(CDS_DEFINITION_NAME);
+    return runtime.getCdsModel().findService(CDS_DEFINITION_NAME).orElse(null);
   }
 
   /** Returns the {@link CdsRuntime} that this service was created with. */

@@ -36,6 +36,10 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreServiceConfiguration.class);
 
+  private static boolean hasAICoreModel(CdsRuntime runtime) {
+    return runtime.getCdsModel().findService("AICore").isPresent();
+  }
+
   private static boolean hasAICoreBinding(CdsRuntime runtime) {
     boolean hasServiceBinding =
         runtime
@@ -68,6 +72,11 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
   @Override
   public void services(CdsRuntimeConfigurer configurer) {
     CdsRuntime runtime = configurer.getCdsRuntime();
+
+    if (!hasAICoreModel(runtime)) {
+      logger.debug("AICore CDS model not found in runtime model — skipping service registration.");
+      return;
+    }
 
     boolean hasBinding = hasAICoreBinding(runtime);
 
