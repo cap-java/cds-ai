@@ -11,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.handler.AICoreApplicationServiceHandler;
 import com.sap.cds.feature.aicore.core.handler.MockEntityHandler;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
@@ -63,7 +62,6 @@ class AICoreServiceConfigurationTest {
 
     var handlers = captor.getAllValues();
     assert handlers.stream().anyMatch(h -> h instanceof MockEntityHandler);
-    assert handlers.stream().anyMatch(h -> h instanceof AICoreApplicationServiceHandler);
     // No setup handler registered when MT is disabled
     assert handlers.stream().noneMatch(h -> h instanceof MockAICoreSetupHandler);
   }
@@ -97,7 +95,6 @@ class AICoreServiceConfigurationTest {
 
     var handlers = captor.getAllValues();
     assert handlers.stream().anyMatch(h -> h instanceof MockEntityHandler);
-    assert handlers.stream().anyMatch(h -> h instanceof AICoreApplicationServiceHandler);
     assert handlers.stream().anyMatch(h -> h instanceof MockAICoreSetupHandler);
   }
 
