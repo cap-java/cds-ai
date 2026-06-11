@@ -65,69 +65,6 @@ jobs:
           java-version: ${{ matrix.java-version }}
           maven-version: ${{ env.MAVEN_VERSION }}
 
-  integration-tests-cleanup:
-    name: Cleanup Integration Test Resources
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [integration-tests, sonarqube-scan]
-    if: always()
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Bind CF Services
-        uses: ./.github/actions/cf-bind
-        with:
-          cf-api: ${{ secrets.CF_API_AWS }}
-          cf-username: ${{ secrets.CF_USERNAME }}
-          cf-password: ${{ secrets.CF_PASSWORD }}
-          cf-org: ${{ secrets.CF_ORG_AWS }}
-          cf-space: ${{ secrets.CF_SPACE_AWS }}
-
-      - name: Cleanup resource groups
-        working-directory: integration-tests
-        shell: bash
-        run: |
-          cds bind --exec -- node -e "
-          const https = require('https');
-          const vcap = JSON.parse(process.env.VCAP_SERVICES || '{}');
-          const key = (vcap.aicore || vcap['ai-core'] || [{}])[0].credentials || JSON.parse(process.env.AICORE_SERVICE_KEY || 'null');
-          if (!key) { console.log('No AI Core credentials found, skipping cleanup'); process.exit(0); }
-          const tokenUrl = key.url + '/oauth/token';
-          const apiUrl = key.serviceurls.AI_API_URL;
-          function fetch(url, opts) {
-            return new Promise((resolve, reject) => {
-              const u = new URL(url);
-              const req = https.request({hostname:u.hostname, path:u.pathname+u.search, method:opts.method||'GET', headers:opts.headers||{}}, res => {
-                let data=''; res.on('data',c=>data+=c); res.on('end',()=>resolve({status:res.statusCode,body:data}));
-              });
-              req.on('error',reject);
-              if(opts.body) req.write(opts.body);
-              req.end();
-            });
-          }
-          (async () => {
-            const tokenParams = new URLSearchParams({grant_type:'client_credentials'});
-            const authHeader = 'Basic ' + Buffer.from(key.clientid+':'+key.clientsecret).toString('base64');
-            const tokenRes = await fetch(tokenUrl+'?'+tokenParams.toString(), {headers:{'Authorization':authHeader}});
-            const token = JSON.parse(tokenRes.body).access_token;
-            const headers = {'Authorization':'Bearer '+token, 'AI-Resource-Group':'default'};
-            // Match ALL attempts for this run (not just current attempt) plus cds-itest- RGs
-            const runId = '${{ github.run_id }}';
-            const prefixes = ['itest-' + runId + '-', 'sonar-' + runId + '-', 'cds-itest-'];
-            const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
-            const groups = JSON.parse(rgRes.body).resources || [];
-            const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));
-            for (const rg of toDelete) {
-              const res = await fetch(apiUrl+'/v2/admin/resourceGroups/'+rg.resourceGroupId, {method:'DELETE', headers});
-              console.log('Delete', rg.resourceGroupId, '->', res.status);
-            }
-            console.log('Cleaned up', toDelete.length, 'resource groups for run ' + runId + ' (all attempts)');
-          })().catch(e => { console.error(e.message); process.exit(1); });
-          "
-
   local-mtx-tests:
     name: Local MTX Tests (Java ${{ matrix.java-version }})
     runs-on: ubuntu-latest

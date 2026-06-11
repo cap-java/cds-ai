@@ -48,6 +48,48 @@ runs:
       working-directory: integration-tests
       shell: bash
 
+    - name: Cleanup AI Core test resource groups
+      if: always()
+      working-directory: integration-tests
+      shell: bash
+      run: |
+        cds bind --exec -- node -e "
+        const https = require('https');
+        const vcap = JSON.parse(process.env.VCAP_SERVICES || '{}');
+        const key = (vcap.aicore || vcap['ai-core'] || [{}])[0].credentials || JSON.parse(process.env.AICORE_SERVICE_KEY || 'null');
+        if (!key) { console.log('No AI Core credentials found, skipping cleanup'); process.exit(0); }
+        const tokenUrl = key.url + '/oauth/token';
+        const apiUrl = key.serviceurls.AI_API_URL;
+        function fetch(url, opts) {
+          return new Promise((resolve, reject) => {
+            const u = new URL(url);
+            const req = https.request({hostname:u.hostname, path:u.pathname+u.search, method:opts.method||'GET', headers:opts.headers||{}}, res => {
+              let data=''; res.on('data',c=>data+=c); res.on('end',()=>resolve({status:res.statusCode,body:data}));
+            });
+            req.on('error',reject);
+            if(opts.body) req.write(opts.body);
+            req.end();
+          });
+        }
+        (async () => {
+          const tokenParams = new URLSearchParams({grant_type:'client_credentials'});
+          const authHeader = 'Basic ' + Buffer.from(key.clientid+':'+key.clientsecret).toString('base64');
+          const tokenRes = await fetch(tokenUrl+'?'+tokenParams.toString(), {headers:{'Authorization':authHeader}});
+          const token = JSON.parse(tokenRes.body).access_token;
+          const headers = {'Authorization':'Bearer '+token, 'AI-Resource-Group':'default'};
+          const runId = '${{ github.run_id }}';
+          const prefixes = ['itest-' + runId + '-', 'sonar-' + runId + '-', 'cds-itest-', 'itest-rg-'];
+          const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
+          const groups = JSON.parse(rgRes.body).resources || [];
+          const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));
+          for (const rg of toDelete) {
+            const res = await fetch(apiUrl+'/v2/admin/resourceGroups/'+rg.resourceGroupId, {method:'DELETE', headers});
+            console.log('Delete', rg.resourceGroupId, '->', res.status);
+          }
+          console.log('Cleaned up', toDelete.length, 'resource groups');
+        })().catch(e => { console.error(e.message); process.exit(0); });
+        " || true
+
     - name: Generate aggregate coverage report
       run: mvn verify -ntp -B -pl coverage-report -am -DskipTests
       shell: bash
