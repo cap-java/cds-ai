@@ -68,7 +68,7 @@ runs:
           const attempt = '${{ github.run_attempt }}';
           const javaVersion = '${{ inputs.java-version }}';
           const ownPrefix = 'itest-' + runId + '-' + attempt + '-j' + javaVersion;
-          const prefixes = [ownPrefix, 'itest-rg-'];
+          const prefixes = [ownPrefix, 'itest-rg-', 'cds-itest-'];
           const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
           const groups = JSON.parse(rgRes.body).resources || [];
           const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));

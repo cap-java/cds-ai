@@ -80,7 +80,7 @@ runs:
           const runId = '${{ github.run_id }}';
           const attempt = '${{ github.run_attempt }}';
           const ownPrefix = 'sonar-' + runId + '-' + attempt;
-          const prefixes = [ownPrefix, 'itest-rg-'];
+          const prefixes = [ownPrefix, 'itest-rg-', 'cds-itest-'];
           const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
           const groups = JSON.parse(rgRes.body).resources || [];
           const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));
