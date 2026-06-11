@@ -78,7 +78,9 @@ runs:
           const token = JSON.parse(tokenRes.body).access_token;
           const headers = {'Authorization':'Bearer '+token, 'AI-Resource-Group':'default'};
           const runId = '${{ github.run_id }}';
-          const prefixes = ['itest-' + runId + '-', 'sonar-' + runId + '-', 'cds-itest-', 'itest-rg-'];
+          const attempt = '${{ github.run_attempt }}';
+          const ownPrefix = 'sonar-' + runId + '-' + attempt;
+          const prefixes = [ownPrefix, 'itest-rg-'];
           const rgRes = await fetch(apiUrl+'/v2/admin/resourceGroups', {headers});
           const groups = JSON.parse(rgRes.body).resources || [];
           const toDelete = groups.filter(rg => rg.resourceGroupId && prefixes.some(p => rg.resourceGroupId.startsWith(p)));
