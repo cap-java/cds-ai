@@ -24,6 +24,8 @@ import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
+import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.reflect.CdsService;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
@@ -67,6 +69,9 @@ class AICoreServiceImplDeploymentIdTest {
     CdsRuntime runtime = mock(CdsRuntime.class);
     CdsEnvironment env = mock(CdsEnvironment.class);
     when(runtime.getEnvironment()).thenReturn(env);
+    CdsModel cdsModel = mock(CdsModel.class);
+    when(runtime.getCdsModel()).thenReturn(cdsModel);
+    when(cdsModel.getService("AICore")).thenReturn(mock(CdsService.class));
     // Use small retry counts so failures don't slow tests.
     when(env.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any()))
         .thenReturn(1);
@@ -198,6 +203,9 @@ class AICoreServiceImplDeploymentIdTest {
     CdsRuntime rtMt = mock(CdsRuntime.class);
     CdsEnvironment envMt = mock(CdsEnvironment.class);
     when(rtMt.getEnvironment()).thenReturn(envMt);
+    CdsModel cdsModelMt = mock(CdsModel.class);
+    when(rtMt.getCdsModel()).thenReturn(cdsModelMt);
+    when(cdsModelMt.getService("AICore")).thenReturn(mock(CdsService.class));
     when(envMt.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any())).thenReturn(1);
     when(envMt.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any())).thenReturn(1L);
     when(envMt.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))

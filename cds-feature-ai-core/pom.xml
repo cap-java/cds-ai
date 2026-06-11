@@ -44,7 +44,6 @@
     <dependency>
       <groupId>com.sap.cds</groupId>
       <artifactId>cds-services-impl</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 

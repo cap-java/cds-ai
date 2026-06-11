@@ -10,6 +10,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.reflect.CdsService;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,9 @@ class MockAICoreServiceImplTest {
     CdsRuntime runtime = mock(CdsRuntime.class);
     CdsEnvironment env = mock(CdsEnvironment.class);
     when(runtime.getEnvironment()).thenReturn(env);
+    CdsModel cdsModel = mock(CdsModel.class);
+    when(runtime.getCdsModel()).thenReturn(cdsModel);
+    when(cdsModel.getService("AICore")).thenReturn(mock(CdsService.class));
     when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
         .thenReturn("test-rg");
     when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
@@ -32,6 +37,9 @@ class MockAICoreServiceImplTest {
     CdsRuntime runtime = mock(CdsRuntime.class);
     CdsEnvironment env = mock(CdsEnvironment.class);
     when(runtime.getEnvironment()).thenReturn(env);
+    CdsModel cdsModel = mock(CdsModel.class);
+    when(runtime.getCdsModel()).thenReturn(cdsModel);
+    when(cdsModel.getService("AICore")).thenReturn(mock(CdsService.class));
     when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
         .thenReturn("default");
     when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
