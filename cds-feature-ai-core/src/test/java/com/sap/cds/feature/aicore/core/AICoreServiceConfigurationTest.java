@@ -7,17 +7,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.handler.MockEntityHandler;
+import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.reflect.CdsService;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -110,6 +114,9 @@ class AICoreServiceConfigurationTest {
         envKey == null || envKey.isBlank(), "Skipped: AICORE_SERVICE_KEY is set");
     when(configurer.getCdsRuntime()).thenReturn(runtime);
     when(runtime.getEnvironment()).thenReturn(environment);
+    CdsModel cdsModel = mock(CdsModel.class);
+    when(runtime.getCdsModel()).thenReturn(cdsModel);
+    when(cdsModel.findService("AICore")).thenReturn(Optional.of(mock(CdsService.class)));
     when(environment.getServiceBindings()).thenReturn(Stream.empty());
     lenient().when(environment.getProperty(any(String.class), any(Class.class), any()))
         .thenAnswer(invocation -> invocation.getArgument(2));
@@ -146,6 +153,9 @@ class AICoreServiceConfigurationTest {
     when(configurer.getCdsRuntime()).thenReturn(runtime);
     when(runtime.getEnvironment()).thenReturn(environment);
     when(runtime.getServiceCatalog()).thenReturn(serviceCatalog);
+    CdsModel cdsModel = mock(CdsModel.class);
+    when(runtime.getCdsModel()).thenReturn(cdsModel);
+    when(cdsModel.findService("AICore")).thenReturn(Optional.of(mock(CdsService.class)));
     when(environment.getServiceBindings()).thenReturn(Stream.empty());
     lenient().when(environment.getProperty(any(String.class), any(Class.class), any()))
         .thenAnswer(invocation -> invocation.getArgument(2));

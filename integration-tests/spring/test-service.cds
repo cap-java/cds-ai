@@ -1,4 +1,5 @@
 using {itest} from '../db/schema';
+using { AICore } from 'com.sap.cds/ai';
 
 service TestService {
   entity Products as projection on itest.Products;
