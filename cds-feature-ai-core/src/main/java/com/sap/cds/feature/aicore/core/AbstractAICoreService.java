@@ -4,6 +4,7 @@
 package com.sap.cds.feature.aicore.core;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.reflect.CdsService;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -20,6 +21,14 @@ public abstract class AbstractAICoreService extends AbstractCqnService implement
 
   protected AbstractAICoreService(String name, CdsRuntime runtime) {
     super(name, runtime);
+  }
+
+  /** The qualified CDS service definition name used for model lookups. */
+  private static final String CDS_DEFINITION_NAME = "AICore";
+
+  @Override
+  public CdsService getDefinition() {
+    return RequestContext.getCurrent(runtime).getModel().getService(CDS_DEFINITION_NAME);
   }
 
   /** Returns the {@link CdsRuntime} that this service was created with. */
