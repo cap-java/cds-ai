@@ -5,10 +5,16 @@ using {
     managed
 } from '@sap/cds/common';
 
-@assert.unique: { attachmentId: [attachmentId] }
+entity SourceDocument : cuid {
+    fileName : String;
+    mimeType : String @Core.IsMediaType;
+    content  : LargeBinary @Core.MediaType: mimeType;
+}
+
 entity ExtractionJob : cuid, managed {
-    attachmentId : String;
-    status       : String;
-    tenantId:String;
+    sourceDocument  : Association to SourceDocument;
+    attachmentId    : String;
+    status          : String;
+    tenantId        : String;
     documentAiJobId : String;
 }

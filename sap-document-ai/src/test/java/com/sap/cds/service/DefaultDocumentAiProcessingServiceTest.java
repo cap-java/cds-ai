@@ -6,7 +6,7 @@ package com.sap.cds.service;
 import static org.mockito.ArgumentMatchers.any;
 
 import com.sap.cds.service.documentai.client.DocumentAiClient;
-import com.sap.cds.service.exceptions.DocumentAiProcessingException;
+import com.sap.cds.service.exceptions.DocumentAiException;
 import com.sap.cds.service.model.DocumentInput;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +21,6 @@ import org.mockito.Mockito;
 class DefaultDocumentAiProcessingServiceTest {
 
   public static final String TEST_PDF = "test.pdf";
-  public static final String CNT_ID_1 = "cnt_id_1";
   public static final String CONTENT_TYPE = "application/pdf";
   public static final String TEST_CONTENT = "test";
   public static final String JOB_1 = "job-1";
@@ -38,7 +37,6 @@ class DefaultDocumentAiProcessingServiceTest {
     documentInput =
         new DocumentInput(
             TEST_PDF,
-            CNT_ID_1,
             CONTENT_TYPE,
             new ByteArrayInputStream(TEST_CONTENT.getBytes(StandardCharsets.UTF_8)));
   }
@@ -66,6 +64,6 @@ class DefaultDocumentAiProcessingServiceTest {
     Mockito.when(documentAiClient.submitDocument(any()))
         .thenThrow(new RuntimeException("submit failed"));
     Assertions.assertThatThrownBy(() -> service.processDocument(JOB_1, documentInput))
-        .isInstanceOf(DocumentAiProcessingException.class);
+        .isInstanceOf(DocumentAiException.Processing.class);
   }
 }

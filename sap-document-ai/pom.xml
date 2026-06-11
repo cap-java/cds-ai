@@ -180,7 +180,6 @@
         <configuration>
           <excludes>
             <exclude>**/feature/documentai/generated/**</exclude>
-            <exclude>**/service/documentai/client/DefaultDocumentAiClient.class</exclude>
           </excludes>
         </configuration>
         <executions>

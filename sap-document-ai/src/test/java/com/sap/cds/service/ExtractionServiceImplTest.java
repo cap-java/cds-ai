@@ -4,8 +4,8 @@
 package com.sap.cds.service;
 
 import static com.sap.cds.service.ExtractionStatus.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentCaptor.forClass;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
@@ -18,6 +18,8 @@ import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsElementNotFoundException;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
+import com.sap.cds.service.model.ExtractionResult;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.ByteArrayInputStream;
@@ -73,7 +75,7 @@ class ExtractionServiceImplTest {
     mockSuccessfulProcessing();
     extractionService.onStartExtraction(eventContext());
 
-    ArgumentCaptor<CqnInsert> insertCaptor = forClass(CqnInsert.class);
+    ArgumentCaptor<CqnInsert> insertCaptor = ArgumentCaptor.forClass(CqnInsert.class);
     verify(persistenceService, atLeastOnce()).run(insertCaptor.capture());
     ExtractionJob inserted =
         Struct.access(insertCaptor.getValue().entries().get(0)).as(ExtractionJob.class);
@@ -90,7 +92,7 @@ class ExtractionServiceImplTest {
     mockSuccessfulProcessing();
     extractionService.onStartExtraction(eventContext());
 
-    ArgumentCaptor<CqnUpdate> captor = forClass(CqnUpdate.class);
+    ArgumentCaptor<CqnUpdate> captor = ArgumentCaptor.forClass(CqnUpdate.class);
     verify(persistenceService, times(1)).run(captor.capture());
 
     ExtractionJob update =
@@ -131,7 +133,9 @@ class ExtractionServiceImplTest {
     mockContentThenStatus(contentStream(), statusResult);
     mockInsertDatabaseCalls();
     mockSuccessfulProcessing();
-    extractionService.onStartExtraction(eventContext());
+    assertThrows(
+        IllegalStatusTransitionException.class,
+        () -> extractionService.onStartExtraction(eventContext()));
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
 
@@ -144,6 +148,67 @@ class ExtractionServiceImplTest {
         .when(documentAiProcessingService)
         .processDocument(any(), any());
     extractionService.onStartExtraction(eventContext());
+    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
+  }
+
+  @Test
+  void triggerExtractionCreatesJobAsPendingWhenServiceUnavailable() {
+    mockInsertDatabaseCalls(); // job creation must succeed
+    when(documentAiProcessingService.isAvailable()).thenReturn(false);
+
+    ExtractionResult result =
+        extractionService.triggerExtraction(
+            ATT_123, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+
+    assertThat(result.status()).isEqualTo(ExtractionResult.Status.PENDING);
+    assertThat(result.internalJobId()).isNotNull();
+    verify(persistenceService).run(any(CqnInsert.class)); // job was created
+  }
+
+  @Test
+  void triggerExtractionMarksJobFailedOnInvalidStatusTransition() {
+    mockInsertDatabaseCalls();
+    mockAllDatabaseCalls();
+    Result statusResult = resultWithJobStatus(PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
+    doThrow(new IllegalStatusTransitionException("invalid transition"))
+        .when(documentAiProcessingService)
+        .processDocument(any(), any());
+
+    assertThrows(
+        IllegalStatusTransitionException.class,
+        () ->
+            extractionService.triggerExtraction(
+                ATT_123, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1));
+
+    verify(persistenceService, never()).run(any(CqnUpdate.class));
+  }
+
+  @Test
+  void triggerExtractionSubmitsDocumentAndUpdatesStatus() {
+    mockInsertDatabaseCalls();
+    mockAllDatabaseCalls();
+    Result statusResult = resultWithJobStatus(PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
+    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+
+    extractionService.triggerExtraction(ATT_123, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+
+    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
+  }
+
+  @Test
+  void triggerExtractionMarksJobFailedOnProcessingError() {
+    mockInsertDatabaseCalls();
+    mockAllDatabaseCalls();
+    Result statusResult = resultWithJobStatus(PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
+    doThrow(new RuntimeException("simulated failure"))
+        .when(documentAiProcessingService)
+        .processDocument(any(), any());
+
+    extractionService.triggerExtraction(ATT_123, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+
     verify(persistenceService, times(1)).run(any(CqnUpdate.class));
   }
 
@@ -229,7 +294,9 @@ class ExtractionServiceImplTest {
 
   private void mockAllDatabaseCalls() {
     mockInsertDatabaseCalls();
-    lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
+    Result updateResult = mock(Result.class);
+    lenient().when(updateResult.rowCount()).thenReturn(1L);
+    lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(updateResult);
   }
 
   private Result resultWithJobStatus(ExtractionStatus status) {

@@ -4,7 +4,7 @@
 package com.sap.cds.service;
 
 import com.sap.cds.service.documentai.client.DocumentAiClient;
-import com.sap.cds.service.exceptions.DocumentAiProcessingException;
+import com.sap.cds.service.exceptions.DocumentAiException;
 import com.sap.cds.service.model.DocumentInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,7 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
           documentAiJobId);
       return documentAiJobId;
     } catch (Exception e) {
-      throw new DocumentAiProcessingException("Failed to process document for jobId=" + jobId, e);
+      throw new DocumentAiException.Processing("Failed to process document for jobId=" + jobId, e);
     }
   }
 

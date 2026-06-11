@@ -1,15 +1,17 @@
 /*
 * © 2026 SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
 */
-package com.sap.cds.service;
+package com.sap.cds.service.utils;
 
 import static com.sap.cds.service.ExtractionStatus.*;
 
-class StatusTransitionValidator {
+import com.sap.cds.service.ExtractionStatus;
+
+public class StatusTransitionValidator {
 
   private StatusTransitionValidator() {}
 
-  static boolean isValid(ExtractionStatus current, ExtractionStatus next) {
+  public static boolean isValid(ExtractionStatus current, ExtractionStatus next) {
     if (current.equals(next)) return true; // idempotent
 
     return switch (current) {
