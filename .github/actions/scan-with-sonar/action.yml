@@ -48,6 +48,14 @@ runs:
       working-directory: integration-tests
       shell: bash
 
+    - name: Cleanup AI Core test resource groups
+      if: always()
+      working-directory: integration-tests
+      shell: bash
+      env:
+        RESOURCE_GROUP_PREFIX: sonar-${{ github.run_id }}-${{ github.run_attempt }}
+      run: cds bind --exec -- node ${{ github.workspace }}/.github/scripts/cleanup-resource-groups.js
+
     - name: Generate aggregate coverage report
       run: mvn verify -ntp -B -pl coverage-report -am -DskipTests
       shell: bash

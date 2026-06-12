@@ -16,9 +16,6 @@ cds:
 spring:
   config.activate.on-profile: local-with-tenants
 cds:
-  requires:
-    AICore:
-      multiTenancy: true
   security:
     mock:
       tenants:

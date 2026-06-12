@@ -4,8 +4,11 @@
 package com.sap.cds.feature.aicore.core;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.services.request.RequestContext;
+import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.utils.services.AbstractCqnService;
+import io.github.resilience4j.retry.Retry;
 import java.util.Map;
 
 /**
@@ -22,6 +25,50 @@ public abstract class AbstractAICoreService extends AbstractCqnService implement
   /** Returns the {@link CdsRuntime} that this service was created with. */
   public CdsRuntime getRuntime() {
     return runtime;
+  }
+
+  /**
+   * Returns the tenant ID from the current {@link RequestContext}. May return {@code null} if no
+   * tenant is set (e.g. in single-tenant mode).
+   */
+  public String currentTenantId() {
+    return RequestContext.getCurrent(runtime).getUserInfo().getTenant();
+  }
+
+  /**
+   * Returns whether the current request is running as a system/provider user. Provider users are
+   * allowed to see all tenants' resources.
+   */
+  public boolean isProviderUser() {
+    UserInfo userInfo = RequestContext.getCurrent(runtime).getUserInfo();
+    return userInfo.isSystemUser() || userInfo.isInternalUser();
+  }
+
+  /**
+   * Returns whether multi-tenancy is enabled. Not part of the public {@link AICoreService}
+   * interface — callers should not need to be aware of multi-tenancy.
+   */
+  public abstract boolean isMultiTenancyEnabled();
+
+  /**
+   * Returns the shared {@link Retry} used internally for transient AI Core errors. Not part of the
+   * public {@link AICoreService} interface but accessible to internal callers (e.g. the
+   * recommendations module) that need consistent backoff behaviour.
+   */
+  public abstract Retry getRetry();
+
+  /**
+   * Returns the resource group for the given tenant ID. This is an internal method used by setup
+   * handlers where the tenant ID is explicitly available from the subscribe/unsubscribe context.
+   *
+   * @param tenantId the CDS tenant identifier
+   * @return the AI Core resource group ID
+   */
+  public abstract String resourceGroupForTenant(String tenantId);
+
+  @Override
+  public String resourceGroup() {
+    return resourceGroupForTenant(currentTenantId());
   }
 
   /** Returns the configured default resource group identifier. */

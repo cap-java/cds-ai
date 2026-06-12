@@ -56,6 +56,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     Map<String, Object> values = analysis.targetValues();
 
     String resourceGroupId = resolveResourceGroup(merge(keys, values));
+    ensureResourceGroupAccessible(resourceGroupId);
 
     String id = (String) keys.get(Deployments.ID);
     if (id != null) {
@@ -75,6 +76,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
     for (Deployments entry : entries) {
       String resourceGroupId = resolveResourceGroup(entry);
+      ensureResourceGroupAccessible(resourceGroupId);
       String configurationId = entry.getConfigurationId();
 
       AiDeploymentCreationRequest request =
@@ -111,6 +113,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
     String deploymentId = (String) keys.get(Deployments.ID);
     String resourceGroupId = resolveResourceGroup(merge(keys, data));
+    ensureResourceGroupAccessible(resourceGroupId);
 
     AiDeploymentModificationRequest modRequest = AiDeploymentModificationRequest.create();
 
@@ -135,6 +138,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
     String deploymentId = (String) keys.get(Deployments.ID);
     String resourceGroupId = resolveResourceGroup(keys);
+    ensureResourceGroupAccessible(resourceGroupId);
 
     deploymentApi.delete(resourceGroupId, deploymentId);
     logger.debug("Deleted deployment {} in resource group {}", deploymentId, resourceGroupId);

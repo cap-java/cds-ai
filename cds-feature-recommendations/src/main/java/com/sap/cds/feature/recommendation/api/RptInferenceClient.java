@@ -31,10 +31,11 @@ import org.slf4j.LoggerFactory;
  *
  * <pre>{@code
  * AICoreService service = ...;
- * String rg = service.resourceGroupForTenant(tenantId);
+ * String rg = service.resourceGroup();
  * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
  * RptInferenceClient client =
- *     new RptInferenceClient(service.inferenceClient(rg, deploymentId), service.getRetry());
+ *     new RptInferenceClient(service.inferenceClient(rg, deploymentId),
+ *         ((AbstractAICoreService) service).getRetry());
  * List<CdsData> predictions = client.predict(rows, List.of("targetColumn"), "ID");
  * }</pre>
  */

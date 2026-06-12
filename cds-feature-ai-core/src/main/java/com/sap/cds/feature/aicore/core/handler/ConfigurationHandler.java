@@ -52,6 +52,7 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     Map<String, Object> values = analysis.targetValues();
 
     String resourceGroupId = resolveResourceGroup(merge(keys, values));
+    ensureResourceGroupAccessible(resourceGroupId);
     logger.debug(
         "Reading configurations for resourceGroup={}, keys={}, values={}",
         resourceGroupId,
@@ -79,6 +80,7 @@ public class ConfigurationHandler extends AbstractCrudHandler {
 
     for (Configurations entry : entries) {
       String resourceGroupId = resolveResourceGroup(entry);
+      ensureResourceGroupAccessible(resourceGroupId);
 
       AiConfigurationBaseData request =
           AiConfigurationBaseData.create()

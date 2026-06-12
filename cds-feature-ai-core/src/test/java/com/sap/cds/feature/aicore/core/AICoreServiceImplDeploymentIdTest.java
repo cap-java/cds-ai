@@ -68,13 +68,13 @@ class AICoreServiceImplDeploymentIdTest {
     CdsEnvironment env = mock(CdsEnvironment.class);
     when(runtime.getEnvironment()).thenReturn(env);
     // Use small retry counts so failures don't slow tests.
-    when(env.getProperty(eq("cds.requires.AICore.maxRetries"), eq(Integer.class), any()))
+    when(env.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any()))
         .thenReturn(1);
-    when(env.getProperty(eq("cds.requires.AICore.initialDelayMs"), eq(Long.class), any()))
+    when(env.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any()))
         .thenReturn(1L);
-    when(env.getProperty(eq("cds.requires.AICore.resourceGroup"), eq(String.class), any()))
+    when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
         .thenReturn("default");
-    when(env.getProperty(eq("cds.requires.AICore.resourceGroupPrefix"), eq(String.class), any()))
+    when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
         .thenReturn("cds-");
 
     service =
@@ -190,6 +190,40 @@ class AICoreServiceImplDeploymentIdTest {
     verify(deploymentApi, times(1))
         .query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any());
     verify(deploymentApi, times(1)).get(RG, DEPLOYMENT_ID);
+  }
+
+  @Test
+  void resourceGroupForTenant_nullTenantId_returnsDefault() {
+    // Even with MT enabled, a null tenantId should fall back to the default resource group.
+    CdsRuntime rtMt = mock(CdsRuntime.class);
+    CdsEnvironment envMt = mock(CdsEnvironment.class);
+    when(rtMt.getEnvironment()).thenReturn(envMt);
+    when(envMt.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any())).thenReturn(1);
+    when(envMt.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any())).thenReturn(1L);
+    when(envMt.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
+        .thenReturn("my-default");
+    when(envMt.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
+        .thenReturn("cds-");
+
+    AICoreServiceImpl mtService =
+        new AICoreServiceImpl(
+            AICoreService.DEFAULT_NAME,
+            rtMt,
+            true, // multi-tenancy enabled
+            deploymentApi,
+            configurationApi,
+            resourceGroupApi,
+            mock(AiCoreService.class));
+
+    String result = mtService.resourceGroupForTenant(null);
+    assertThat(result).isEqualTo("my-default");
+  }
+
+  @Test
+  void resourceGroupForTenant_multiTenancyDisabled_returnsDefault() {
+    // Single-tenancy always returns default regardless of the tenantId passed.
+    String result = service.resourceGroupForTenant("any-tenant");
+    assertThat(result).isEqualTo("default");
   }
 
   @Test

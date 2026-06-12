@@ -25,7 +25,6 @@ import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsEnvironment;
-import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
@@ -100,14 +99,14 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     this.multiTenancyEnabled = multiTenancyEnabled;
     CdsEnvironment env = runtime.getEnvironment();
     this.maxRetries =
-        env.getProperty("cds.requires.AICore.maxRetries", Integer.class, DEFAULT_MAX_RETRIES);
+        env.getProperty("cds.ai.core.maxRetries", Integer.class, DEFAULT_MAX_RETRIES);
     this.initialDelayMs =
-        env.getProperty("cds.requires.AICore.initialDelayMs", Long.class, DEFAULT_INITIAL_DELAY_MS);
+        env.getProperty("cds.ai.core.initialDelayMs", Long.class, DEFAULT_INITIAL_DELAY_MS);
     this.defaultResourceGroup =
-        env.getProperty("cds.requires.AICore.resourceGroup", String.class, DEFAULT_RESOURCE_GROUP);
+        env.getProperty("cds.ai.core.resourceGroup", String.class, DEFAULT_RESOURCE_GROUP);
     this.resourceGroupPrefix =
         env.getProperty(
-            "cds.requires.AICore.resourceGroupPrefix", String.class, DEFAULT_RESOURCE_GROUP_PREFIX);
+            "cds.ai.core.resourceGroupPrefix", String.class, DEFAULT_RESOURCE_GROUP_PREFIX);
     this.retry = buildRetry(maxRetries, initialDelayMs);
     this.tenantResourceGroupCache = newCache();
     this.resourceGroupDeploymentCache = newCache();
@@ -126,8 +125,8 @@ public class AICoreServiceImpl extends AbstractAICoreService {
 
   @Override
   public String resourceGroupForTenant(String tenantId) {
-    if (!multiTenancyEnabled) {
-      logger.debug("Multi-tenancy disabled, using resource group {}", defaultResourceGroup);
+    if (!multiTenancyEnabled || tenantId == null) {
+      logger.debug("Using default resource group {}", defaultResourceGroup);
       return defaultResourceGroup;
     }
     return getOrCreateResourceGroupForTenant(tenantId);
@@ -243,8 +242,7 @@ public class AICoreServiceImpl extends AbstractAICoreService {
     if (rgObj instanceof Map<?, ?> rgMap && rgMap.containsKey("resourceGroupId")) {
       return (String) rgMap.get("resourceGroupId");
     }
-    String tenantId = RequestContext.getCurrent(runtime).getUserInfo().getTenant();
-    return resourceGroupForTenant(tenantId);
+    return resourceGroup();
   }
 
   @Override

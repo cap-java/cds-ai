@@ -33,7 +33,10 @@ class FioriRecommendationHandler implements EventHandler {
   private final AICoreService aiCoreService;
   private final RecommendationClientResolver clientResolver;
   private final RecommendationResultParser resultParser = new RecommendationResultParser();
-  private final Cache<String, Boolean> entitiesWithoutPredictions =
+  // Avoids re-evaluating the CDS model on every read to check whether an entity has prediction
+  // columns. Keys are "<tenantId>:<entityName>" because if an entity needs a prediction can be
+  // different across tenants.
+  private final Cache<String, Boolean> entitiesWithoutPredictionsPerTenant =
       Caffeine.newBuilder().maximumSize(10_000).build();
 
   FioriRecommendationHandler(
@@ -42,14 +45,25 @@ class FioriRecommendationHandler implements EventHandler {
     this.clientResolver = clientResolver;
   }
 
+  void invalidateTenant(String tenantId) {
+    String prefix = tenantKey(tenantId) + ":";
+    entitiesWithoutPredictionsPerTenant.asMap().keySet().removeIf(k -> k.startsWith(prefix));
+  }
+
+  private static String tenantKey(String tenantId) {
+    return tenantId != null ? tenantId : "";
+  }
+
   @After(entity = "*")
   public void afterRead(CdsReadEventContext context, List<CdsData> dataList) {
     CdsStructuredType target = context.getTarget();
     if (target == null) {
       return;
     }
+    String tenantId = context.getUserInfo().getTenant();
     String entityName = target.getQualifiedName();
-    if (entitiesWithoutPredictions.getIfPresent(entityName) != null) {
+    String cacheKey = tenantKey(tenantId) + ":" + entityName;
+    if (entitiesWithoutPredictionsPerTenant.getIfPresent(cacheKey) != null) {
       return;
     }
 
@@ -77,14 +91,14 @@ class FioriRecommendationHandler implements EventHandler {
             .getCdsRuntime()
             .getEnvironment()
             .getProperty(
-                "cds.requires.recommendations.contextRowLimit",
+                "cds.ai.recommendations.contextRowLimit",
                 Integer.class,
                 DEFAULT_CONTEXT_ROW_LIMIT);
 
     var builder = new RecommendationContextBuilder(target, rowType, limit);
 
     if (builder.predictionElementNames().isEmpty()) {
-      entitiesWithoutPredictions.put(entityName, Boolean.TRUE);
+      entitiesWithoutPredictionsPerTenant.put(cacheKey, Boolean.TRUE);
       return;
     }
 
@@ -111,8 +125,7 @@ class FioriRecommendationHandler implements EventHandler {
 
     List<CdsData> allRows = builder.assembleRows(contextRows, predictRow, row);
 
-    String tenantId = context.getUserInfo().getTenant();
-    RecommendationClient client = clientResolver.resolve(aiCoreService, tenantId);
+    RecommendationClient client = clientResolver.resolve(aiCoreService);
     List<CdsData> predictions =
         client.predict(allRows, builder.predictionElementNames(), builder.indexColumn());
 

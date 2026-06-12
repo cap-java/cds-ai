@@ -67,7 +67,7 @@ class FioriRecommendationHandlerTest {
     reset(db);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
     predictionClient = randomPickClient();
-    cut = new FioriRecommendationHandler(aiCoreService, (service, tenantId) -> predictionClient);
+    cut = new FioriRecommendationHandler(aiCoreService, (service) -> predictionClient);
   }
 
   // ── tests ──────────────────────────────────────────────────────────────────
@@ -297,6 +297,50 @@ class FioriRecommendationHandlerTest {
         });
   }
 
+  @Test
+  void invalidateTenant_removesOnlyThatTenantsEntries() {
+    // populate cache for two tenants
+    runInTenant(
+        "tenant-a",
+        () -> {
+          Map<String, Object> row = draftRow("title", "foo");
+          CdsReadEventContext ctx = readContext("test.PlainEntity", List.of(row));
+          cut.afterRead(ctx, dataList(row));
+        });
+    runInTenant(
+        "tenant-b",
+        () -> {
+          Map<String, Object> row = draftRow("title", "foo");
+          CdsReadEventContext ctx = readContext("test.PlainEntity", List.of(row));
+          cut.afterRead(ctx, dataList(row));
+        });
+
+    cut.invalidateTenant("tenant-a");
+
+    // tenant-a entry gone → db is called again (no early exit)
+    runInTenant(
+        "tenant-a",
+        () -> {
+          Map<String, Object> row = draftRow("genre_ID", null);
+          CdsReadEventContext ctx = readContext("test.Books", List.of(row));
+          when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
+          cut.afterRead(ctx, dataList(row));
+          assertThat(row).containsKey("SAP_Recommendations");
+        });
+
+    // tenant-b entry still cached → db is NOT called
+    reset(db);
+    when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
+    runInTenant(
+        "tenant-b",
+        () -> {
+          Map<String, Object> row = draftRow("title", "foo");
+          CdsReadEventContext ctx = readContext("test.PlainEntity", List.of(row));
+          cut.afterRead(ctx, dataList(row));
+          verifyNoInteractions(db);
+        });
+  }
+
   // ── helpers ────────────────────────────────────────────────────────────────
 
   private CdsReadEventContext readContext(String entityName, List<Map<String, Object>> resultRows) {
@@ -316,6 +360,10 @@ class FioriRecommendationHandlerTest {
 
   private void runIn(Runnable test) {
     runtime.requestContext().run((Consumer<RequestContext>) rc -> test.run());
+  }
+
+  private void runInTenant(String tenantId, Runnable test) {
+    runtime.requestContext().systemUser(tenantId).run((Consumer<RequestContext>) rc -> test.run());
   }
 
   private Map<String, Object> draftRow(String col, Object val) {

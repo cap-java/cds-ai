@@ -5,7 +5,6 @@ package com.sap.cds.feature.aicore.api;
 
 import com.sap.cds.services.cds.CqnService;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
-import io.github.resilience4j.retry.Retry;
 
 /**
  * CAP service contract for SAP AI Core integration.
@@ -15,20 +14,16 @@ import io.github.resilience4j.retry.Retry;
  * provides programmatic helpers to:
  *
  * <ul>
- *   <li>Resolve the resource group ID for a CDS tenant ({@link #resourceGroupForTenant(String)}),
- *       creating it on-demand when multi-tenancy is enabled.
+ *   <li>Resolve the resource group ID for the current tenant ({@link #resourceGroup()}), creating
+ *       it on-demand when multi-tenancy is enabled.
  *   <li>Resolve (or create) a deployment matching a {@link ModelDeploymentSpec} ({@link
  *       #deploymentId(String, ModelDeploymentSpec)}).
  *   <li>Build an {@link ApiClient} preconfigured for inference against a specific deployment
  *       ({@link #inferenceClient(String, String)}).
- *   <li>Expose a shared retry/backoff policy ({@link #getRetry()}) for downstream callers that want
- *       consistent transient-error handling.
  * </ul>
  *
- * <p>Two implementations are provided: {@link com.sap.cds.feature.aicore.core.AICoreServiceImpl}
- * (when an SAP AI Core service binding is detected) and {@link
- * com.sap.cds.feature.aicore.core.MockAICoreServiceImpl} (in-memory fallback for local
- * development).
+ * <p>The implementation is tenant-aware: it reads the current tenant from the {@code
+ * RequestContext}. Callers do not need to pass tenant identifiers explicitly.
  */
 public interface AICoreService extends CqnService {
 
@@ -45,16 +40,15 @@ public interface AICoreService extends CqnService {
   String CONFIGURATIONS = "AICore.configurations";
 
   /**
-   * Returns the AI Core resource group ID associated with the given CDS tenant.
+   * Returns the AI Core resource group ID associated with the current tenant.
    *
-   * <p>When multi-tenancy is disabled the configured {@code cds.requires.AICore.resourceGroup} is
-   * returned for every tenant. When enabled, the resource group is looked up by the {@code
-   * ext.ai.sap.com/CDS_TENANT_ID} label and created on first call if it does not exist.
+   * <p>When multi-tenancy is disabled the configured default resource group is returned. When
+   * enabled, the resource group is looked up by the {@code ext.ai.sap.com/CDS_TENANT_ID} label and
+   * created on first call if it does not exist.
    *
-   * @param tenantId the CDS tenant identifier; may be {@code null} when multi-tenancy is disabled
-   * @return the AI Core resource group ID
+   * @return the AI Core resource group ID for the current tenant
    */
-  String resourceGroupForTenant(String tenantId);
+  String resourceGroup();
 
   /**
    * Returns the deployment ID for the given model spec inside the given resource group.
@@ -80,13 +74,4 @@ public interface AICoreService extends CqnService {
    * @return a configured {@link ApiClient} pointing at the deployment's inference endpoint
    */
   ApiClient inferenceClient(String resourceGroupId, String deploymentId);
-
-  /** Returns whether multi-tenancy is enabled for this service. */
-  boolean isMultiTenancyEnabled();
-
-  /**
-   * Returns the shared {@link Retry} used internally for transient AI Core errors. Exposed so
-   * downstream inference clients can reuse the same backoff policy.
-   */
-  Retry getRetry();
 }

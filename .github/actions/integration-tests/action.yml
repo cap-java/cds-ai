@@ -34,3 +34,11 @@ runs:
       run: cds bind --exec -- mvn clean verify -ntp -B -f pom.xml
       working-directory: integration-tests
       shell: bash
+
+    - name: Cleanup AI Core test resource groups
+      if: always()
+      working-directory: integration-tests
+      shell: bash
+      env:
+        RESOURCE_GROUP_PREFIX: itest-${{ github.run_id }}-${{ github.run_attempt }}-j${{ inputs.java-version }}
+      run: cds bind --exec -- node ${{ github.workspace }}/.github/scripts/cleanup-resource-groups.js
