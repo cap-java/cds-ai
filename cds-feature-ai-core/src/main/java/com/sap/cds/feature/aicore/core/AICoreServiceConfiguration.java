@@ -63,6 +63,20 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
     return runtime.getServiceCatalog().getService(DeploymentService.class, DeploymentService.DEFAULT_NAME) != null;
   }
 
+  /**
+   * Detects multi-tenancy by checking the standard CAP Java {@code cds.multiTenancy.sidecar.url}
+   * property or the presence of a {@link DeploymentService} in the service catalog. This aligns
+   * with the standard CAP Java convention — no custom property flag is needed.
+   */
+  private static boolean detectMultiTenancy(CdsRuntime runtime) {
+    CdsProperties props = runtime.getEnvironment().getCdsProperties();
+    String sidecarUrl = props.getMultiTenancy().getSidecar().getUrl();
+    if (sidecarUrl != null && !sidecarUrl.isBlank()) {
+      return true;
+    }
+    return runtime.getServiceCatalog().getService(DeploymentService.class, DeploymentService.DEFAULT_NAME) != null;
+  }
+
   @Override
   public void services(CdsRuntimeConfigurer configurer) {
     CdsRuntime runtime = configurer.getCdsRuntime();
