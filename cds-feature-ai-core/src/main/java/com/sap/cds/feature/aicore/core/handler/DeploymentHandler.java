@@ -26,7 +26,6 @@ import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.time.OffsetDateTime;
@@ -48,7 +47,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     this.deploymentApi = deploymentApi;
   }
 
-  @On(event = CqnService.EVENT_READ, entity = Deployments_.CDS_NAME)
+  @On(entity = Deployments_.CDS_NAME)
   public void onRead(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -71,7 +70,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = Deployments_.CDS_NAME)
+  @On(entity = Deployments_.CDS_NAME)
   public void onCreate(CdsCreateEventContext context, List<Deployments> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
@@ -96,7 +95,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     context.setResult(results);
   }
 
-  @On(event = CqnService.EVENT_UPDATE, entity = Deployments_.CDS_NAME)
+  @On(entity = Deployments_.CDS_NAME)
   public void onUpdate(CdsUpdateEventContext context, List<Deployments> entries) {
     if (entries.isEmpty()) {
       throw new ServiceException(ErrorStatuses.BAD_REQUEST, "No update payload provided");
@@ -130,7 +129,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     context.setResult(List.of(data));
   }
 
-  @On(event = CqnService.EVENT_DELETE, entity = Deployments_.CDS_NAME)
+  @On(entity = Deployments_.CDS_NAME)
   public void onDelete(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();

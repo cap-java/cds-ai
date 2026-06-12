@@ -28,7 +28,6 @@ import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.util.ArrayList;
@@ -49,7 +48,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     this.resourceGroupApi = resourceGroupApi;
   }
 
-  @On(event = CqnService.EVENT_READ, entity = ResourceGroups_.CDS_NAME)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void onRead(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -75,7 +74,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = ResourceGroups_.CDS_NAME)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void onCreate(CdsCreateEventContext context, List<ResourceGroups> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
@@ -118,7 +117,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     context.setResult(results);
   }
 
-  @On(event = CqnService.EVENT_UPDATE, entity = ResourceGroups_.CDS_NAME)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void onUpdate(CdsUpdateEventContext context) {
     CqnUpdate update = context.getCqn();
     CdsModel model = context.getModel();
@@ -142,7 +141,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     context.setResult(List.of(CdsData.create(data)));
   }
 
-  @On(event = CqnService.EVENT_DELETE, entity = ResourceGroups_.CDS_NAME)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void onDelete(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();

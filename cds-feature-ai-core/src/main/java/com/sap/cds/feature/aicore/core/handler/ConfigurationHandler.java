@@ -22,7 +22,6 @@ import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.util.ArrayList;
@@ -44,7 +43,7 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     this.configurationApi = configurationApi;
   }
 
-  @On(event = CqnService.EVENT_READ, entity = Configurations_.CDS_NAME)
+  @On(entity = Configurations_.CDS_NAME)
   public void onRead(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -75,7 +74,7 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = Configurations_.CDS_NAME)
+  @On(entity = Configurations_.CDS_NAME)
   public void onCreate(CdsCreateEventContext context, List<Configurations> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 

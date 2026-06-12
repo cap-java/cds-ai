@@ -29,7 +29,7 @@ public class ActionHandler extends AbstractCrudHandler {
     this.deploymentApi = deploymentApi;
   }
 
-  @On(event = DeploymentsStopContext.CDS_NAME, entity = Deployments_.CDS_NAME)
+  @On(entity = Deployments_.CDS_NAME)
   public void onStop(DeploymentsStopContext context) {
     Map<String, Object> keys = asMap(context.get("keys"));
     String deploymentId = (String) keys.get(Deployments.ID);
