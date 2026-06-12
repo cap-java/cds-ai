@@ -1,0 +1,48 @@
+logging:
+  level:
+    root: INFO
+    com.sap.cds.feature.aicore.core: DEBUG
+---
+spring:
+  datasource:
+    url: "jdbc:h2:mem:testdb"
+  config:
+    activate:
+      on-profile: default
+  sql:
+    init:
+      platform: h2
+cds:
+  requires:
+    AICore:
+      resourceGroup: default
+  security:
+    mock:
+      users:
+        admin:
+          password: admin
+          roles:
+            - admin
+        user:
+          password: user
+  data-source:
+    auto-config:
+      enabled: false
+---
+management:
+  endpoint:
+    health:
+      show-components: always
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health
+  health:
+    defaults:
+      enabled: false
+    ping:
+      enabled: true
+    db:
+      enabled: true

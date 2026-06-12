@@ -1,0 +1,9 @@
+{
+  "name": "cds-feature-recommendations-cds",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CDS build dependencies for cds-feature-recommendations. Pulled in by Maven (cds-maven-plugin npm goal) so a fresh `mvn install` is hermetic and does not require a globally installed @sap/cds-dk.",
+  "devDependencies": {
+    "@sap/cds-dk": "9.9.1"
+  }
+}

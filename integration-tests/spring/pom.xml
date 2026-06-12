@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sap.cds</groupId>
+    <artifactId>cds-feature-ai-integration-tests</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>cds-feature-ai-integration-tests-spring</artifactId>
+  <packaging>jar</packaging>
+  <name>CDS Feature AI - Integration Tests - Spring</name>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- CAP Spring Boot with OData -->
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-starter-spring-boot-odata</artifactId>
+    </dependency>
+
+    <!-- Module under test -->
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-feature-ai-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-feature-recommendations</artifactId>
+    </dependency>
+
+    <!-- H2 for Spring context -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.sap.cds</groupId>
+        <artifactId>cds-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>cds.install-node</id>
+            <goals>
+              <goal>install-node</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>cds.npm-ci</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}/..</workingDirectory>
+              <arguments>ci</arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>cds.resolve</id>
+            <goals>
+              <goal>resolve</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}/..</workingDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>cds.build</id>
+            <goals>
+              <goal>cds</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}/..</workingDirectory>
+              <commands>
+                <command>build --for java</command>
+                <command>deploy spring/test-service.cds --to h2 --dry &gt;
+                            "${project.basedir}/src/main/resources/schema.sql"</command>
+              </commands>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring.boot.version}</version>
+        <configuration>
+          <mainClass>com.sap.cds.feature.aicore.itest.Application</mainClass>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <runOrder>alphabetical</runOrder>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>jacoco-initialize</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>jacoco-site-report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

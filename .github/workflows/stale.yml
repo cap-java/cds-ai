@@ -1,0 +1,15 @@
+name: "Close stale issues"
+
+permissions: {}
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+
+jobs:
+  stale:
+    uses: cap-java/.github/.github/workflows/stale.yml@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
+    permissions:
+      actions: write
+      issues: write
+      pull-requests: write
