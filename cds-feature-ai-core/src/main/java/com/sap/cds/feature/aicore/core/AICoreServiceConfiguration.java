@@ -8,6 +8,7 @@ import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
 import com.sap.cds.feature.aicore.core.handler.ConfigurationHandler;
 import com.sap.cds.feature.aicore.core.handler.DeploymentHandler;
@@ -104,10 +105,15 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
         runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
 
     if (registered instanceof AICoreServiceImpl service) {
-      configurer.eventHandler(new ResourceGroupHandler(service));
-      configurer.eventHandler(new DeploymentHandler(service));
-      configurer.eventHandler(new ConfigurationHandler(service));
-      configurer.eventHandler(new ActionHandler(service));
+      var deploymentApi = service.getDeploymentApi();
+      var configApi = service.getConfigurationApi();
+      var rgApi = service.getResourceGroupApi();
+
+      configurer.eventHandler(new AICoreApiHandler());
+      configurer.eventHandler(new ResourceGroupHandler(rgApi));
+      configurer.eventHandler(new DeploymentHandler(deploymentApi, rgApi));
+      configurer.eventHandler(new ConfigurationHandler(configApi, rgApi));
+      configurer.eventHandler(new ActionHandler(deploymentApi, rgApi));
       logger.debug("Registered Prod AI-Core Implementation");
 
       if (service.isMultiTenancyEnabled()) {

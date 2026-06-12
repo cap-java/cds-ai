@@ -7,187 +7,190 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.sap.ai.sdk.core.AiCoreService;
+import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiExecutionStatus;
+import com.sap.cds.Result;
+import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Update;
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
-import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
-import com.sap.cds.ql.cqn.AnalysisResult;
-import com.sap.cds.ql.cqn.CqnAnalyzer;
-import com.sap.cds.ql.cqn.CqnUpdate;
-import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.cds.CdsCreateEventContext;
-import com.sap.cds.services.cds.CdsUpdateEventContext;
-import java.util.HashMap;
-import java.util.List;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
+import com.sap.cds.services.request.RequestContext;
+import com.sap.cds.services.runtime.CdsRuntime;
+import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import java.util.Map;
+import java.util.function.Function;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Integration-style tests for {@link DeploymentHandler} using a real CDS runtime. Only the SDK API
+ * clients (DeploymentApi, ResourceGroupApi, ConfigurationApi) are mocked since they talk to a
+ * remote AI Core service.
+ */
 class DeploymentHandlerTest {
 
-  @Mock private AICoreServiceImpl service;
-  @Mock private DeploymentApi deploymentApi;
-  @Mock private CdsUpdateEventContext updateContext;
-  @Mock private CdsCreateEventContext createContext;
+  private static CdsRuntime runtime;
+  private static AICoreServiceImpl service;
+  private static DeploymentApi deploymentApi;
+  private static ResourceGroupApi resourceGroupApi;
+  private static ConfigurationApi configurationApi;
 
-  private DeploymentHandler cut;
+  @BeforeAll
+  static void bootRuntime() {
+    deploymentApi = mock(DeploymentApi.class);
+    resourceGroupApi = mock(ResourceGroupApi.class);
+    configurationApi = mock(ConfigurationApi.class);
+
+    var configurer =
+        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    configurer.cdsModel("edmx/csn.json");
+    runtime = configurer.getCdsRuntime();
+
+    service =
+        new AICoreServiceImpl(
+            AICoreService.DEFAULT_NAME,
+            runtime,
+            /* multiTenancy */ false,
+            deploymentApi,
+            configurationApi,
+            resourceGroupApi,
+            mock(AiCoreService.class));
+    configurer.service(service);
+    configurer.eventHandler(new AICoreApiHandler());
+    configurer.eventHandler(new DeploymentHandler(deploymentApi, resourceGroupApi));
+    configurer.complete();
+  }
 
   @BeforeEach
-  void setup() {
-    when(service.getDeploymentApi()).thenReturn(deploymentApi);
-    cut = new DeploymentHandler(service);
+  void clearMockInvocations() {
+    clearInvocations(deploymentApi, resourceGroupApi, configurationApi);
   }
 
   @Test
-  void onUpdate_emptyEntries_throwsBadRequest() {
-    List<Deployments> entries = List.of();
+  void onCreate_createsDeploymentWithConfigurationId() {
+    AiDeploymentCreationResponse response = mock(AiDeploymentCreationResponse.class);
+    when(response.getId()).thenReturn("new-dep-id");
+    when(response.getStatus()).thenReturn(AiExecutionStatus.UNKNOWN);
+    when(deploymentApi.create(eq("default"), any(AiDeploymentCreationRequest.class)))
+        .thenReturn(response);
 
-    assertThatThrownBy(() -> cut.onUpdate(updateContext, entries))
-        .isInstanceOfSatisfying(
-            ServiceException.class,
-            e -> assertThat(e.getErrorStatus()).isEqualTo(ErrorStatuses.BAD_REQUEST))
-        .hasMessageContaining("No update payload provided");
+    Result result =
+        runtime
+            .requestContext()
+            .run(
+                (Function<RequestContext, Result>)
+                    ctx ->
+                        service.run(
+                            Insert.into("AICore.deployments")
+                                .entry(
+                                    Map.of(
+                                        "configurationId", "cfg-1",
+                                        "resourceGroup_resourceGroupId", "default"))));
 
-    verifyNoInteractions(deploymentApi);
+    ArgumentCaptor<AiDeploymentCreationRequest> captor =
+        ArgumentCaptor.forClass(AiDeploymentCreationRequest.class);
+    verify(deploymentApi).create(eq("default"), captor.capture());
+    assertThat(captor.getValue().getConfigurationId()).isEqualTo("cfg-1");
+    assertThat(result.single().get("id")).isEqualTo("new-dep-id");
   }
 
   @Test
-  void onUpdate_payloadWithoutTargetStatusOrConfigurationId_throwsBadRequest() {
-    List<Deployments> entries = List.of(Deployments.of(Map.of("ttl", "1d")));
+  void onCreate_withTtl_setsTtlOnRequest() {
+    AiDeploymentCreationResponse response = mock(AiDeploymentCreationResponse.class);
+    when(response.getId()).thenReturn("dep-ttl");
+    when(response.getStatus()).thenReturn(AiExecutionStatus.UNKNOWN);
+    when(deploymentApi.create(eq("default"), any(AiDeploymentCreationRequest.class)))
+        .thenReturn(response);
 
-    assertThatThrownBy(() -> cut.onUpdate(updateContext, entries))
-        .isInstanceOfSatisfying(
-            ServiceException.class,
-            e -> assertThat(e.getErrorStatus()).isEqualTo(ErrorStatuses.BAD_REQUEST))
-        .hasMessageContaining("targetStatus")
-        .hasMessageContaining("configurationId");
+    runtime
+        .requestContext()
+        .run(
+            (Function<RequestContext, Result>)
+                ctx ->
+                    service.run(
+                        Insert.into("AICore.deployments")
+                            .entry(
+                                Map.of(
+                                    "configurationId", "cfg-2",
+                                    "ttl", "PT24H",
+                                    "resourceGroup_resourceGroupId", "default"))));
 
-    verifyNoInteractions(deploymentApi);
+    ArgumentCaptor<AiDeploymentCreationRequest> captor =
+        ArgumentCaptor.forClass(AiDeploymentCreationRequest.class);
+    verify(deploymentApi).create(eq("default"), captor.capture());
+    assertThat(captor.getValue().getTtl()).isEqualTo("PT24H");
   }
 
   @Test
   void onUpdate_withTargetStatus_callsModifyWithTargetStatus() {
-    Deployments data = Deployments.create();
-    data.setTargetStatus("STOPPED");
-    List<Deployments> entries = List.of(data);
-
-    CqnUpdate cqnUpdate = mock(CqnUpdate.class);
-    CdsModel model = mock(CdsModel.class);
-    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
-    AnalysisResult analysisResult = mock(AnalysisResult.class);
-
-    when(updateContext.getCqn()).thenReturn(cqnUpdate);
-    when(updateContext.getModel()).thenReturn(model);
-    Map<String, Object> keys = new HashMap<>();
-    keys.put(Deployments.ID, "dep-123");
-    when(analysisResult.targetKeys()).thenReturn(keys);
-    when(analyzer.analyze(cqnUpdate)).thenReturn(analysisResult);
-    when(service.resolveResourceGroupFromKeys(any())).thenReturn("rg-1");
-    when(service.isProviderUser()).thenReturn(true);
-
-    try (MockedStatic<CqnAnalyzer> staticAnalyzer = mockStatic(CqnAnalyzer.class)) {
-      staticAnalyzer.when(() -> CqnAnalyzer.create(model)).thenReturn(analyzer);
-      cut.onUpdate(updateContext, entries);
-    }
+    runtime
+        .requestContext()
+        .run(
+            (Function<RequestContext, Result>)
+                ctx ->
+                    service.run(
+                        Update.entity("AICore.deployments")
+                            .where(d -> d.get("id").eq("dep-123"))
+                            .data("targetStatus", "STOPPED")));
 
     ArgumentCaptor<AiDeploymentModificationRequest> captor =
         ArgumentCaptor.forClass(AiDeploymentModificationRequest.class);
-    verify(deploymentApi).modify(eq("rg-1"), eq("dep-123"), captor.capture());
+    verify(deploymentApi).modify(eq("default"), eq("dep-123"), captor.capture());
     assertThat(captor.getValue().getTargetStatus().getValue()).isEqualTo("STOPPED");
   }
 
   @Test
   void onUpdate_withConfigurationId_callsModifyWithConfigurationId() {
-    Deployments data = Deployments.create();
-    data.setConfigurationId("config-456");
-    List<Deployments> entries = List.of(data);
-
-    CqnUpdate cqnUpdate = mock(CqnUpdate.class);
-    CdsModel model = mock(CdsModel.class);
-    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
-    AnalysisResult analysisResult = mock(AnalysisResult.class);
-
-    when(updateContext.getCqn()).thenReturn(cqnUpdate);
-    when(updateContext.getModel()).thenReturn(model);
-    Map<String, Object> keys = new HashMap<>();
-    keys.put(Deployments.ID, "dep-789");
-    when(analysisResult.targetKeys()).thenReturn(keys);
-    when(analyzer.analyze(cqnUpdate)).thenReturn(analysisResult);
-    when(service.resolveResourceGroupFromKeys(any())).thenReturn("rg-2");
-    when(service.isProviderUser()).thenReturn(true);
-
-    try (MockedStatic<CqnAnalyzer> staticAnalyzer = mockStatic(CqnAnalyzer.class)) {
-      staticAnalyzer.when(() -> CqnAnalyzer.create(model)).thenReturn(analyzer);
-      cut.onUpdate(updateContext, entries);
-    }
+    runtime
+        .requestContext()
+        .run(
+            (Function<RequestContext, Result>)
+                ctx ->
+                    service.run(
+                        Update.entity("AICore.deployments")
+                            .where(d -> d.get("id").eq("dep-789"))
+                            .data("configurationId", "config-456")));
 
     ArgumentCaptor<AiDeploymentModificationRequest> captor =
         ArgumentCaptor.forClass(AiDeploymentModificationRequest.class);
-    verify(deploymentApi).modify(eq("rg-2"), eq("dep-789"), captor.capture());
+    verify(deploymentApi).modify(eq("default"), eq("dep-789"), captor.capture());
     assertThat(captor.getValue().getConfigurationId()).isEqualTo("config-456");
   }
 
   @Test
-  void onCreate_createsDeploymentWithConfigurationId() {
-    Deployments entry = Deployments.create();
-    entry.setConfigurationId("cfg-1");
-    entry.put(Deployments.RESOURCE_GROUP, Map.of("resourceGroupId", "rg-test"));
-    List<Deployments> entries = List.of(entry);
-
-    AiDeploymentCreationResponse response = mock(AiDeploymentCreationResponse.class);
-    when(response.getId()).thenReturn("new-dep-id");
-    when(response.getStatus()).thenReturn(AiExecutionStatus.UNKNOWN);
-    when(service.resolveResourceGroupFromKeys(any())).thenReturn("rg-test");
-    when(service.isProviderUser()).thenReturn(true);
-    when(deploymentApi.create(eq("rg-test"), any(AiDeploymentCreationRequest.class)))
-        .thenReturn(response);
-
-    cut.onCreate(createContext, entries);
-
-    verify(createContext).setResult(any(List.class));
-    ArgumentCaptor<AiDeploymentCreationRequest> captor =
-        ArgumentCaptor.forClass(AiDeploymentCreationRequest.class);
-    verify(deploymentApi).create(eq("rg-test"), captor.capture());
-    assertThat(captor.getValue().getConfigurationId()).isEqualTo("cfg-1");
-  }
-
-  @Test
-  void onCreate_withTtl_setsTtlOnRequest() {
-    Deployments entry = Deployments.create();
-    entry.setConfigurationId("cfg-2");
-    entry.setTtl("PT24H");
-    List<Deployments> entries = List.of(entry);
-
-    AiDeploymentCreationResponse response = mock(AiDeploymentCreationResponse.class);
-    when(response.getId()).thenReturn("dep-ttl");
-    when(response.getStatus()).thenReturn(AiExecutionStatus.UNKNOWN);
-    when(service.resolveResourceGroupFromKeys(any())).thenReturn("rg-default");
-    when(service.isProviderUser()).thenReturn(true);
-    when(deploymentApi.create(eq("rg-default"), any(AiDeploymentCreationRequest.class)))
-        .thenReturn(response);
-
-    cut.onCreate(createContext, entries);
-
-    ArgumentCaptor<AiDeploymentCreationRequest> captor =
-        ArgumentCaptor.forClass(AiDeploymentCreationRequest.class);
-    verify(deploymentApi).create(eq("rg-default"), captor.capture());
-    assertThat(captor.getValue().getTtl()).isEqualTo("PT24H");
+  void onUpdate_withoutTargetStatusOrConfigurationId_throwsBadRequest() {
+    assertThatThrownBy(
+            () ->
+                runtime
+                    .requestContext()
+                    .run(
+                        (Function<RequestContext, Result>)
+                            ctx ->
+                                service.run(
+                                    Update.entity("AICore.deployments")
+                                        .where(d -> d.get("id").eq("dep-x"))
+                                        .data("ttl", "1d"))))
+        .isInstanceOfSatisfying(
+            ServiceException.class,
+            e -> assertThat(e.getErrorStatus()).isEqualTo(ErrorStatuses.BAD_REQUEST))
+        .hasMessageContaining("targetStatus")
+        .hasMessageContaining("configurationId");
   }
 }
