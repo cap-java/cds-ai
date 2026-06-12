@@ -41,18 +41,12 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
   }
 
   private static boolean hasAICoreBinding(CdsRuntime runtime) {
-    boolean hasServiceBinding =
-        runtime
-            .getEnvironment()
-            .getServiceBindings()
-            .filter(b -> ServiceBindingUtils.matches(b, "aicore"))
-            .findFirst()
-            .isPresent();
-    if (hasServiceBinding) {
-      return true;
-    }
-    String envKey = System.getenv("AICORE_SERVICE_KEY");
-    return envKey != null && !envKey.isBlank();
+    return runtime
+        .getEnvironment()
+        .getServiceBindings()
+        .filter(b -> ServiceBindingUtils.matches(b, "aicore"))
+        .findFirst()
+        .isPresent();
   }
 
   /**
