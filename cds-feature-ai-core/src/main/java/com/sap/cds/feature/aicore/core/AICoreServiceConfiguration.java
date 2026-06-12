@@ -8,6 +8,7 @@ import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
 import com.sap.cds.feature.aicore.core.handler.ConfigurationHandler;
 import com.sap.cds.feature.aicore.core.handler.DeploymentHandler;
@@ -104,6 +105,7 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
         runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
 
     if (registered instanceof AICoreServiceImpl service) {
+      configurer.eventHandler(new AICoreApiHandler());
       configurer.eventHandler(new ResourceGroupHandler(service));
       configurer.eventHandler(new DeploymentHandler(service));
       configurer.eventHandler(new ConfigurationHandler(service));

@@ -13,13 +13,23 @@ import com.sap.cds.services.EventName;
  * the current tenant. In multi-tenancy mode, the resource group is created on-demand if it does not
  * exist. In single-tenancy mode, the configured default resource group is returned.
  *
- * <p>The current tenant is read from the {@code RequestContext} — no explicit input is required.
+ * <p>If {@link #getTenantId()} is non-null, the handler uses the explicit tenant ID. Otherwise, the
+ * current tenant is read from the {@code RequestContext}.
  */
 @EventName(ResourceGroupContext.EVENT)
 public interface ResourceGroupContext extends EventContext {
 
   /** Event name constant. */
   String EVENT = "resourceGroup";
+
+  /**
+   * Returns the explicit tenant ID (optional). If {@code null}, the handler reads the tenant from
+   * the current {@code RequestContext}.
+   */
+  String getTenantId();
+
+  /** Sets an explicit tenant ID. */
+  void setTenantId(String tenantId);
 
   /** Returns the resolved resource group ID (set by the ON handler). */
   String getResult();

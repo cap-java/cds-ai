@@ -25,6 +25,7 @@ import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
+import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -60,16 +61,32 @@ class AICoreServiceImplDeploymentIdTest {
     return AICoreServiceImpl.deploymentCacheKey(RG, spec);
   }
 
-  /** Boots a real CdsRuntime with the AICore model and fast retry settings. */
-  private static CdsRuntime createTestRuntime() {
+  /**
+   * Creates an {@link AICoreServiceImpl} properly registered with a CDS runtime and the {@link
+   * AICoreApiHandler} so that {@code emit()} dispatches to the handler.
+   */
+  private AICoreServiceImpl createService(boolean multiTenancy) {
     TestPropertiesProvider props = new TestPropertiesProvider();
     props.setProperty("cds.ai.core.maxRetries", 1);
     props.setProperty("cds.ai.core.initialDelayMs", 1L);
 
-    return CdsRuntimeConfigurer.create(props)
-        .cdsModel("edmx/csn.json")
-        .serviceConfigurations()
-        .complete();
+    CdsRuntimeConfigurer configurer = CdsRuntimeConfigurer.create(props);
+    configurer.cdsModel("edmx/csn.json");
+    CdsRuntime runtime = configurer.getCdsRuntime();
+
+    AICoreServiceImpl svc =
+        new AICoreServiceImpl(
+            AICoreService.DEFAULT_NAME,
+            runtime,
+            multiTenancy,
+            deploymentApi,
+            configurationApi,
+            resourceGroupApi,
+            mock(AiCoreService.class));
+    configurer.service(svc);
+    configurer.eventHandler(new AICoreApiHandler());
+    configurer.complete();
+    return svc;
   }
 
   @BeforeEach
@@ -77,18 +94,7 @@ class AICoreServiceImplDeploymentIdTest {
     deploymentApi = mock(DeploymentApi.class);
     configurationApi = mock(ConfigurationApi.class);
     resourceGroupApi = mock(ResourceGroupApi.class);
-
-    CdsRuntime runtime = createTestRuntime();
-
-    service =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            false,
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
+    service = createService(false);
   }
 
   @Test
@@ -139,7 +145,7 @@ class AICoreServiceImplDeploymentIdTest {
     OpenApiRequestException serverError = new OpenApiRequestException("boom").statusCode(503);
     when(deploymentApi.get(RG, "still-valid-id")).thenThrow(serverError);
 
-    assertThatThrownBy(() -> service.deploymentId(RG, spec)).isSameAs(serverError);
+    assertThatThrownBy(() -> service.deploymentId(RG, spec)).rootCause().isSameAs(serverError);
 
     assertThat(service.getResourceGroupDeploymentCache())
         .containsEntry(cacheKey(), "still-valid-id");
@@ -193,17 +199,7 @@ class AICoreServiceImplDeploymentIdTest {
 
   @Test
   void resourceGroupForTenant_nullTenantId_returnsDefault() {
-    CdsRuntime runtime = createTestRuntime();
-
-    AICoreServiceImpl mtService =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            true, // multi-tenancy enabled
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
+    AICoreServiceImpl mtService = createService(true);
 
     String result = mtService.resourceGroupForTenant(null);
     assertThat(result).isEqualTo("default");
