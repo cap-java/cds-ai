@@ -3,9 +3,12 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
+import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.services.ErrorStatuses;
+import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
 import java.util.HashMap;
@@ -15,14 +18,18 @@ import java.util.function.Function;
 
 abstract class AbstractCrudHandler implements EventHandler {
 
-  protected final AICoreServiceImpl service;
+  private final ResourceGroupApi resourceGroupApi;
 
-  protected AbstractCrudHandler(AICoreServiceImpl service) {
-    this.service = service;
+  protected AbstractCrudHandler(ResourceGroupApi resourceGroupApi) {
+    this.resourceGroupApi = resourceGroupApi;
   }
 
-  protected String resolveResourceGroup(Map<String, Object> keys) {
-    return service.resolveResourceGroupFromKeys(keys);
+  protected AbstractAICoreService getService(EventContext context) {
+    return (AbstractAICoreService) context.getService();
+  }
+
+  protected String resolveResourceGroup(EventContext context, Map<String, Object> keys) {
+    return getService(context).resolveResourceGroupFromKeys(keys);
   }
 
   /**
@@ -30,15 +37,16 @@ abstract class AbstractCrudHandler implements EventHandler {
    * users may access any resource group. In single-tenancy mode, no restriction is applied. Throws
    * 404 if the resource group does not belong to the current tenant.
    */
-  protected void ensureResourceGroupAccessible(String resourceGroupId) {
-    if (service.isProviderUser() || !service.isMultiTenancyEnabled()) {
+  protected void ensureResourceGroupAccessible(EventContext context, String resourceGroupId) {
+    AbstractAICoreService svc = getService(context);
+    if (svc.isProviderUser() || !svc.isMultiTenancyEnabled()) {
       return;
     }
-    String currentTenant = service.currentTenantId();
+    String currentTenant = svc.currentTenantId();
     if (currentTenant == null) {
       return;
     }
-    BckndResourceGroup rg = service.getResourceGroupApi().get(resourceGroupId);
+    BckndResourceGroup rg = resourceGroupApi.get(resourceGroupId);
     if (rg.getLabels() != null
         && rg.getLabels().stream()
             .anyMatch(

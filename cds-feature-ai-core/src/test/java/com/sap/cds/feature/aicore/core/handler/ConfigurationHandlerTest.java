@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sap.ai.sdk.core.client.ConfigurationApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.ql.cqn.AnalysisResult;
@@ -33,6 +34,7 @@ class ConfigurationHandlerTest {
 
   @Mock private AICoreServiceImpl service;
   @Mock private ConfigurationApi configurationApi;
+  @Mock private ResourceGroupApi resourceGroupApi;
   @Mock private CdsReadEventContext context;
   @Mock private CqnSelect select;
   @Mock private CdsModel model;
@@ -41,9 +43,9 @@ class ConfigurationHandlerTest {
 
   @Test
   void onRead_nullResources_returnsEmptyListWithoutNpe() {
-    when(service.getConfigurationApi()).thenReturn(configurationApi);
     when(context.getCqn()).thenReturn(select);
     when(context.getModel()).thenReturn(model);
+    when(context.getService()).thenReturn(service);
     when(analyzer.analyze(select)).thenReturn(analysisResult);
     when(analysisResult.targetKeys()).thenReturn(new HashMap<>());
     when(analysisResult.targetValues()).thenReturn(new HashMap<>());
@@ -57,7 +59,7 @@ class ConfigurationHandlerTest {
     try (MockedStatic<CqnAnalyzer> staticAnalyzer = mockStatic(CqnAnalyzer.class)) {
       staticAnalyzer.when(() -> CqnAnalyzer.create(model)).thenReturn(analyzer);
 
-      ConfigurationHandler handler = new ConfigurationHandler(service);
+      ConfigurationHandler handler = new ConfigurationHandler(configurationApi, resourceGroupApi);
       handler.onRead(context);
     }
 

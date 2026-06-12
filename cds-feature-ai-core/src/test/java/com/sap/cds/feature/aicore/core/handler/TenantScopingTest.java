@@ -14,6 +14,7 @@ import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,15 +33,16 @@ class TenantScopingTest {
 
   @Mock private AICoreServiceImpl service;
   @Mock private ResourceGroupApi resourceGroupApi;
+  @Mock private EventContext eventContext;
 
   /** Concrete subclass to expose the protected method for testing. */
   private static class TestableHandler extends AbstractCrudHandler {
-    TestableHandler(AICoreServiceImpl service) {
-      super(service);
+    TestableHandler(ResourceGroupApi resourceGroupApi) {
+      super(resourceGroupApi);
     }
 
-    void callEnsureResourceGroupAccessible(String resourceGroupId) {
-      ensureResourceGroupAccessible(resourceGroupId);
+    void callEnsureResourceGroupAccessible(EventContext context, String resourceGroupId) {
+      ensureResourceGroupAccessible(context, resourceGroupId);
     }
   }
 
@@ -48,7 +50,8 @@ class TenantScopingTest {
 
   @BeforeEach
   void setUp() {
-    handler = new TestableHandler(service);
+    handler = new TestableHandler(resourceGroupApi);
+    when(eventContext.getService()).thenReturn(service);
   }
 
   // ── ensureResourceGroupAccessible ──────────────────────────────────────────
@@ -57,7 +60,7 @@ class TenantScopingTest {
   void providerUser_allowsAccessToAnyResourceGroup() {
     when(service.isProviderUser()).thenReturn(true);
 
-    assertThatCode(() -> handler.callEnsureResourceGroupAccessible("any-rg"))
+    assertThatCode(() -> handler.callEnsureResourceGroupAccessible(eventContext, "any-rg"))
         .doesNotThrowAnyException();
     verify(resourceGroupApi, never()).get("any-rg");
   }
@@ -67,7 +70,7 @@ class TenantScopingTest {
     when(service.isProviderUser()).thenReturn(false);
     when(service.isMultiTenancyEnabled()).thenReturn(false);
 
-    assertThatCode(() -> handler.callEnsureResourceGroupAccessible("any-rg"))
+    assertThatCode(() -> handler.callEnsureResourceGroupAccessible(eventContext, "any-rg"))
         .doesNotThrowAnyException();
     verify(resourceGroupApi, never()).get("any-rg");
   }
@@ -78,7 +81,7 @@ class TenantScopingTest {
     when(service.isMultiTenancyEnabled()).thenReturn(true);
     when(service.currentTenantId()).thenReturn(null);
 
-    assertThatCode(() -> handler.callEnsureResourceGroupAccessible("any-rg"))
+    assertThatCode(() -> handler.callEnsureResourceGroupAccessible(eventContext, "any-rg"))
         .doesNotThrowAnyException();
     verify(resourceGroupApi, never()).get("any-rg");
   }
@@ -88,7 +91,6 @@ class TenantScopingTest {
     when(service.isProviderUser()).thenReturn(false);
     when(service.isMultiTenancyEnabled()).thenReturn(true);
     when(service.currentTenantId()).thenReturn("tenant-a");
-    when(service.getResourceGroupApi()).thenReturn(resourceGroupApi);
 
     BckndResourceGroup rg = mock(BckndResourceGroup.class);
     BckndResourceGroupLabel label = mock(BckndResourceGroupLabel.class);
@@ -97,7 +99,7 @@ class TenantScopingTest {
     when(rg.getLabels()).thenReturn(List.of(label));
     when(resourceGroupApi.get("rg-for-a")).thenReturn(rg);
 
-    assertThatCode(() -> handler.callEnsureResourceGroupAccessible("rg-for-a"))
+    assertThatCode(() -> handler.callEnsureResourceGroupAccessible(eventContext, "rg-for-a"))
         .doesNotThrowAnyException();
   }
 
@@ -106,7 +108,6 @@ class TenantScopingTest {
     when(service.isProviderUser()).thenReturn(false);
     when(service.isMultiTenancyEnabled()).thenReturn(true);
     when(service.currentTenantId()).thenReturn("tenant-a");
-    when(service.getResourceGroupApi()).thenReturn(resourceGroupApi);
 
     BckndResourceGroup rg = mock(BckndResourceGroup.class);
     BckndResourceGroupLabel label = mock(BckndResourceGroupLabel.class);
@@ -115,7 +116,7 @@ class TenantScopingTest {
     when(rg.getLabels()).thenReturn(List.of(label));
     when(resourceGroupApi.get("rg-for-b")).thenReturn(rg);
 
-    assertThatThrownBy(() -> handler.callEnsureResourceGroupAccessible("rg-for-b"))
+    assertThatThrownBy(() -> handler.callEnsureResourceGroupAccessible(eventContext, "rg-for-b"))
         .isInstanceOf(ServiceException.class)
         .hasMessageContaining("not found");
   }
@@ -125,13 +126,12 @@ class TenantScopingTest {
     when(service.isProviderUser()).thenReturn(false);
     when(service.isMultiTenancyEnabled()).thenReturn(true);
     when(service.currentTenantId()).thenReturn("tenant-a");
-    when(service.getResourceGroupApi()).thenReturn(resourceGroupApi);
 
     BckndResourceGroup rg = mock(BckndResourceGroup.class);
     when(rg.getLabels()).thenReturn(null);
     when(resourceGroupApi.get("rg-no-labels")).thenReturn(rg);
 
-    assertThatThrownBy(() -> handler.callEnsureResourceGroupAccessible("rg-no-labels"))
+    assertThatThrownBy(() -> handler.callEnsureResourceGroupAccessible(eventContext, "rg-no-labels"))
         .isInstanceOf(ServiceException.class)
         .hasMessageContaining("not found");
   }
@@ -141,13 +141,12 @@ class TenantScopingTest {
     when(service.isProviderUser()).thenReturn(false);
     when(service.isMultiTenancyEnabled()).thenReturn(true);
     when(service.currentTenantId()).thenReturn("tenant-a");
-    when(service.getResourceGroupApi()).thenReturn(resourceGroupApi);
 
     BckndResourceGroup rg = mock(BckndResourceGroup.class);
     when(rg.getLabels()).thenReturn(List.of());
     when(resourceGroupApi.get("rg-empty-labels")).thenReturn(rg);
 
-    assertThatThrownBy(() -> handler.callEnsureResourceGroupAccessible("rg-empty-labels"))
+    assertThatThrownBy(() -> handler.callEnsureResourceGroupAccessible(eventContext, "rg-empty-labels"))
         .isInstanceOf(ServiceException.class)
         .hasMessageContaining("not found");
   }

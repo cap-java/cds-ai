@@ -105,11 +105,15 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
         runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
 
     if (registered instanceof AICoreServiceImpl service) {
+      var deploymentApi = service.getDeploymentApi();
+      var configApi = service.getConfigurationApi();
+      var rgApi = service.getResourceGroupApi();
+
       configurer.eventHandler(new AICoreApiHandler());
-      configurer.eventHandler(new ResourceGroupHandler(service));
-      configurer.eventHandler(new DeploymentHandler(service));
-      configurer.eventHandler(new ConfigurationHandler(service));
-      configurer.eventHandler(new ActionHandler(service));
+      configurer.eventHandler(new ResourceGroupHandler(rgApi));
+      configurer.eventHandler(new DeploymentHandler(deploymentApi, rgApi));
+      configurer.eventHandler(new ConfigurationHandler(configApi, rgApi));
+      configurer.eventHandler(new ActionHandler(deploymentApi, rgApi));
       logger.debug("Registered Prod AI-Core Implementation");
 
       if (service.isMultiTenancyEnabled()) {

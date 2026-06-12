@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.sap.ai.sdk.core.client.DeploymentApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
@@ -44,6 +45,7 @@ class DeploymentHandlerTest {
 
   @Mock private AICoreServiceImpl service;
   @Mock private DeploymentApi deploymentApi;
+  @Mock private ResourceGroupApi resourceGroupApi;
   @Mock private CdsUpdateEventContext updateContext;
   @Mock private CdsCreateEventContext createContext;
 
@@ -51,8 +53,7 @@ class DeploymentHandlerTest {
 
   @BeforeEach
   void setup() {
-    when(service.getDeploymentApi()).thenReturn(deploymentApi);
-    cut = new DeploymentHandler(service);
+    cut = new DeploymentHandler(deploymentApi, resourceGroupApi);
   }
 
   @Test
@@ -95,6 +96,7 @@ class DeploymentHandlerTest {
 
     when(updateContext.getCqn()).thenReturn(cqnUpdate);
     when(updateContext.getModel()).thenReturn(model);
+    when(updateContext.getService()).thenReturn(service);
     Map<String, Object> keys = new HashMap<>();
     keys.put(Deployments.ID, "dep-123");
     when(analysisResult.targetKeys()).thenReturn(keys);
@@ -126,6 +128,7 @@ class DeploymentHandlerTest {
 
     when(updateContext.getCqn()).thenReturn(cqnUpdate);
     when(updateContext.getModel()).thenReturn(model);
+    when(updateContext.getService()).thenReturn(service);
     Map<String, Object> keys = new HashMap<>();
     keys.put(Deployments.ID, "dep-789");
     when(analysisResult.targetKeys()).thenReturn(keys);
@@ -154,6 +157,7 @@ class DeploymentHandlerTest {
     AiDeploymentCreationResponse response = mock(AiDeploymentCreationResponse.class);
     when(response.getId()).thenReturn("new-dep-id");
     when(response.getStatus()).thenReturn(AiExecutionStatus.UNKNOWN);
+    when(createContext.getService()).thenReturn(service);
     when(service.resolveResourceGroupFromKeys(any())).thenReturn("rg-test");
     when(service.isProviderUser()).thenReturn(true);
     when(deploymentApi.create(eq("rg-test"), any(AiDeploymentCreationRequest.class)))
@@ -178,6 +182,7 @@ class DeploymentHandlerTest {
     AiDeploymentCreationResponse response = mock(AiDeploymentCreationResponse.class);
     when(response.getId()).thenReturn("dep-ttl");
     when(response.getStatus()).thenReturn(AiExecutionStatus.UNKNOWN);
+    when(createContext.getService()).thenReturn(service);
     when(service.resolveResourceGroupFromKeys(any())).thenReturn("rg-default");
     when(service.isProviderUser()).thenReturn(true);
     when(deploymentApi.create(eq("rg-default"), any(AiDeploymentCreationRequest.class)))

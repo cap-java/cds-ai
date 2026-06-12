@@ -55,8 +55,7 @@ class ResourceGroupHandlerTest {
 
   @BeforeEach
   void setUp() {
-    when(service.getResourceGroupApi()).thenReturn(resourceGroupApi);
-    handler = new ResourceGroupHandler(service);
+    handler = new ResourceGroupHandler(resourceGroupApi);
   }
 
   @Test
@@ -152,6 +151,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnUpdate)).thenReturn(analysisResult);
       when(updateContext.getCqn()).thenReturn(cqnUpdate);
       when(updateContext.getModel()).thenReturn(model);
+      when(updateContext.getService()).thenReturn(service);
 
       Map<String, Object> data = new HashMap<>();
       data.put(ResourceGroups.LABELS, List.of(Map.of("key", "env", "value", "staging")));
@@ -188,6 +188,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnUpdate)).thenReturn(analysisResult);
       when(updateContext.getCqn()).thenReturn(cqnUpdate);
       when(updateContext.getModel()).thenReturn(model);
+      when(updateContext.getService()).thenReturn(service);
 
       Map<String, Object> data = new HashMap<>();
       // no labels in update payload
@@ -257,6 +258,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isMultiTenancyEnabled()).thenReturn(true);
       when(service.isProviderUser()).thenReturn(false);
       when(service.currentTenantId()).thenReturn("current-tenant");
@@ -288,6 +290,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isMultiTenancyEnabled()).thenReturn(true);
       when(service.isProviderUser()).thenReturn(false);
       when(service.currentTenantId()).thenReturn(null);
@@ -314,6 +317,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isMultiTenancyEnabled()).thenReturn(false);
 
       BckndResourceGroupList result = mock(BckndResourceGroupList.class);
@@ -350,6 +354,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isProviderUser()).thenReturn(true);
 
       BckndResourceGroup rg = mock(BckndResourceGroup.class);
@@ -374,6 +379,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isProviderUser()).thenReturn(false);
       when(service.isMultiTenancyEnabled()).thenReturn(false);
 
@@ -399,6 +405,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isProviderUser()).thenReturn(false);
       when(service.isMultiTenancyEnabled()).thenReturn(true);
       when(service.currentTenantId()).thenReturn("tenant-a");
@@ -428,6 +435,7 @@ class ResourceGroupHandlerTest {
       when(analyzer.analyze(cqnSelect)).thenReturn(analysisResult);
       when(readContext.getCqn()).thenReturn(cqnSelect);
       when(readContext.getModel()).thenReturn(model);
+      when(readContext.getService()).thenReturn(service);
       when(service.isProviderUser()).thenReturn(false);
       when(service.isMultiTenancyEnabled()).thenReturn(true);
       when(service.currentTenantId()).thenReturn("tenant-a");
