@@ -28,7 +28,7 @@ import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 public interface AICoreService extends RemoteService {
 
   /** Default service name under which an instance is registered in the service catalog. */
-  String DEFAULT_NAME = "AICore$Default";
+  String DEFAULT_NAME = "AICoreService$Default";
 
   /** Qualified name of the {@code resourceGroups} entity exposed by this service. */
   String RESOURCE_GROUPS = "AICore.resourceGroups";
