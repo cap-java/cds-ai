@@ -44,12 +44,19 @@
     <dependency>
       <groupId>com.sap.cds</groupId>
       <artifactId>cds-services-impl</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
     <finalName>${project.artifactId}</finalName>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+      </testResource>
+      <testResource>
+        <directory>src/gen/srv/src/main/resources</directory>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <groupId>com.sap.cds</groupId>

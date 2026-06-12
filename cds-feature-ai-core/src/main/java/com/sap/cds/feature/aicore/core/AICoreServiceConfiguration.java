@@ -8,7 +8,6 @@ import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.handler.AICoreApplicationServiceHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
 import com.sap.cds.feature.aicore.core.handler.ConfigurationHandler;
 import com.sap.cds.feature.aicore.core.handler.DeploymentHandler;
@@ -37,19 +36,17 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreServiceConfiguration.class);
 
+  private static boolean hasAICoreModel(CdsRuntime runtime) {
+    return runtime.getCdsModel().findService("AICore").isPresent();
+  }
+
   private static boolean hasAICoreBinding(CdsRuntime runtime) {
-    boolean hasServiceBinding =
-        runtime
-            .getEnvironment()
-            .getServiceBindings()
-            .filter(b -> ServiceBindingUtils.matches(b, "aicore"))
-            .findFirst()
-            .isPresent();
-    if (hasServiceBinding) {
-      return true;
-    }
-    String envKey = System.getenv("AICORE_SERVICE_KEY");
-    return envKey != null && !envKey.isBlank();
+    return runtime
+        .getEnvironment()
+        .getServiceBindings()
+        .filter(b -> ServiceBindingUtils.matches(b, "aicore"))
+        .findFirst()
+        .isPresent();
   }
 
   /**
@@ -69,6 +66,11 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
   @Override
   public void services(CdsRuntimeConfigurer configurer) {
     CdsRuntime runtime = configurer.getCdsRuntime();
+
+    if (!hasAICoreModel(runtime)) {
+      logger.debug("AICore CDS model not found in runtime model — skipping service registration.");
+      return;
+    }
 
     boolean hasBinding = hasAICoreBinding(runtime);
 
@@ -106,7 +108,6 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
       configurer.eventHandler(new DeploymentHandler(service));
       configurer.eventHandler(new ConfigurationHandler(service));
       configurer.eventHandler(new ActionHandler(service));
-      configurer.eventHandler(new AICoreApplicationServiceHandler(service));
       logger.debug("Registered Prod AI-Core Implementation");
 
       if (service.isMultiTenancyEnabled()) {
@@ -115,7 +116,6 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
       }
     } else if (registered instanceof MockAICoreServiceImpl mockService) {
       configurer.eventHandler(new MockEntityHandler());
-      configurer.eventHandler(new AICoreApplicationServiceHandler(mockService));
       if (mockService.isMultiTenancyEnabled()) {
         configurer.eventHandler(new MockAICoreSetupHandler(mockService));
         logger.debug("Registered Mock AI-Core Setup Handler for MTX subscribe/unsubscribe.");

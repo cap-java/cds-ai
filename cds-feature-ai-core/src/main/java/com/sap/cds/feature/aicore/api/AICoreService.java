@@ -3,7 +3,7 @@
  */
 package com.sap.cds.feature.aicore.api;
 
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 
 /**
@@ -25,10 +25,10 @@ import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
  * <p>The implementation is tenant-aware: it reads the current tenant from the {@code
  * RequestContext}. Callers do not need to pass tenant identifiers explicitly.
  */
-public interface AICoreService extends CqnService {
+public interface AICoreService extends RemoteService {
 
   /** Default service name under which an instance is registered in the service catalog. */
-  String DEFAULT_NAME = "AICore";
+  String DEFAULT_NAME = "AICore$Default";
 
   /** Qualified name of the {@code resourceGroups} entity exposed by this service. */
   String RESOURCE_GROUPS = "AICore.resourceGroups";
