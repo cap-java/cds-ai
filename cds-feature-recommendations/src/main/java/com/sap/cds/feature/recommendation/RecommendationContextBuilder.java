@@ -6,6 +6,7 @@ package com.sap.cds.feature.recommendation;
 import static com.sap.cds.reflect.CdsAnnotatable.byAnnotation;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -128,7 +129,7 @@ class RecommendationContextBuilder {
     Map<String, Object> predictRow = new HashMap<>(row);
     Drafts.ELEMENTS.forEach(predictRow::remove);
     for (String col : predictionElementNames) {
-      predictRow.putIfAbsent(col, "[PREDICT]");
+      predictRow.putIfAbsent(col, RptInferenceClient.PREDICT);
     }
     return CdsData.create(predictRow);
   }
@@ -149,19 +150,24 @@ class RecommendationContextBuilder {
     return sb.toString();
   }
 
-  List<CdsData> assembleRows(List<CdsData> contextRows, CdsData predictRow, CdsData currentRow) {
-    List<CdsData> allRows = new ArrayList<>();
+  /**
+   * Injects a synthetic index column into the given row if the entity has a composite or non-ID
+   * key. The synthetic key is a concatenation of all key fields, used as the RPT-1 index column.
+   * No-op when a plain {@code ID} key is sufficient.
+   */
+  void addSyntheticKey(CdsData row) {
     if (syntheticKeyNeeded) {
-      for (CdsData contextRow : contextRows) {
-        contextRow.put(SYNTHETIC_KEY_COLUMN, computeSyntheticKey(contextRow));
-        allRows.add(contextRow);
-      }
-      predictRow.put(SYNTHETIC_KEY_COLUMN, computeSyntheticKey(currentRow));
-    } else {
-      allRows.addAll(contextRows);
+      row.put(SYNTHETIC_KEY_COLUMN, computeSyntheticKey(row));
     }
-    allRows.add(predictRow);
-    return allRows;
+  }
+
+  /**
+   * Convenience overload that applies {@link #addSyntheticKey(CdsData)} to each row in the list.
+   */
+  void addSyntheticKey(List<CdsData> rows) {
+    if (syntheticKeyNeeded) {
+      rows.forEach(this::addSyntheticKey);
+    }
   }
 
   private List<String> computePredictionElements() {

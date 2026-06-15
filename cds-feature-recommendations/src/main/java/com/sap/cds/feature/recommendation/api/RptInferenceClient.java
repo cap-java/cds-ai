@@ -44,6 +44,9 @@ public class RptInferenceClient implements RecommendationClient {
 
   private static final Logger logger = LoggerFactory.getLogger(RptInferenceClient.class);
 
+  // RPT-1 specific: the placeholder value that marks a column as a prediction target in the request
+  public static final String PREDICT = "[PREDICT]";
+
   private static final Set<String> MANAGED_FIELDS =
       Set.of("createdBy", "modifiedBy", "createdAt", "modifiedAt");
 
@@ -58,11 +61,16 @@ public class RptInferenceClient implements RecommendationClient {
 
   @Override
   public List<CdsData> predict(
-      List<CdsData> rows, List<String> predictionColumns, String indexColumn) {
-    PredictRequestPayload request = buildRequest(rows, predictionColumns, indexColumn);
+      CdsData predictionRow,
+      List<CdsData> contextRows,
+      List<String> predictionColumns,
+      String indexColumn) {
+    List<CdsData> allRows = new java.util.ArrayList<>(contextRows);
+    allRows.add(predictionRow);
+    PredictRequestPayload request = buildRequest(allRows, predictionColumns, indexColumn);
     logger.debug(
-        "Sending prediction request for {} rows, {} target columns",
-        rows.size(),
+        "Sending prediction request for one row with {} context rows, {} target columns",
+        contextRows.size(),
         predictionColumns.size());
     return Retry.decorateSupplier(
             INFERENCE_RETRY,
@@ -85,7 +93,7 @@ public class RptInferenceClient implements RecommendationClient {
                 col ->
                     TargetColumnConfig.create()
                         .name(col)
-                        .predictionPlaceholder(PredictionPlaceholder.create("[PREDICT]"))
+                        .predictionPlaceholder(PredictionPlaceholder.create(PREDICT))
                         .taskType(TargetColumnConfig.TaskTypeEnum.CLASSIFICATION))
             .toList();
 
@@ -104,7 +112,7 @@ public class RptInferenceClient implements RecommendationClient {
                       });
                   for (String target : predictionColumns) {
                     if (!row.containsKey(target) || row.get(target) == null) {
-                      sdkRow.put(target, RowsInnerValue.create("[PREDICT]"));
+                      sdkRow.put(target, RowsInnerValue.create(PREDICT));
                     }
                   }
                   return sdkRow;

@@ -152,7 +152,7 @@ class FioriRecommendationHandlerTest {
           Map<String, Object> row = draftRow("genre_ID", null);
           CdsReadEventContext ctx = readContext("test.Books", List.of(row));
           when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
-          predictionClient = (rows, cols, idx) -> List.of();
+          predictionClient = (predictionRow, contextRows, cols, idx) -> List.of();
           cut.afterRead(ctx, dataList(row));
           assertThat(row).doesNotContainKey("SAP_Recommendations");
         });
@@ -166,7 +166,7 @@ class FioriRecommendationHandlerTest {
           CdsReadEventContext ctx = readContext("test.Books", List.of(row));
           when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
           predictionClient =
-              (rows, cols, idx) ->
+              (predictionRow, contextRows, cols, idx) ->
                   List.of(
                       CdsData.create(Map.of("ID", "id-1")), CdsData.create(Map.of("ID", "id-2")));
           cut.afterRead(ctx, dataList(row));
@@ -393,55 +393,33 @@ class FioriRecommendationHandlerTest {
 
   private static RecommendationClient rptStyleClient() {
     Random random = new Random(42);
-    return (rows, predictionColumns, indexColumn) -> {
-      List<CdsData> predictions = new ArrayList<>();
-      for (CdsData row : rows) {
-        if (predictionColumns.stream().noneMatch(col -> "[PREDICT]".equals(row.get(col)))) {
-          continue;
-        }
-        Map<String, Object> prediction = new HashMap<>();
-        for (String col : predictionColumns) {
-          List<Object> available =
-              rows.stream()
-                  .filter(r -> r.get(col) != null && !"[PREDICT]".equals(r.get(col)))
-                  .map(r -> r.get(col))
-                  .toList();
-          Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
-          prediction.put(col, List.of(Map.of("prediction", val)));
-        }
-        prediction.put(indexColumn, row.get(indexColumn));
-        predictions.add(CdsData.create(prediction));
+    return (predictionRow, contextRows, predictionColumns, indexColumn) -> {
+      Map<String, Object> prediction = new HashMap<>();
+      for (String col : predictionColumns) {
+        List<Object> available =
+            contextRows.stream().filter(r -> r.get(col) != null).map(r -> r.get(col)).toList();
+        Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
+        prediction.put(col, List.of(Map.of("prediction", val)));
       }
-      return predictions;
+      prediction.put(indexColumn, predictionRow.get(indexColumn));
+      return List.of(CdsData.create(prediction));
     };
   }
 
   private static RecommendationClient randomPickClient() {
     Random random = new Random(42);
-    return (rows, predictionColumns, indexColumn) -> {
-      List<CdsData> predictions = new ArrayList<>();
-      for (CdsData row : rows) {
-        Map<String, Object> prediction = new HashMap<>();
-        boolean addPrediction = false;
-        for (String col : predictionColumns) {
-          if ("[PREDICT]".equals(row.get(col))) {
-            addPrediction = true;
-            List<Object> available =
-                rows.stream()
-                    .filter(r -> r.get(col) != null && !"[PREDICT]".equals(r.get(col)))
-                    .map(r -> r.get(col))
-                    .toList();
-            Object val =
-                available.isEmpty() ? null : available.get(random.nextInt(available.size()));
-            prediction.put(col, List.of(Map.of("prediction", val)));
-          }
-        }
-        if (addPrediction) {
-          prediction.put(indexColumn, row.get(indexColumn));
-          predictions.add(CdsData.create(prediction));
+    return (predictionRow, contextRows, predictionColumns, indexColumn) -> {
+      Map<String, Object> prediction = new HashMap<>();
+      for (String col : predictionColumns) {
+        if ("[PREDICT]".equals(predictionRow.get(col))) {
+          List<Object> available =
+              contextRows.stream().filter(r -> r.get(col) != null).map(r -> r.get(col)).toList();
+          Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
+          prediction.put(col, List.of(Map.of("prediction", val)));
         }
       }
-      return predictions;
+      prediction.put(indexColumn, predictionRow.get(indexColumn));
+      return List.of(CdsData.create(prediction));
     };
   }
 }

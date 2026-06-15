@@ -121,11 +121,15 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    List<CdsData> allRows = builder.assembleRows(contextRows, predictRow, row);
+    // RPT-1 requires a single string index column; entities with composite or non-ID keys get a
+    // synthetic key injected before the rows are sent to the model.
+    builder.addSyntheticKey(contextRows);
+    builder.addSyntheticKey(predictRow);
 
     RecommendationClient client = clientResolver.resolve(aiCoreService);
     List<CdsData> predictions =
-        client.predict(allRows, builder.predictionElementNames(), builder.indexColumn());
+        client.predict(
+            predictRow, contextRows, builder.predictionElementNames(), builder.indexColumn());
 
     if (predictions.isEmpty()) {
       logger.warn("No predictions returned from AI client.");
