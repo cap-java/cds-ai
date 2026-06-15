@@ -3,15 +3,17 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.model.AiConfiguration;
 import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ArtifactArgumentBinding;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ParameterArgumentBinding;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ParameterArgumentBindingList;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
@@ -21,7 +23,6 @@ import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.util.ArrayList;
@@ -36,14 +37,12 @@ public class ConfigurationHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurationHandler.class);
 
-  private final ConfigurationApi configurationApi;
-
-  public ConfigurationHandler(AICoreServiceImpl service) {
-    super(service);
-    this.configurationApi = service.getConfigurationApi();
+  public ConfigurationHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    super(config, clients, resolver);
   }
 
-  @On(event = CqnService.EVENT_READ, entity = AICoreService.CONFIGURATIONS)
+  @On(entity = Configurations_.CDS_NAME)
   public void onRead(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -51,8 +50,8 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analysis.targetKeys();
     Map<String, Object> values = analysis.targetValues();
 
-    String resourceGroupId = resolveResourceGroup(merge(keys, values));
-    ensureResourceGroupAccessible(resourceGroupId);
+    String resourceGroupId = resolveResourceGroup(context, merge(keys, values));
+    ensureResourceGroupAccessible(context, resourceGroupId);
     logger.debug(
         "Reading configurations for resourceGroup={}, keys={}, values={}",
         resourceGroupId,
@@ -61,12 +60,14 @@ public class ConfigurationHandler extends AbstractCrudHandler {
 
     String id = (String) keys.get(Configurations.ID);
     if (id != null) {
-      AiConfiguration config = configurationApi.get(resourceGroupId, id);
+      AiConfiguration config = clients.configurationApi().get(resourceGroupId, id);
       context.setResult(List.of(toConfigurations(config, resourceGroupId)));
     } else {
       String scenarioId = (String) values.get(Configurations.SCENARIO_ID);
       AiConfigurationList result =
-          configurationApi.query(resourceGroupId, scenarioId, null, null, null, null, null, null);
+          clients
+              .configurationApi()
+              .query(resourceGroupId, scenarioId, null, null, null, null, null, null);
       List<Map<String, Object>> results =
           mapResources(result.getResources(), c -> toConfigurations(c, resourceGroupId));
       logger.debug("ConfigurationApi.query returned {} resources", results.size());
@@ -74,13 +75,13 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = AICoreService.CONFIGURATIONS)
+  @On(entity = Configurations_.CDS_NAME)
   public void onCreate(CdsCreateEventContext context, List<Configurations> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
     for (Configurations entry : entries) {
-      String resourceGroupId = resolveResourceGroup(entry);
-      ensureResourceGroupAccessible(resourceGroupId);
+      String resourceGroupId = resolveResourceGroup(context, entry);
+      ensureResourceGroupAccessible(context, resourceGroupId);
 
       AiConfigurationBaseData request =
           AiConfigurationBaseData.create()
@@ -97,7 +98,7 @@ public class ConfigurationHandler extends AbstractCrudHandler {
         request.parameterBindings(sdkBindings);
       }
 
-      var response = configurationApi.create(resourceGroupId, request);
+      var response = clients.configurationApi().create(resourceGroupId, request);
       entry.setId(response.getId());
       results.add(entry);
       logger.debug(

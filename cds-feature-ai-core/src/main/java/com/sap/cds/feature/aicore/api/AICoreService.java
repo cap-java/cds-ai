@@ -28,7 +28,7 @@ import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 public interface AICoreService extends RemoteService {
 
   /** Default service name under which an instance is registered in the service catalog. */
-  String DEFAULT_NAME = "AICore$Default";
+  String DEFAULT_NAME = "AICoreService$Default";
 
   /** Qualified name of the {@code resourceGroups} entity exposed by this service. */
   String RESOURCE_GROUPS = "AICore.resourceGroups";
@@ -49,6 +49,17 @@ public interface AICoreService extends RemoteService {
    * @return the AI Core resource group ID for the current tenant
    */
   String resourceGroup();
+
+  /**
+   * Returns the AI Core resource group ID associated with the given tenant.
+   *
+   * <p>This variant is used during subscribe/unsubscribe flows where the tenant ID is explicitly
+   * available from the context rather than the current request.
+   *
+   * @param tenantId the CDS tenant identifier
+   * @return the AI Core resource group ID for the specified tenant
+   */
+  String resourceGroupForTenant(String tenantId);
 
   /**
    * Returns the deployment ID for the given model spec inside the given resource group.

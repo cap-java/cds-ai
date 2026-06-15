@@ -14,7 +14,10 @@ import com.sap.ai.sdk.foundationmodels.rpt.generated.model.TargetColumnConfig;
 import com.sap.cds.CdsData;
 import com.sap.cds.services.draft.Drafts;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
+import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
+import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +36,7 @@ import org.slf4j.LoggerFactory;
  * AICoreService service = ...;
  * String rg = service.resourceGroup();
  * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
- * RptInferenceClient client =
- *     new RptInferenceClient(service.inferenceClient(rg, deploymentId),
- *         ((AbstractAICoreService) service).getRetry());
+ * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId));
  * List<CdsData> predictions = client.predict(rows, List.of("targetColumn"), "ID");
  * }</pre>
  */
@@ -46,13 +47,13 @@ public class RptInferenceClient implements RecommendationClient {
   private static final Set<String> MANAGED_FIELDS =
       Set.of("createdBy", "modifiedBy", "createdAt", "modifiedAt");
 
-  private final DefaultApi api;
-  private final Retry retry;
+  private static final Retry INFERENCE_RETRY = buildInferenceRetry();
 
-  public RptInferenceClient(ApiClient apiClient, Retry retry) {
+  private final DefaultApi api;
+
+  public RptInferenceClient(ApiClient apiClient) {
     this.api =
         new DefaultApi(apiClient.withObjectMapper(JacksonConfiguration.getDefaultObjectMapper()));
-    this.retry = retry;
   }
 
   @Override
@@ -64,7 +65,7 @@ public class RptInferenceClient implements RecommendationClient {
         rows.size(),
         predictionColumns.size());
     return Retry.decorateSupplier(
-            retry,
+            INFERENCE_RETRY,
             () -> {
               var response = api.predict(request);
               logger.debug("Prediction response id: {}", response.getId());
@@ -114,5 +115,21 @@ public class RptInferenceClient implements RecommendationClient {
         .predictionConfig(PredictionConfig.create().targetColumns(targetColumns))
         .rows(sdkRows)
         .indexColumn(indexColumn);
+  }
+
+  private static Retry buildInferenceRetry() {
+    RetryConfig config =
+        RetryConfig.custom()
+            .maxAttempts(3)
+            .intervalFunction(IntervalFunction.ofExponentialBackoff(500, 2.0, 5000))
+            .retryOnException(
+                e ->
+                    e instanceof OpenApiRequestException oae
+                        && oae.statusCode() != null
+                        && (oae.statusCode() == 403
+                            || oae.statusCode() == 404
+                            || oae.statusCode() == 412))
+            .build();
+    return Retry.of("rpt-inference", config);
   }
 }

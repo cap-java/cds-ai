@@ -8,9 +8,11 @@ import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
 import com.sap.cds.feature.aicore.core.handler.ConfigurationHandler;
 import com.sap.cds.feature.aicore.core.handler.DeploymentHandler;
+import com.sap.cds.feature.aicore.core.handler.MockAICoreApiHandler;
 import com.sap.cds.feature.aicore.core.handler.MockEntityHandler;
 import com.sap.cds.feature.aicore.core.handler.ResourceGroupHandler;
 import com.sap.cds.services.environment.CdsProperties;
@@ -28,13 +30,16 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Detects the presence of an SAP AI Core service binding (either a regular service binding or
  * the {@code AICORE_SERVICE_KEY} environment variable used for hybrid local testing) and registers
- * either {@link AICoreServiceImpl} (when a binding is found) or {@link MockAICoreServiceImpl}
- * (no-binding fallback). Picked up automatically through {@code ServiceLoader}; applications do not
- * need to instantiate this class directly.
+ * the appropriate handlers. Picked up automatically through {@code ServiceLoader}; applications do
+ * not need to instantiate this class directly.
  */
 public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreServiceConfiguration.class);
+
+  private AICoreConfig config;
+  private AICoreClients clients;
+  private DeploymentResolver resolver;
 
   private static boolean hasAICoreModel(CdsRuntime runtime) {
     return runtime.getCdsModel().findService("AICore").isPresent();
@@ -60,7 +65,10 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
     if (sidecarUrl != null && !sidecarUrl.isBlank()) {
       return true;
     }
-    return runtime.getServiceCatalog().getService(DeploymentService.class, DeploymentService.DEFAULT_NAME) != null;
+    return runtime
+            .getServiceCatalog()
+            .getService(DeploymentService.class, DeploymentService.DEFAULT_NAME)
+        != null;
   }
 
   @Override
@@ -73,54 +81,58 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
     }
 
     boolean hasBinding = hasAICoreBinding(runtime);
-
     boolean multiTenancyEnabled = detectMultiTenancy(runtime);
 
+    this.config = AICoreConfig.from(runtime.getEnvironment(), multiTenancyEnabled);
+
     if (hasBinding) {
-      AICoreServiceImpl service =
-          new AICoreServiceImpl(
-              AICoreService.DEFAULT_NAME,
-              runtime,
-              multiTenancyEnabled,
-              new DeploymentApi(),
-              new ConfigurationApi(),
-              new ResourceGroupApi(),
-              new AiCoreService());
-      configurer.service(service);
+      DeploymentApi deploymentApi = new DeploymentApi();
+      ConfigurationApi configurationApi = new ConfigurationApi();
+      ResourceGroupApi resourceGroupApi = new ResourceGroupApi();
+      AiCoreService sdkService = new AiCoreService();
+
+      this.clients =
+          new AICoreClients(deploymentApi, configurationApi, resourceGroupApi, sdkService);
+      this.resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
       logger.info("Registered AICoreService backed by AI Core binding.");
     } else {
-      MockAICoreServiceImpl mockService =
-          new MockAICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime, multiTenancyEnabled);
-      configurer.service(mockService);
-      logger.info("Registered MockAICoreService (no AI Core binding found).");
+      logger.info(
+          "Registered AICoreService (no AI Core binding found — mock handlers will be used).");
     }
+
+    configurer.service(new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime));
   }
 
   @Override
   public void eventHandlers(CdsRuntimeConfigurer configurer) {
-    CdsRuntime runtime = configurer.getCdsRuntime();
+    if (config == null) {
+      return; // No AICore model — services() skipped registration
+    }
 
-    AICoreService registered =
-        runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    if (clients != null) {
+      // Production path: real AI Core binding
+      configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+      configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
+      configurer.eventHandler(new DeploymentHandler(config, clients, resolver));
+      configurer.eventHandler(new ConfigurationHandler(config, clients, resolver));
+      configurer.eventHandler(new ActionHandler(config, clients, resolver));
+      logger.debug("Registered production AI Core event handlers.");
 
-    if (registered instanceof AICoreServiceImpl service) {
-      configurer.eventHandler(new ResourceGroupHandler(service));
-      configurer.eventHandler(new DeploymentHandler(service));
-      configurer.eventHandler(new ConfigurationHandler(service));
-      configurer.eventHandler(new ActionHandler(service));
-      logger.debug("Registered Prod AI-Core Implementation");
-
-      if (service.isMultiTenancyEnabled()) {
-        configurer.eventHandler(new AICoreSetupHandler(service));
-        logger.debug("Registered AI-Core Setup Handler for MTX subscribe/unsubscribe.");
+      if (config.multiTenancyEnabled()) {
+        configurer.eventHandler(new AICoreSetupHandler(clients, resolver));
+        logger.debug("Registered AI Core setup handler for MTX subscribe/unsubscribe.");
       }
-    } else if (registered instanceof MockAICoreServiceImpl mockService) {
+    } else {
+      // Mock path: no AI Core binding
+      MockAICoreApiHandler mockApiHandler = new MockAICoreApiHandler(config);
       configurer.eventHandler(new MockEntityHandler());
-      if (mockService.isMultiTenancyEnabled()) {
-        configurer.eventHandler(new MockAICoreSetupHandler(mockService));
-        logger.debug("Registered Mock AI-Core Setup Handler for MTX subscribe/unsubscribe.");
+      configurer.eventHandler(mockApiHandler);
+      logger.debug("Registered mock AI Core event handlers.");
+
+      if (config.multiTenancyEnabled()) {
+        configurer.eventHandler(new MockAICoreSetupHandler(mockApiHandler));
+        logger.debug("Registered mock AI Core setup handler for MTX subscribe/unsubscribe.");
       }
-      logger.debug("Registered Mock AI-Core Implementation");
     }
   }
 }

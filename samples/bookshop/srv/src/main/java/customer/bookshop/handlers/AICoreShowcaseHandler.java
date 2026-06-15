@@ -3,7 +3,6 @@ package customer.bookshop.handlers;
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
@@ -140,9 +139,7 @@ public class AICoreShowcaseHandler implements EventHandler {
     String rg = service.resourceGroup();
     String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
     RptInferenceClient client =
-        new RptInferenceClient(
-            service.inferenceClient(rg, deploymentId),
-            ((AbstractAICoreService) service).getRetry());
+        new RptInferenceClient(service.inferenceClient(rg, deploymentId));
     List<CdsData> predictions = client.predict(rows, List.of("category"), "ID");
 
     List<Map<String, Object>> results = new ArrayList<>();

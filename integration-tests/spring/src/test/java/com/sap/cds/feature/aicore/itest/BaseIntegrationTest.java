@@ -5,12 +5,13 @@ package com.sap.cds.feature.aicore.itest;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.util.List;
 import java.util.Map;
@@ -42,8 +43,11 @@ public abstract class BaseIntegrationTest {
     return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 
-  protected AbstractAICoreService getAICoreServiceImpl() {
-    return (AbstractAICoreService) getAICoreService();
+  protected AICoreConfig getAICoreConfig() {
+    CdsProperties props = runtime.getEnvironment().getCdsProperties();
+    String sidecarUrl = props.getMultiTenancy().getSidecar().getUrl();
+    boolean mt = sidecarUrl != null && !sidecarUrl.isBlank();
+    return AICoreConfig.from(runtime.getEnvironment(), mt);
   }
 
   protected CqnService getAICoreCqnService() {
@@ -51,7 +55,7 @@ public abstract class BaseIntegrationTest {
   }
 
   protected String ensureRptDeploymentReady() {
-    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
     return CACHED_DEPLOYMENT_IDS.computeIfAbsent(
         resourceGroup,
         rg -> {

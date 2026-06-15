@@ -3,7 +3,6 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.model.AiDeployment;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
@@ -11,8 +10,11 @@ import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
@@ -25,7 +27,6 @@ import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.time.OffsetDateTime;
@@ -40,14 +41,12 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DeploymentHandler.class);
 
-  private final DeploymentApi deploymentApi;
-
-  public DeploymentHandler(AICoreServiceImpl service) {
-    super(service);
-    this.deploymentApi = service.getDeploymentApi();
+  public DeploymentHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    super(config, clients, resolver);
   }
 
-  @On(event = CqnService.EVENT_READ, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void onRead(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -55,28 +54,28 @@ public class DeploymentHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analysis.targetKeys();
     Map<String, Object> values = analysis.targetValues();
 
-    String resourceGroupId = resolveResourceGroup(merge(keys, values));
-    ensureResourceGroupAccessible(resourceGroupId);
+    String resourceGroupId = resolveResourceGroup(context, merge(keys, values));
+    ensureResourceGroupAccessible(context, resourceGroupId);
 
     String id = (String) keys.get(Deployments.ID);
     if (id != null) {
-      AiDeploymentResponseWithDetails deployment = deploymentApi.get(resourceGroupId, id);
+      AiDeploymentResponseWithDetails deployment = clients.deploymentApi().get(resourceGroupId, id);
       context.setResult(List.of(toDeployments(deployment, resourceGroupId)));
     } else {
       AiDeploymentList result =
-          deploymentApi.query(resourceGroupId, null, null, null, null, null, null, null);
+          clients.deploymentApi().query(resourceGroupId, null, null, null, null, null, null, null);
       context.setResult(
           mapResources(result.getResources(), d -> toDeployments(d, resourceGroupId)));
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void onCreate(CdsCreateEventContext context, List<Deployments> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
     for (Deployments entry : entries) {
-      String resourceGroupId = resolveResourceGroup(entry);
-      ensureResourceGroupAccessible(resourceGroupId);
+      String resourceGroupId = resolveResourceGroup(context, entry);
+      ensureResourceGroupAccessible(context, resourceGroupId);
       String configurationId = entry.getConfigurationId();
 
       AiDeploymentCreationRequest request =
@@ -86,7 +85,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
         request.ttl(entry.getTtl());
       }
 
-      var response = deploymentApi.create(resourceGroupId, request);
+      var response = clients.deploymentApi().create(resourceGroupId, request);
       entry.setId(response.getId());
       entry.setStatus(response.getStatus().getValue());
       results.add(entry);
@@ -95,7 +94,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     context.setResult(results);
   }
 
-  @On(event = CqnService.EVENT_UPDATE, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void onUpdate(CdsUpdateEventContext context, List<Deployments> entries) {
     if (entries.isEmpty()) {
       throw new ServiceException(ErrorStatuses.BAD_REQUEST, "No update payload provided");
@@ -112,8 +111,8 @@ public class DeploymentHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analyzer.analyze(context.getCqn()).targetKeys();
 
     String deploymentId = (String) keys.get(Deployments.ID);
-    String resourceGroupId = resolveResourceGroup(merge(keys, data));
-    ensureResourceGroupAccessible(resourceGroupId);
+    String resourceGroupId = resolveResourceGroup(context, merge(keys, data));
+    ensureResourceGroupAccessible(context, resourceGroupId);
 
     AiDeploymentModificationRequest modRequest = AiDeploymentModificationRequest.create();
 
@@ -124,12 +123,12 @@ public class DeploymentHandler extends AbstractCrudHandler {
       modRequest.configurationId(data.getConfigurationId());
     }
 
-    deploymentApi.modify(resourceGroupId, deploymentId, modRequest);
+    clients.deploymentApi().modify(resourceGroupId, deploymentId, modRequest);
     logger.debug("Updated deployment {} in resource group {}", deploymentId, resourceGroupId);
     context.setResult(List.of(data));
   }
 
-  @On(event = CqnService.EVENT_DELETE, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void onDelete(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();
@@ -137,10 +136,10 @@ public class DeploymentHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analyzer.analyze(delete).targetKeys();
 
     String deploymentId = (String) keys.get(Deployments.ID);
-    String resourceGroupId = resolveResourceGroup(keys);
-    ensureResourceGroupAccessible(resourceGroupId);
+    String resourceGroupId = resolveResourceGroup(context, keys);
+    ensureResourceGroupAccessible(context, resourceGroupId);
 
-    deploymentApi.delete(resourceGroupId, deploymentId);
+    clients.deploymentApi().delete(resourceGroupId, deploymentId);
     logger.debug("Deleted deployment {} in resource group {}", deploymentId, resourceGroupId);
     context.setResult(List.of());
   }

@@ -17,13 +17,13 @@ import org.junit.jupiter.api.Test;
  * CDS model. This verifies the full service registration and handler wiring lifecycle without heavy
  * Mockito mocks.
  *
- * <p>Since the test runtime has no service bindings, the configuration always registers a {@link
- * MockAICoreServiceImpl} regardless of environment variables.
+ * <p>Since the test runtime has no service bindings, the configuration always registers an {@link
+ * AICoreServiceImpl} with mock handlers regardless of environment variables.
  */
 class AICoreServiceConfigurationTest {
 
   @Test
-  void noBinding_noMultiTenancy_registersMockService() {
+  void noBinding_noMultiTenancy_registersService() {
     CdsRuntime runtime =
         CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()))
             .cdsModel("edmx/csn.json")
@@ -34,12 +34,11 @@ class AICoreServiceConfigurationTest {
     AICoreService service =
         runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
 
-    assertThat(service).isNotNull().isInstanceOf(MockAICoreServiceImpl.class);
-    assertThat(((MockAICoreServiceImpl) service).isMultiTenancyEnabled()).isFalse();
+    assertThat(service).isNotNull().isInstanceOf(AICoreServiceImpl.class);
   }
 
   @Test
-  void noBinding_withSidecarUrl_registersMultiTenantMockService() {
+  void noBinding_withSidecarUrl_registersService() {
     CdsProperties props = new CdsProperties();
     CdsProperties.MultiTenancy mt = new CdsProperties.MultiTenancy();
     CdsProperties.MultiTenancy.Sidecar sidecar = new CdsProperties.MultiTenancy.Sidecar();
@@ -57,8 +56,7 @@ class AICoreServiceConfigurationTest {
     AICoreService service =
         runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
 
-    assertThat(service).isNotNull().isInstanceOf(MockAICoreServiceImpl.class);
-    assertThat(((MockAICoreServiceImpl) service).isMultiTenancyEnabled()).isTrue();
+    assertThat(service).isNotNull().isInstanceOf(AICoreServiceImpl.class);
   }
 
   @Test
