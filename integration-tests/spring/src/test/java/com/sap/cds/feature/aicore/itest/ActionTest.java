@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -28,35 +28,33 @@ class ActionTest extends BaseIntegrationTest {
 
   @BeforeAll
   void ensureResourceGroupReady() {
-    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreServiceImpl().getDefaultResourceGroup());
+    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreConfig().defaultResourceGroup());
   }
 
   @Test
   void resourceGroupForTenant_singleTenancy_returnsDefault() {
-    AbstractAICoreService service = getAICoreServiceImpl();
-    assumeFalse(service.isMultiTenancyEnabled(), "Multi-tenancy is enabled");
+    AICoreConfig config = getAICoreConfig();
+    AICoreService service = getAICoreService();
+    assumeFalse(config.multiTenancyEnabled(), "Multi-tenancy is enabled");
     String result = service.resourceGroupForTenant("any-tenant-id");
-    assertThat(result).isEqualTo(service.getDefaultResourceGroup());
+    assertThat(result).isEqualTo(config.defaultResourceGroup());
   }
 
   @Test
   void resourceGroupForTenant_multiTenancy_createsGroup() {
-    AbstractAICoreService service = getAICoreServiceImpl();
-    assumeTrue(service.isMultiTenancyEnabled(), "Multi-tenancy is not enabled");
+    AICoreConfig config = getAICoreConfig();
+    AICoreService service = getAICoreService();
+    assumeTrue(config.multiTenancyEnabled(), "Multi-tenancy is not enabled");
     String tenantId = "itest-action-tenant-" + System.currentTimeMillis();
-    try {
-      String resourceGroupId = service.resourceGroupForTenant(tenantId);
-      assertThat(resourceGroupId).startsWith(service.getResourceGroupPrefix());
-      assertThat(resourceGroupId).contains(tenantId);
-    } finally {
-      service.clearTenantCache(tenantId);
-    }
+    String resourceGroupId = service.resourceGroupForTenant(tenantId);
+    assertThat(resourceGroupId).startsWith(config.resourceGroupPrefix());
+    assertThat(resourceGroupId).contains(tenantId);
   }
 
   @Test
   void deploymentId_returnsValidDeployment() {
-    AbstractAICoreService service = getAICoreServiceImpl();
-    String resourceGroup = service.getDefaultResourceGroup();
+    AICoreService service = getAICoreService();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
     assertThat(deploymentId).isNotNull().isNotBlank();
@@ -64,20 +62,21 @@ class ActionTest extends BaseIntegrationTest {
 
   @Test
   void deploymentId_cachedOnSecondCall() {
-    AbstractAICoreService service = getAICoreServiceImpl();
-    String resourceGroup = service.getDefaultResourceGroup();
+    AICoreService service = getAICoreService();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     String first = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
     String second = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
     assertThat(second).isEqualTo(first);
   }
 
-  @Disabled("Stops the shared RPT deployment needed by subsequent Recommendation tests; "
-      + "re-enable once test creates its own isolated deployment")
+  @Disabled(
+      "Stops the shared RPT deployment needed by subsequent Recommendation tests; "
+          + "re-enable once test creates its own isolated deployment")
   @Test
   void stop_deployment_changesTargetStatus() {
     CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     Result deployments =
         service.run(
@@ -99,7 +98,8 @@ class ActionTest extends BaseIntegrationTest {
     service.run(
         Update.entity("AICore.deployments")
             .where(d -> d.get("id").eq(targetId))
-            .data(Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
+            .data(
+                Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
@@ -113,21 +113,5 @@ class ActionTest extends BaseIntegrationTest {
     assertThat(readResult.list()).hasSize(1);
     Row row = readResult.single();
     assertThat(row.get("targetStatus")).isIn("STOPPED", "STOPPING");
-  }
-
-  @Test
-  void resolveResourceGroupFromKeys_directKey() {
-    AbstractAICoreService service = getAICoreServiceImpl();
-    Map<String, Object> keys = Map.of("resourceGroup_resourceGroupId", "my-rg");
-    String resolved = service.resolveResourceGroupFromKeys(keys);
-    assertThat(resolved).isEqualTo("my-rg");
-  }
-
-  @Test
-  void resolveResourceGroupFromKeys_nestedMap() {
-    AbstractAICoreService service = getAICoreServiceImpl();
-    Map<String, Object> keys = Map.of("resourceGroup", Map.of("resourceGroupId", "nested-rg"));
-    String resolved = service.resolveResourceGroupFromKeys(keys);
-    assertThat(resolved).isEqualTo("nested-rg");
   }
 }

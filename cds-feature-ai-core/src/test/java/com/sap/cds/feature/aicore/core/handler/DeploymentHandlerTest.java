@@ -21,10 +21,13 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiExecutionStatus;
 import com.sap.cds.Result;
+import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
-import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
@@ -58,23 +61,20 @@ class DeploymentHandlerTest {
     resourceGroupApi = mock(ResourceGroupApi.class);
     configurationApi = mock(ConfigurationApi.class);
 
-    var configurer =
-        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
     configurer.cdsModel("edmx/csn.json");
     runtime = configurer.getCdsRuntime();
 
-    service =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            /* multiTenancy */ false,
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
+    AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
+    AICoreClients clients =
+        new AICoreClients(
+            deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+
+    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(service);
-    configurer.eventHandler(new AICoreApiHandler());
-    configurer.eventHandler(new DeploymentHandler(deploymentApi, resourceGroupApi));
+    configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+    configurer.eventHandler(new DeploymentHandler(config, clients));
     configurer.complete();
   }
 

@@ -3,7 +3,6 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,9 +18,12 @@ import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.cds.Result;
-import com.sap.cds.ql.Select;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.ql.Select;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
@@ -52,23 +54,20 @@ class TenantScopingTest {
     resourceGroupApi = mock(ResourceGroupApi.class);
     ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-    var configurer =
-        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
     configurer.cdsModel("edmx/csn.json");
     runtime = configurer.getCdsRuntime();
 
-    service =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            /* multiTenancy */ true,
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
+    AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, true);
+    AICoreClients clients =
+        new AICoreClients(
+            deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+
+    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(service);
-    configurer.eventHandler(new AICoreApiHandler());
-    configurer.eventHandler(new DeploymentHandler(deploymentApi, resourceGroupApi));
+    configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+    configurer.eventHandler(new DeploymentHandler(config, clients));
     configurer.complete();
   }
 
@@ -247,7 +246,7 @@ class TenantScopingTest {
   private void stubResourceGroupWithTenant(String rgId, String tenantId) {
     BckndResourceGroup rg = mock(BckndResourceGroup.class);
     BckndResourceGroupLabel label = mock(BckndResourceGroupLabel.class);
-    when(label.getKey()).thenReturn(AICoreServiceImpl.TENANT_LABEL_KEY);
+    when(label.getKey()).thenReturn(AICoreConfig.TENANT_LABEL_KEY);
     when(label.getValue()).thenReturn(tenantId);
     when(rg.getLabels()).thenReturn(List.of(label));
     when(resourceGroupApi.get(rgId)).thenReturn(rg);

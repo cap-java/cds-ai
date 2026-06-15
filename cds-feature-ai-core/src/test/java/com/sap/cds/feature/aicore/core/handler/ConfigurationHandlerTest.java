@@ -20,10 +20,13 @@ import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationCreationResponse;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.cds.Result;
+import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
-import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
@@ -54,23 +57,20 @@ class ConfigurationHandlerTest {
     resourceGroupApi = mock(ResourceGroupApi.class);
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
 
-    var configurer =
-        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
     configurer.cdsModel("edmx/csn.json");
     runtime = configurer.getCdsRuntime();
 
-    service =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            /* multiTenancy */ false,
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
+    AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
+    AICoreClients clients =
+        new AICoreClients(
+            deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+
+    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(service);
-    configurer.eventHandler(new AICoreApiHandler());
-    configurer.eventHandler(new ConfigurationHandler(configurationApi, resourceGroupApi));
+    configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+    configurer.eventHandler(new ConfigurationHandler(config, clients));
     configurer.complete();
   }
 
@@ -100,9 +100,7 @@ class ConfigurationHandlerTest {
                     ctx ->
                         service.run(
                             Select.from("AICore.configurations")
-                                .where(
-                                    c ->
-                                        c.get("resourceGroup_resourceGroupId").eq("default"))));
+                                .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
     verify(configurationApi).query(eq("default"), any(), any(), any(), any(), any(), any(), any());
     assertThat(result.list()).hasSize(1);
@@ -125,9 +123,7 @@ class ConfigurationHandlerTest {
                     ctx ->
                         service.run(
                             Select.from("AICore.configurations")
-                                .where(
-                                    c ->
-                                        c.get("resourceGroup_resourceGroupId").eq("default"))));
+                                .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
     assertThat(result.list()).isEmpty();
   }

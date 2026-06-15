@@ -4,111 +4,84 @@
 package com.sap.cds.feature.aicore.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.reflect.CdsService;
-import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
+import com.sap.cds.feature.aicore.core.handler.MockAICoreApiHandler;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.runtime.CdsRuntime;
+import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for {@link MockAICoreApiHandler} verifying the mock behavior when no AI Core binding is
+ * present. These tests boot a real CDS runtime with mock handlers to validate end-to-end flow.
+ */
 class MockAICoreServiceImplTest {
 
-  private MockAICoreServiceImpl createService(boolean multiTenancyEnabled) {
-    CdsRuntime runtime = mock(CdsRuntime.class);
-    CdsEnvironment env = mock(CdsEnvironment.class);
-    when(runtime.getEnvironment()).thenReturn(env);
-    CdsModel cdsModel = mock(CdsModel.class);
-    when(runtime.getCdsModel()).thenReturn(cdsModel);
-    when(cdsModel.getService("AICore")).thenReturn(mock(CdsService.class));
-    when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
-        .thenReturn("test-rg");
-    when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
-        .thenReturn("prefix-");
-    return new MockAICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime, multiTenancyEnabled);
+  private AICoreService createMockService(boolean multiTenancy) {
+    CdsProperties props = new CdsProperties();
+    if (multiTenancy) {
+      CdsProperties.MultiTenancy mt = new CdsProperties.MultiTenancy();
+      CdsProperties.MultiTenancy.Sidecar sidecar = new CdsProperties.MultiTenancy.Sidecar();
+      sidecar.setUrl("http://localhost:4004");
+      mt.setSidecar(sidecar);
+      props.setMultiTenancy(mt);
+    }
+
+    CdsRuntime runtime =
+        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props))
+            .cdsModel("edmx/csn.json")
+            .serviceConfigurations()
+            .eventHandlerConfigurations()
+            .complete();
+
+    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 
   @Test
-  void defaultConstructor_setsMultiTenancyFalse() {
-    CdsRuntime runtime = mock(CdsRuntime.class);
-    CdsEnvironment env = mock(CdsEnvironment.class);
-    when(runtime.getEnvironment()).thenReturn(env);
-    CdsModel cdsModel = mock(CdsModel.class);
-    when(runtime.getCdsModel()).thenReturn(cdsModel);
-    when(cdsModel.getService("AICore")).thenReturn(mock(CdsService.class));
-    when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
-        .thenReturn("default");
-    when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
-        .thenReturn("cds-");
-
-    MockAICoreServiceImpl service = new MockAICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
-    assertThat(service.isMultiTenancyEnabled()).isFalse();
+  void noMultiTenancy_resourceGroupReturnsDefault() {
+    AICoreService service = createMockService(false);
+    assertThat(service.resourceGroup()).isEqualTo("default");
   }
 
   @Test
-  void mtConstructor_setsMultiTenancyTrue() {
-    MockAICoreServiceImpl service = createService(true);
-    assertThat(service.isMultiTenancyEnabled()).isTrue();
+  void noMultiTenancy_resourceGroupForTenant_returnsDefault() {
+    AICoreService service = createMockService(false);
+    assertThat(service.resourceGroupForTenant("any-tenant")).isEqualTo("default");
   }
 
   @Test
-  void resourceGroupForTenant_mtDisabled_alwaysReturnsDefault() {
-    MockAICoreServiceImpl service = createService(false);
-    assertThat(service.resourceGroupForTenant("tenant-x")).isEqualTo("test-rg");
-    assertThat(service.resourceGroupForTenant("tenant-y")).isEqualTo("test-rg");
-  }
-
-  @Test
-  void resourceGroupForTenant_mtEnabled_returnsPrefixedTenantId() {
-    MockAICoreServiceImpl service = createService(true);
+  void multiTenancy_resourceGroupForTenant_returnsPrefixed() {
+    AICoreService service = createMockService(true);
     String rg = service.resourceGroupForTenant("my-tenant");
-    assertThat(rg).isEqualTo("prefix-my-tenant");
+    assertThat(rg).isEqualTo("cds-my-tenant");
   }
 
   @Test
-  void resourceGroupForTenant_mtEnabled_cachesResult() {
-    MockAICoreServiceImpl service = createService(true);
+  void multiTenancy_resourceGroupForTenant_cachesResult() {
+    AICoreService service = createMockService(true);
     String first = service.resourceGroupForTenant("t1");
     String second = service.resourceGroupForTenant("t1");
-    assertThat(first).isSameAs(second);
-    assertThat(service.getTenantResourceGroupCache()).containsKey("t1");
+    assertThat(first).isEqualTo(second);
   }
 
   @Test
-  void clearTenantCache_removesCorrectEntries() {
-    MockAICoreServiceImpl service = createService(true);
-    service.resourceGroupForTenant("t1");
-    service.resourceGroupForTenant("t2");
-    var spec = new com.sap.cds.feature.aicore.api.ModelDeploymentSpec(
-        "scenario", "exec", "cfg1", java.util.List.of(), d -> true);
-    service.deploymentId("prefix-t1", spec);
-
-    service.clearTenantCache("t1");
-
-    assertThat(service.getTenantResourceGroupCache()).doesNotContainKey("t1");
-    assertThat(service.getTenantResourceGroupCache()).containsKey("t2");
-    assertThat(service.getResourceGroupDeploymentCache()).doesNotContainKeys("prefix-t1::cfg1");
+  void deploymentId_returnsMockId() {
+    AICoreService service = createMockService(false);
+    var spec = new ModelDeploymentSpec("scenario", "exec", "cfg1", List.of(), d -> true);
+    String id = service.deploymentId("default", spec);
+    assertThat(id).startsWith("mock-deployment-");
   }
 
   @Test
-  void getRetry_returnsNonNull() {
-    MockAICoreServiceImpl service = createService(false);
-    assertThat(service.getRetry()).isNotNull();
-  }
-
-  @Test
-  void getDefaultResourceGroup_readsFromConfig() {
-    MockAICoreServiceImpl service = createService(false);
-    assertThat(service.getDefaultResourceGroup()).isEqualTo("test-rg");
-  }
-
-  @Test
-  void getResourceGroupPrefix_readsFromConfig() {
-    MockAICoreServiceImpl service = createService(false);
-    assertThat(service.getResourceGroupPrefix()).isEqualTo("prefix-");
+  void deploymentId_cachesSameResult() {
+    AICoreService service = createMockService(false);
+    var spec = new ModelDeploymentSpec("scenario", "exec", "cfg1", List.of(), d -> true);
+    String first = service.deploymentId("default", spec);
+    String second = service.deploymentId("default", spec);
+    assertThat(first).isEqualTo(second);
   }
 }

@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
@@ -51,25 +50,13 @@ class SubscribeUnsubscribeTest {
 
   @Test
   void subscribeTenant_createsResourceGroup() throws Exception {
-    AbstractAICoreService service = getService();
+    AICoreService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-3");
 
-    assertThat(service.isMultiTenancyEnabled()).isTrue();
-    assertThat(service.getTenantResourceGroupCache()).containsKey("tenant-3");
-  }
-
-  @Test
-  void unsubscribeTenant_clearsCaches() throws Exception {
-    AbstractAICoreService service = getService();
-
-    subscriptionEndpointClient.subscribeTenant("tenant-3");
-
-    assertThat(service.getTenantResourceGroupCache()).containsKey("tenant-3");
-
-    subscriptionEndpointClient.unsubscribeTenant("tenant-3");
-
-    assertThat(service.getTenantResourceGroupCache()).doesNotContainKey("tenant-3");
+    // After subscription, the service should be able to resolve a resource group for the tenant
+    String resourceGroup = service.resourceGroupForTenant("tenant-3");
+    assertThat(resourceGroup).isNotNull().isNotBlank();
   }
 
   @Test
@@ -95,7 +82,7 @@ class SubscribeUnsubscribeTest {
     }
   }
 
-  private AbstractAICoreService getService() {
-    return (AbstractAICoreService) runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private AICoreService getService() {
+    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
   }
 }

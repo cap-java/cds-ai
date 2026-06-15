@@ -4,12 +4,10 @@
 package com.sap.cds.feature.aicore.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import java.lang.reflect.Field;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,12 +15,14 @@ import org.junit.jupiter.api.Test;
 
 class AICoreServiceImplTest {
 
+  private static final AICoreConfig CONFIG = new AICoreConfig("default", "cds-", 10, 300, true);
+
   @Test
   void notReadyYet_topLevel403_returnsTrue() {
     OpenApiRequestException e = mock(OpenApiRequestException.class);
     when(e.statusCode()).thenReturn(403);
 
-    assertThat(AICoreServiceImpl.notReadyYet(e)).isTrue();
+    assertThat(DeploymentResolver.notReadyYet(e)).isTrue();
   }
 
   @Test
@@ -30,7 +30,7 @@ class AICoreServiceImplTest {
     OpenApiRequestException e = mock(OpenApiRequestException.class);
     when(e.statusCode()).thenReturn(412);
 
-    assertThat(AICoreServiceImpl.notReadyYet(e)).isTrue();
+    assertThat(DeploymentResolver.notReadyYet(e)).isTrue();
   }
 
   @Test
@@ -38,7 +38,7 @@ class AICoreServiceImplTest {
     OpenApiRequestException e = mock(OpenApiRequestException.class);
     when(e.statusCode()).thenReturn(404);
 
-    assertThat(AICoreServiceImpl.notReadyYet(e)).isTrue();
+    assertThat(DeploymentResolver.notReadyYet(e)).isTrue();
   }
 
   @Test
@@ -46,7 +46,7 @@ class AICoreServiceImplTest {
     OpenApiRequestException e = mock(OpenApiRequestException.class);
     when(e.statusCode()).thenReturn(500);
 
-    assertThat(AICoreServiceImpl.notReadyYet(e)).isFalse();
+    assertThat(DeploymentResolver.notReadyYet(e)).isFalse();
   }
 
   @Test
@@ -58,7 +58,7 @@ class AICoreServiceImplTest {
     when(outer.statusCode()).thenReturn(500);
     when(outer.getCause()).thenReturn(inner);
 
-    assertThat(AICoreServiceImpl.notReadyYet(outer)).isTrue();
+    assertThat(DeploymentResolver.notReadyYet(outer)).isTrue();
   }
 
   @Test
@@ -66,7 +66,7 @@ class AICoreServiceImplTest {
     OpenApiRequestException e = mock(OpenApiRequestException.class);
     when(e.statusCode()).thenReturn(null);
 
-    assertThat(AICoreServiceImpl.notReadyYet(e)).isFalse();
+    assertThat(DeploymentResolver.notReadyYet(e)).isFalse();
   }
 
   @Test
@@ -74,7 +74,7 @@ class AICoreServiceImplTest {
     // Locks must live in a non-evicting map: a Caffeine cache could evict an entry between two
     // threads' lookups, causing them to synchronize on different objects for the same cache key
     // and race to create duplicate AI Core deployments.
-    Field field = AICoreServiceImpl.class.getDeclaredField("deploymentLocks");
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentLocks");
     assertThat(field.getType()).isEqualTo(ConcurrentHashMap.class);
   }
 
@@ -91,98 +91,110 @@ class AICoreServiceImplTest {
   }
 
   @Test
-  void clearTenantCacheRemovesAllRelatedEntries() throws Exception {
+  void invalidateTenantRemovesAllRelatedEntries() throws Exception {
     String tenantId = "tenant-1";
     String resourceGroupId = "cds-tenant-1";
 
-    AICoreServiceImpl service = freshService();
-    Cache<String, String> tenantCache = readCache(service, "tenantResourceGroupCache");
-    Cache<String, String> deploymentCache = readCache(service, "resourceGroupDeploymentCache");
-    ConcurrentHashMap<String, Object> deploymentLocks = readLocks(service);
+    DeploymentResolver resolver = freshResolver();
+    putInTenantCache(resolver, tenantId, resourceGroupId);
+    putInDeploymentCache(resolver, resourceGroupId, "deployment-id");
+    putInDeploymentLocks(resolver, resourceGroupId);
 
-    tenantCache.put(tenantId, resourceGroupId);
-    deploymentCache.put(resourceGroupId, "deployment-id");
-    deploymentLocks.put(resourceGroupId, new Object());
+    resolver.invalidateTenant(tenantId);
 
-    service.clearTenantCache(tenantId);
-
-    assertThat(tenantCache.asMap()).doesNotContainKey(tenantId);
-    assertThat(deploymentCache.asMap()).doesNotContainKey(resourceGroupId);
-    assertThat(deploymentLocks).doesNotContainKey(resourceGroupId);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(tenantId);
+    assertThat(getDeploymentCache(resolver)).doesNotContainKey(resourceGroupId);
+    assertThat(getDeploymentLocks(resolver)).doesNotContainKey(resourceGroupId);
   }
 
   @Test
-  void clearTenantCacheLeavesOtherTenantsUntouched() throws Exception {
+  void invalidateTenantLeavesOtherTenantsUntouched() throws Exception {
     String tenantA = "tenant-a";
     String resourceGroupA = "cds-tenant-a";
     String tenantB = "tenant-b";
     String resourceGroupB = "cds-tenant-b";
 
-    AICoreServiceImpl service = freshService();
-    Cache<String, String> tenantCache = readCache(service, "tenantResourceGroupCache");
-    Cache<String, String> deploymentCache = readCache(service, "resourceGroupDeploymentCache");
-    ConcurrentHashMap<String, Object> deploymentLocks = readLocks(service);
+    DeploymentResolver resolver = freshResolver();
+    putInTenantCache(resolver, tenantA, resourceGroupA);
+    putInTenantCache(resolver, tenantB, resourceGroupB);
+    putInDeploymentCache(resolver, resourceGroupA, "deployment-a");
+    putInDeploymentCache(resolver, resourceGroupB, "deployment-b");
+    putInDeploymentLocks(resolver, resourceGroupA);
+    putInDeploymentLocks(resolver, resourceGroupB);
 
-    tenantCache.put(tenantA, resourceGroupA);
-    tenantCache.put(tenantB, resourceGroupB);
-    deploymentCache.put(resourceGroupA, "deployment-a");
-    deploymentCache.put(resourceGroupB, "deployment-b");
-    deploymentLocks.put(resourceGroupA, new Object());
-    deploymentLocks.put(resourceGroupB, new Object());
+    resolver.invalidateTenant(tenantA);
 
-    service.clearTenantCache(tenantA);
-
-    assertThat(tenantCache.asMap()).doesNotContainKey(tenantA).containsKey(tenantB);
-    assertThat(deploymentCache.asMap())
+    assertThat(resolver.getTenantResourceGroupCacheView())
+        .doesNotContainKey(tenantA)
+        .containsKey(tenantB);
+    assertThat(getDeploymentCache(resolver))
         .doesNotContainKey(resourceGroupA)
         .containsKey(resourceGroupB);
-    assertThat(deploymentLocks).doesNotContainKey(resourceGroupA).containsKey(resourceGroupB);
+    assertThat(getDeploymentLocks(resolver))
+        .doesNotContainKey(resourceGroupA)
+        .containsKey(resourceGroupB);
   }
 
   @Test
-  void clearTenantCacheIsNoOpForUnknownTenant() throws Exception {
+  void invalidateTenantIsNoOpForUnknownTenant() throws Exception {
     String resourceGroupId = "cds-tenant-1";
 
-    AICoreServiceImpl service = freshService();
-    Cache<String, String> deploymentCache = readCache(service, "resourceGroupDeploymentCache");
-    ConcurrentHashMap<String, Object> deploymentLocks = readLocks(service);
+    DeploymentResolver resolver = freshResolver();
+    putInDeploymentCache(resolver, resourceGroupId, "deployment-id");
+    putInDeploymentLocks(resolver, resourceGroupId);
 
-    deploymentCache.put(resourceGroupId, "deployment-id");
-    deploymentLocks.put(resourceGroupId, new Object());
+    resolver.invalidateTenant("unknown-tenant");
 
-    service.clearTenantCache("unknown-tenant");
-
-    assertThat(deploymentCache.asMap()).containsKey(resourceGroupId);
-    assertThat(deploymentLocks).containsKey(resourceGroupId);
+    assertThat(getDeploymentCache(resolver)).containsKey(resourceGroupId);
+    assertThat(getDeploymentLocks(resolver)).containsKey(resourceGroupId);
   }
 
-  private static AICoreServiceImpl freshService() throws Exception {
-    AICoreServiceImpl service = mock(AICoreServiceImpl.class, CALLS_REAL_METHODS);
-    setField(service, "tenantResourceGroupCache", Caffeine.newBuilder().build());
-    setField(service, "resourceGroupDeploymentCache", Caffeine.newBuilder().build());
-    setField(service, "deploymentLocks", new ConcurrentHashMap<>());
-    return service;
+  private static DeploymentResolver freshResolver() {
+    DeploymentApi deploymentApi = mock(DeploymentApi.class);
+    return new DeploymentResolver(CONFIG, deploymentApi);
   }
 
   @SuppressWarnings("unchecked")
-  private static <K, V> Cache<K, V> readCache(AICoreServiceImpl service, String fieldName)
+  private static void putInTenantCache(DeploymentResolver resolver, String key, String value)
       throws Exception {
-    Field field = AICoreServiceImpl.class.getDeclaredField(fieldName);
+    Field field = DeploymentResolver.class.getDeclaredField("tenantResourceGroupCache");
     field.setAccessible(true);
-    return (Cache<K, V>) field.get(service);
+    ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver))
+        .put(key, value);
   }
 
   @SuppressWarnings("unchecked")
-  private static ConcurrentHashMap<String, Object> readLocks(AICoreServiceImpl service)
+  private static void putInDeploymentCache(DeploymentResolver resolver, String key, String value)
       throws Exception {
-    Field field = AICoreServiceImpl.class.getDeclaredField("deploymentLocks");
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentCache");
     field.setAccessible(true);
-    return (ConcurrentHashMap<String, Object>) field.get(service);
+    ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver))
+        .put(key, value);
   }
 
-  private static void setField(Object target, String fieldName, Object value) throws Exception {
-    Field field = AICoreServiceImpl.class.getDeclaredField(fieldName);
+  @SuppressWarnings("unchecked")
+  private static java.util.Map<String, String> getDeploymentCache(DeploymentResolver resolver)
+      throws Exception {
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentCache");
     field.setAccessible(true);
-    field.set(target, value);
+    return ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver)).asMap();
+  }
+
+  private static void putInDeploymentLocks(DeploymentResolver resolver, String key)
+      throws Exception {
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentLocks");
+    field.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    ConcurrentHashMap<String, Object> locks =
+        (ConcurrentHashMap<String, Object>) field.get(resolver);
+    locks.put(key, new Object());
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ConcurrentHashMap<String, Object> getDeploymentLocks(DeploymentResolver resolver)
+      throws Exception {
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentLocks");
+    field.setAccessible(true);
+    return (ConcurrentHashMap<String, Object>) field.get(resolver);
   }
 }

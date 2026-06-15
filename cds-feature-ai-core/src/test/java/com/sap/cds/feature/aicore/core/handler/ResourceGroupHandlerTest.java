@@ -22,11 +22,14 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupPatchRequest;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.Result;
+import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
-import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
@@ -57,23 +60,20 @@ class ResourceGroupHandlerTest {
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
     ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-    var configurer =
-        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
     configurer.cdsModel("edmx/csn.json");
     runtime = configurer.getCdsRuntime();
 
-    service =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            /* multiTenancy */ false,
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
+    AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
+    AICoreClients clients =
+        new AICoreClients(
+            deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+
+    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(service);
-    configurer.eventHandler(new AICoreApiHandler());
-    configurer.eventHandler(new ResourceGroupHandler(resourceGroupApi));
+    configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+    configurer.eventHandler(new ResourceGroupHandler(config, clients));
     configurer.complete();
   }
 
@@ -90,8 +90,7 @@ class ResourceGroupHandlerTest {
 
     BckndResourceGroupList list = mock(BckndResourceGroupList.class);
     when(list.getResources()).thenReturn(List.of(rg));
-    when(resourceGroupApi.getAll(any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(list);
+    when(resourceGroupApi.getAll(any(), any(), any(), any(), any(), any(), any())).thenReturn(list);
 
     Result result =
         runtime
@@ -141,7 +140,7 @@ class ResourceGroupHandlerTest {
     verify(resourceGroupApi).create(captor.capture());
     assertThat(captor.getValue().getLabels())
         .extracting(BckndResourceGroupLabel::getKey, BckndResourceGroupLabel::getValue)
-        .containsExactly(tuple(AICoreServiceImpl.TENANT_LABEL_KEY, "tenant-a"));
+        .containsExactly(tuple(AICoreConfig.TENANT_LABEL_KEY, "tenant-a"));
   }
 
   @Test
@@ -159,9 +158,7 @@ class ResourceGroupHandlerTest {
                     service.run(
                         Update.entity("AICore.resourceGroups")
                             .where(d -> d.get("resourceGroupId").eq("rg-upd"))
-                            .data(
-                                "labels",
-                                List.of(Map.of("key", "env", "value", "staging")))));
+                            .data("labels", List.of(Map.of("key", "env", "value", "staging")))));
 
     ArgumentCaptor<BckndResourceGroupPatchRequest> captor =
         ArgumentCaptor.forClass(BckndResourceGroupPatchRequest.class);
@@ -216,18 +213,16 @@ class ResourceGroupHandlerTest {
       configurer.cdsModel("edmx/csn.json");
       mtRuntime = configurer.getCdsRuntime();
 
-      mtService =
-          new AICoreServiceImpl(
-              AICoreService.DEFAULT_NAME,
-              mtRuntime,
-              /* multiTenancy */ true,
-              deploymentApi,
-              configurationApi,
-              mtResourceGroupApi,
-              mock(AiCoreService.class));
+      AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, true);
+      AICoreClients clients =
+          new AICoreClients(
+              deploymentApi, configurationApi, mtResourceGroupApi, mock(AiCoreService.class));
+      DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+
+      mtService = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, mtRuntime);
       configurer.service(mtService);
-      configurer.eventHandler(new AICoreApiHandler());
-      configurer.eventHandler(new ResourceGroupHandler(mtResourceGroupApi));
+      configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+      configurer.eventHandler(new ResourceGroupHandler(config, clients));
       configurer.complete();
     }
 
@@ -261,7 +256,7 @@ class ResourceGroupHandlerTest {
       verify(mtResourceGroupApi)
           .getAll(any(), any(), any(), any(), any(), any(), selectorCaptor.capture());
       assertThat(selectorCaptor.getValue())
-          .containsExactly(AICoreServiceImpl.TENANT_LABEL_KEY + "=current-tenant");
+          .containsExactly(AICoreConfig.TENANT_LABEL_KEY + "=current-tenant");
     }
   }
 }

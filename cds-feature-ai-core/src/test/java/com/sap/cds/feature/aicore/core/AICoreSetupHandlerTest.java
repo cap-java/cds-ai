@@ -12,15 +12,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sap.ai.sdk.core.AiCoreService;
+import com.sap.ai.sdk.core.client.ConfigurationApi;
+import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.mt.UnsubscribeEventContext;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
-import java.util.HashMap;
+import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,31 +36,37 @@ class AICoreSetupHandlerTest {
   private static final String TENANT = "tenant-1";
   private static final String RG_ID = "cds-tenant-1";
 
-  @Mock private AICoreServiceImpl service;
   @Mock private ResourceGroupApi resourceGroupApi;
   @Mock private UnsubscribeEventContext unsubscribeContext;
 
-  private Map<String, String> tenantCache;
+  private DeploymentResolver resolver;
+  private AICoreClients clients;
   private AICoreSetupHandler cut;
 
   @BeforeEach
   void setUp() {
-    tenantCache = new HashMap<>();
-    when(service.getTenantResourceGroupCache()).thenReturn(tenantCache);
-    when(service.getResourceGroupApi()).thenReturn(resourceGroupApi);
+    AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, true);
+    DeploymentApi deploymentApi = mock(DeploymentApi.class);
+    clients =
+        new AICoreClients(
+            deploymentApi,
+            mock(ConfigurationApi.class),
+            resourceGroupApi,
+            mock(AiCoreService.class));
+    resolver = new DeploymentResolver(config, deploymentApi);
     when(unsubscribeContext.getTenant()).thenReturn(TENANT);
-    cut = new AICoreSetupHandler(service);
+    cut = new AICoreSetupHandler(clients, resolver);
   }
 
   @Test
-  void cacheHit_deletesAndClears() {
-    tenantCache.put(TENANT, RG_ID);
+  void cacheHit_deletesAndClears() throws Exception {
+    putInTenantCache(resolver, TENANT, RG_ID);
 
     cut.beforeUnsubscribe(unsubscribeContext);
 
     verify(resourceGroupApi).delete(RG_ID);
     verify(resourceGroupApi, never()).getAll(any(), any(), any(), any(), any(), any(), any());
-    verify(service).clearTenantCache(TENANT);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(TENANT);
   }
 
   @Test
@@ -73,9 +81,9 @@ class AICoreSetupHandlerTest {
     cut.beforeUnsubscribe(unsubscribeContext);
 
     assertThat(labelCaptor.getValue())
-        .containsExactly(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + TENANT);
+        .containsExactly(AICoreConfig.TENANT_LABEL_KEY + "=" + TENANT);
     verify(resourceGroupApi).delete(RG_ID);
-    verify(service).clearTenantCache(TENANT);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(TENANT);
   }
 
   @Test
@@ -87,7 +95,7 @@ class AICoreSetupHandlerTest {
     cut.beforeUnsubscribe(unsubscribeContext);
 
     verify(resourceGroupApi, never()).delete(any());
-    verify(service).clearTenantCache(TENANT);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(TENANT);
   }
 
   @Test
@@ -99,24 +107,24 @@ class AICoreSetupHandlerTest {
     cut.beforeUnsubscribe(unsubscribeContext);
 
     verify(resourceGroupApi, never()).delete(any());
-    verify(service).clearTenantCache(TENANT);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(TENANT);
   }
 
   @Test
-  void deleteReturns404_treatedAsSuccess() {
-    tenantCache.put(TENANT, RG_ID);
+  void deleteReturns404_treatedAsSuccess() throws Exception {
+    putInTenantCache(resolver, TENANT, RG_ID);
     OpenApiRequestException notFound = new OpenApiRequestException("not found").statusCode(404);
     when(resourceGroupApi.delete(RG_ID)).thenThrow(notFound);
 
     cut.beforeUnsubscribe(unsubscribeContext);
 
     verify(resourceGroupApi).delete(RG_ID);
-    verify(service).clearTenantCache(TENANT);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(TENANT);
   }
 
   @Test
-  void deleteReturnsOther5xx_propagatesAsServiceException() {
-    tenantCache.put(TENANT, RG_ID);
+  void deleteReturnsOther5xx_propagatesAsServiceException() throws Exception {
+    putInTenantCache(resolver, TENANT, RG_ID);
     OpenApiRequestException serverError = new OpenApiRequestException("boom").statusCode(500);
     when(resourceGroupApi.delete(RG_ID)).thenThrow(serverError);
 
@@ -124,21 +132,12 @@ class AICoreSetupHandlerTest {
         .isInstanceOf(ServiceException.class)
         .hasCauseReference(serverError);
     // Cache still cleared in finally.
-    verify(service).clearTenantCache(TENANT);
+    assertThat(resolver.getTenantResourceGroupCacheView()).doesNotContainKey(TENANT);
   }
 
   @Test
-  void unsubscribeTwice_secondCallIsNoOp() {
-    tenantCache.put(TENANT, RG_ID);
-    // First call uses cache, deletes successfully and clears (we simulate clearTenantCache
-    // by removing from the underlying map).
-    org.mockito.Mockito.doAnswer(
-            inv -> {
-              tenantCache.remove(TENANT);
-              return null;
-            })
-        .when(service)
-        .clearTenantCache(TENANT);
+  void unsubscribeTwice_secondCallIsNoOp() throws Exception {
+    putInTenantCache(resolver, TENANT, RG_ID);
 
     cut.beforeUnsubscribe(unsubscribeContext);
 
@@ -151,7 +150,6 @@ class AICoreSetupHandlerTest {
 
     verify(resourceGroupApi, times(1)).delete(RG_ID);
     verify(resourceGroupApi, times(1)).getAll(any(), any(), any(), any(), any(), any(), any());
-    verify(service, times(2)).clearTenantCache(TENANT);
   }
 
   @Test
@@ -163,7 +161,6 @@ class AICoreSetupHandlerTest {
         .isInstanceOf(ServiceException.class)
         .hasCauseReference(boom);
     verify(resourceGroupApi, never()).delete(any());
-    verify(service).clearTenantCache(TENANT);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -175,5 +172,14 @@ class AICoreSetupHandlerTest {
     BckndResourceGroupList list = mock(BckndResourceGroupList.class);
     when(list.getResources()).thenReturn(resources);
     return list;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static void putInTenantCache(DeploymentResolver resolver, String key, String value)
+      throws Exception {
+    Field field = DeploymentResolver.class.getDeclaredField("tenantResourceGroupCache");
+    field.setAccessible(true);
+    ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver))
+        .put(key, value);
   }
 }
