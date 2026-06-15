@@ -9,7 +9,7 @@ permissions:
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, refactor/remote-service-migration-v2]
     types: [reopened, synchronize, opened]
 
 jobs:
