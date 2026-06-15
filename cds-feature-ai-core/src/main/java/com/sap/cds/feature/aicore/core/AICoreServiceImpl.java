@@ -19,6 +19,13 @@ import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
  * com.sap.cds.services.EventContext EventContext}, emits it via the CAP event mechanism, and
  * returns the handler's result. All business logic (caching, locking, API calls) lives in the
  * registered ON handlers which receive their dependencies via constructor injection.
+ *
+ * <p><strong>Implementation note:</strong> This class extends {@code AbstractCdsDefinedService}
+ * from the CAP Java runtime's internal {@code impl} package. This is necessary because the public
+ * API ({@code ServiceDelegator}) does not provide CQN execution capabilities or CDS model binding.
+ * The semi-public {@code AbstractCqnService} (from {@code cds-services-utils}) provides CQN but not
+ * {@code getDefinition()}. Until a public API alternative exists, this coupling is accepted and
+ * version-compatibility is verified through integration tests against the CAP Java runtime.
  */
 public class AICoreServiceImpl extends AbstractCdsDefinedService implements AICoreService {
 

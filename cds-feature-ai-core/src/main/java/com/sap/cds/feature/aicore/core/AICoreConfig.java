@@ -29,6 +29,22 @@ public record AICoreConfig(
   private static final int DEFAULT_MAX_RETRIES = 10;
   private static final long DEFAULT_INITIAL_DELAY_MS = 300;
 
+  public AICoreConfig {
+    if (maxRetries < 1) {
+      throw new IllegalArgumentException("cds.ai.core.maxRetries must be >= 1, got " + maxRetries);
+    }
+    if (initialDelayMs < 1) {
+      throw new IllegalArgumentException(
+          "cds.ai.core.initialDelayMs must be >= 1, got " + initialDelayMs);
+    }
+    if (defaultResourceGroup == null || defaultResourceGroup.isBlank()) {
+      throw new IllegalArgumentException("cds.ai.core.resourceGroup must not be blank");
+    }
+    if (resourceGroupPrefix == null) {
+      throw new IllegalArgumentException("cds.ai.core.resourceGroupPrefix must not be null");
+    }
+  }
+
   /** Creates an {@code AICoreConfig} from the runtime environment properties. */
   public static AICoreConfig from(CdsEnvironment env, boolean multiTenancyEnabled) {
     return new AICoreConfig(
