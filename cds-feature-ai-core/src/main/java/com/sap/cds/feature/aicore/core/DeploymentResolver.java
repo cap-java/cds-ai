@@ -6,16 +6,22 @@ package com.sap.cds.feature.aicore.core;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sap.ai.sdk.core.client.DeploymentApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
+import com.sap.ai.sdk.core.model.BckndResourceGroup;
+import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
+import com.sap.ai.sdk.core.model.BckndResourceGroupList;
+import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,29 +54,43 @@ public class DeploymentResolver {
    */
   private final ConcurrentHashMap<String, Object> deploymentLocks = new ConcurrentHashMap<>();
 
+  private final AICoreConfig config;
   private final DeploymentApi deploymentApi;
+  private final ResourceGroupApi resourceGroupApi;
   private final Retry retry;
 
-  public DeploymentResolver(AICoreConfig config, DeploymentApi deploymentApi) {
+  public DeploymentResolver(
+      AICoreConfig config, DeploymentApi deploymentApi, ResourceGroupApi resourceGroupApi) {
+    this.config = config;
     this.deploymentApi = deploymentApi;
+    this.resourceGroupApi = resourceGroupApi;
     this.retry = buildRetry(config.maxRetries(), config.initialDelayMs());
     this.tenantResourceGroupCache = newCache();
     this.deploymentCache = newCache();
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Resource group resolution
+  // ──────────────────────────────────────────────────────────────────────────
+
   /**
-   * Resolves the resource group for a tenant. On cache miss, calls the {@code creator} function
-   * (which typically creates the resource group in AI Core) atomically via Caffeine's loader.
-   * Thread-safe.
+   * Resolves the resource group for a tenant. Returns the configured default resource group if
+   * multi-tenancy is disabled or tenant is {@code null}. Otherwise looks up (or creates) the
+   * tenant's resource group via the AI Core API, caching the result. Thread-safe.
    *
-   * @param tenantId the CDS tenant identifier
-   * @param creator function that receives the tenant ID and returns the resource group ID (may
-   *     involve API calls to find or create the resource group)
+   * @param tenantId the CDS tenant identifier (may be {@code null})
    * @return the AI Core resource group ID
    */
-  public String resolveResourceGroup(String tenantId, Function<String, String> creator) {
-    return tenantResourceGroupCache.get(tenantId, creator::apply);
+  public String resolveResourceGroup(String tenantId) {
+    if (!config.multiTenancyEnabled() || tenantId == null) {
+      return config.defaultResourceGroup();
+    }
+    return tenantResourceGroupCache.get(tenantId, this::findOrCreateResourceGroup);
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Deployment resolution
+  // ──────────────────────────────────────────────────────────────────────────
 
   /**
    * Resolves a deployment ID for the given spec within a resource group. On cache hit, validates
@@ -104,6 +124,10 @@ public class DeploymentResolver {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Cache management
+  // ──────────────────────────────────────────────────────────────────────────
+
   /**
    * Evicts all cache entries associated with the given tenant: the resource-group mapping, all
    * deployments in that resource group, and their lock entries.
@@ -126,18 +150,15 @@ public class DeploymentResolver {
   }
 
   /**
-   * Returns a read-only view of the tenant-to-resource-group cache. Primarily for diagnostics and
-   * the setup handler's unsubscribe logic.
+   * Returns an unmodifiable view of the tenant-to-resource-group cache. Primarily for diagnostics
+   * and the setup handler's unsubscribe logic.
    */
   public Map<String, String> getTenantResourceGroupCacheView() {
-    return tenantResourceGroupCache.asMap();
+    return Collections.unmodifiableMap(tenantResourceGroupCache.asMap());
   }
 
-  /**
-   * Builds the cache key for deployment lookups. Public so that tests can derive the same key
-   * format.
-   */
-  public static String deploymentCacheKey(String resourceGroupId, ModelDeploymentSpec spec) {
+  /** Builds the cache key for deployment lookups. */
+  static String deploymentCacheKey(String resourceGroupId, ModelDeploymentSpec spec) {
     return resourceGroupId + "::" + spec.configurationName();
   }
 
@@ -159,6 +180,34 @@ public class DeploymentResolver {
   // ──────────────────────────────────────────────────────────────────────────
   // Internal
   // ──────────────────────────────────────────────────────────────────────────
+
+  private String findOrCreateResourceGroup(String tenantId) {
+    List<String> labelSelector = List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + tenantId);
+    BckndResourceGroupList result =
+        resourceGroupApi.getAll(null, null, null, null, null, null, labelSelector);
+    List<BckndResourceGroup> resources = result.getResources();
+    if (resources != null && !resources.isEmpty()) {
+      return resources.get(0).getResourceGroupId();
+    }
+    String resourceGroupId = config.resourceGroupPrefix() + tenantId;
+    BckndResourceGroupLabel label =
+        BckndResourceGroupLabel.create().key(AICoreConfig.TENANT_LABEL_KEY).value(tenantId);
+    BckndResourceGroupsPostRequest request =
+        BckndResourceGroupsPostRequest.create()
+            .resourceGroupId(resourceGroupId)
+            .labels(List.of(label));
+    try {
+      resourceGroupApi.create(request);
+      logger.debug("Created resource group {} for tenant {}", resourceGroupId, tenantId);
+    } catch (OpenApiRequestException e) {
+      if (e.statusCode() != null && e.statusCode() == 409) {
+        logger.debug("Resource group {} already exists (409 Conflict), reusing", resourceGroupId);
+      } else {
+        throw e;
+      }
+    }
+    return resourceGroupId;
+  }
 
   /**
    * Validates that a cached deployment ID is still active (RUNNING or PENDING). Returns {@code
