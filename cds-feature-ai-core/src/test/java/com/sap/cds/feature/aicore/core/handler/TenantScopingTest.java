@@ -62,12 +62,12 @@ class TenantScopingTest {
     AICoreClients clients =
         new AICoreClients(
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
-    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
     service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(service);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
-    configurer.eventHandler(new DeploymentHandler(config, clients));
+    configurer.eventHandler(new DeploymentHandler(config, clients, resolver));
     configurer.complete();
   }
 

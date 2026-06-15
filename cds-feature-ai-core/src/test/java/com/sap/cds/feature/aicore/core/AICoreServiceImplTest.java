@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.sap.ai.sdk.core.client.DeploymentApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import java.lang.reflect.Field;
 import java.util.concurrent.ConcurrentHashMap;
@@ -151,7 +152,8 @@ class AICoreServiceImplTest {
 
   private static DeploymentResolver freshResolver() {
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
-    return new DeploymentResolver(CONFIG, deploymentApi);
+    ResourceGroupApi resourceGroupApi = mock(ResourceGroupApi.class);
+    return new DeploymentResolver(CONFIG, deploymentApi, resourceGroupApi);
   }
 
   @SuppressWarnings("unchecked")

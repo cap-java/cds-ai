@@ -68,12 +68,12 @@ class ResourceGroupHandlerTest {
     AICoreClients clients =
         new AICoreClients(
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
-    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
     service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(service);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
-    configurer.eventHandler(new ResourceGroupHandler(config, clients));
+    configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
     configurer.complete();
   }
 
@@ -217,12 +217,13 @@ class ResourceGroupHandlerTest {
       AICoreClients clients =
           new AICoreClients(
               deploymentApi, configurationApi, mtResourceGroupApi, mock(AiCoreService.class));
-      DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi);
+      DeploymentResolver resolver =
+          new DeploymentResolver(config, deploymentApi, mtResourceGroupApi);
 
       mtService = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, mtRuntime);
       configurer.service(mtService);
       configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
-      configurer.eventHandler(new ResourceGroupHandler(config, clients));
+      configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
       configurer.complete();
     }
 

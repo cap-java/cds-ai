@@ -53,7 +53,7 @@ class AICoreSetupHandlerTest {
             mock(ConfigurationApi.class),
             resourceGroupApi,
             mock(AiCoreService.class));
-    resolver = new DeploymentResolver(config, deploymentApi);
+    resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
     when(unsubscribeContext.getTenant()).thenReturn(TENANT);
     cut = new AICoreSetupHandler(clients, resolver);
   }

@@ -80,7 +80,7 @@ class AICoreServiceImplDeploymentIdTest {
     AICoreClients clients =
         new AICoreClients(
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
-    resolver = new DeploymentResolver(config, deploymentApi);
+    resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
     AICoreServiceImpl svc = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
     configurer.service(svc);
