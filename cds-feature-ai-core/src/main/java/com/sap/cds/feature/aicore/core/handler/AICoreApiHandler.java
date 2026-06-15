@@ -3,9 +3,6 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.ai.sdk.core.client.ConfigurationApi;
-import com.sap.ai.sdk.core.client.DeploymentApi;
-import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.ai.sdk.core.model.AiDeployment;
@@ -22,7 +19,9 @@ import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.InferenceClientContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
@@ -42,100 +41,56 @@ import org.slf4j.LoggerFactory;
  * ON handler for the {@link AICoreService} API events ({@code resourceGroup}, {@code deploymentId},
  * {@code inferenceClient}).
  *
- * <p>Contains the implementation logic previously housed directly in {@link AICoreServiceImpl}. The
- * handler accesses shared state (caches, API clients, configuration) via the service instance
- * obtained from the {@link com.sap.cds.services.EventContext}.
+ * <p>Contains the business logic for resource-group resolution, deployment discovery/creation, and
+ * inference client construction. Caching, locking, and retry are delegated to {@link
+ * DeploymentResolver}.
  */
 @ServiceName(AICoreService.DEFAULT_NAME)
 public class AICoreApiHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreApiHandler.class);
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // ON handlers
-  // ──────────────────────────────────────────────────────────────────────────
+  private final AICoreConfig config;
+  private final AICoreClients clients;
+  private final DeploymentResolver resolver;
+
+  public AICoreApiHandler(AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    this.config = config;
+    this.clients = clients;
+    this.resolver = resolver;
+  }
 
   @On
   public void onResourceGroup(ResourceGroupContext context) {
-    AICoreServiceImpl service = (AICoreServiceImpl) context.getService();
     String tenantId = context.getTenantId();
     if (tenantId == null) {
-      tenantId = service.currentTenantId();
+      tenantId = context.getUserInfo().getTenant();
     }
-    if (!service.isMultiTenancyEnabled() || tenantId == null) {
-      logger.debug("Using default resource group {}", service.getDefaultResourceGroup());
-      context.setResult(service.getDefaultResourceGroup());
+    if (!config.multiTenancyEnabled() || tenantId == null) {
+      logger.debug("Using default resource group {}", config.defaultResourceGroup());
+      context.setResult(config.defaultResourceGroup());
       return;
     }
-    String result = getOrCreateResourceGroupForTenant(service, tenantId);
+    String result = resolver.resolveResourceGroup(tenantId, this::findOrCreateResourceGroup);
     context.setResult(result);
   }
 
   @On
   public void onDeploymentId(DeploymentIdContext context) {
-    AICoreServiceImpl service = (AICoreServiceImpl) context.getService();
     String resourceGroupId = context.getResourceGroupId();
     ModelDeploymentSpec spec = context.getSpec();
 
-    String cacheKey = AICoreServiceImpl.deploymentCacheKey(resourceGroupId, spec);
-    Object lock = service.getDeploymentLocks().computeIfAbsent(cacheKey, k -> new Object());
-    synchronized (lock) {
-      String cached =
-          service.getResourceGroupDeploymentCaffeineCache().getIfPresent(cacheKey);
-      if (cached != null) {
-        try {
-          var current = service.getDeploymentApi().get(resourceGroupId, cached);
-          if (AiDeploymentStatus.RUNNING.equals(current.getStatus())
-              || AiDeploymentStatus.PENDING.equals(current.getStatus())) {
-            context.setResult(cached);
-            return;
-          }
-        } catch (OpenApiRequestException e) {
-          // Only 404 means the cached deployment was deleted out-of-band — drop the stale entry
-          // and fall through to discover or create a new one. Any other status (5xx, 401, 412,
-          // network errors, …) is propagated so the caller's retry/backoff policy can handle it
-          // rather than silently invalidating a potentially valid cache entry and triggering a
-          // duplicate deployment.
-          Integer status = e.statusCode();
-          if (status == null || status != 404) {
-            throw e;
-          }
-          logger.debug(
-              "Cached deployment {} in resource group {} no longer exists (404), "
-                  + "invalidating cache entry",
-              cached,
-              resourceGroupId);
-        }
-        service.getResourceGroupDeploymentCaffeineCache().invalidate(cacheKey);
-      }
-      AiDeploymentList deploymentList = queryDeploymentsUntilReady(service, resourceGroupId, spec);
-      Optional<String> existing =
-          deploymentList.getResources().stream()
-              .filter(
-                  d ->
-                      spec.configurationName().equals(d.getConfigurationName())
-                          && spec.matchesExisting().test(d)
-                          && (AiDeploymentStatus.RUNNING.equals(d.getStatus())
-                              || AiDeploymentStatus.PENDING.equals(d.getStatus())))
-              .findFirst()
-              .map(AiDeployment::getId);
-      if (existing.isPresent()) {
-        String deploymentId = existing.get();
-        service.getResourceGroupDeploymentCaffeineCache().put(cacheKey, deploymentId);
-        context.setResult(deploymentId);
-        return;
-      }
-      String deploymentId = createDeployment(service, resourceGroupId, spec, cacheKey);
-      context.setResult(deploymentId);
-    }
+    String deploymentId =
+        resolver.resolveDeployment(
+            resourceGroupId, spec, () -> findOrCreateDeployment(resourceGroupId, spec));
+    context.setResult(deploymentId);
   }
 
   @On
   public void onInferenceClient(InferenceClientContext context) {
-    AICoreServiceImpl service = (AICoreServiceImpl) context.getService();
     var destination =
-        service
-            .getSdkService()
+        clients
+            .sdkService()
             .getInferenceDestination(context.getResourceGroupId())
             .usingDeploymentId(context.getDeploymentId());
     logger.debug("Inference destination URI: {}", destination.getUri());
@@ -143,61 +98,64 @@ public class AICoreApiHandler implements EventHandler {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Private implementation helpers (moved from AICoreServiceImpl)
+  // Resource group business logic
   // ──────────────────────────────────────────────────────────────────────────
 
-  private String getOrCreateResourceGroupForTenant(AICoreServiceImpl service, String tenantId) {
-    return service
-        .getTenantResourceGroupCaffeineCache()
-        .get(
-            tenantId,
-            key -> {
-              ResourceGroupApi resourceGroupApi = service.getResourceGroupApi();
-              List<String> labelSelector =
-                  List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + key);
-              BckndResourceGroupList result =
-                  resourceGroupApi.getAll(null, null, null, null, null, null, labelSelector);
-              List<BckndResourceGroup> resources = result.getResources();
-              if (resources != null && !resources.isEmpty()) {
-                return resources.get(0).getResourceGroupId();
-              }
-              String resourceGroupId = service.getResourceGroupPrefix() + key;
-              BckndResourceGroupLabel label =
-                  BckndResourceGroupLabel.create()
-                      .key(AICoreServiceImpl.TENANT_LABEL_KEY)
-                      .value(key);
-              BckndResourceGroupsPostRequest request =
-                  BckndResourceGroupsPostRequest.create()
-                      .resourceGroupId(resourceGroupId)
-                      .labels(List.of(label));
-              try {
-                resourceGroupApi.create(request);
-                logger.debug(
-                    "Created resource group {} for tenant {}", resourceGroupId, key);
-              } catch (OpenApiRequestException e) {
-                if (e.statusCode() != null && e.statusCode() == 409) {
-                  logger.debug(
-                      "Resource group {} already exists (409 Conflict), reusing",
-                      resourceGroupId);
-                } else {
-                  throw e;
-                }
-              }
-              return resourceGroupId;
-            });
+  private String findOrCreateResourceGroup(String tenantId) {
+    List<String> labelSelector = List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + tenantId);
+    BckndResourceGroupList result =
+        clients.resourceGroupApi().getAll(null, null, null, null, null, null, labelSelector);
+    List<BckndResourceGroup> resources = result.getResources();
+    if (resources != null && !resources.isEmpty()) {
+      return resources.get(0).getResourceGroupId();
+    }
+    String resourceGroupId = config.resourceGroupPrefix() + tenantId;
+    BckndResourceGroupLabel label =
+        BckndResourceGroupLabel.create().key(AICoreConfig.TENANT_LABEL_KEY).value(tenantId);
+    BckndResourceGroupsPostRequest request =
+        BckndResourceGroupsPostRequest.create()
+            .resourceGroupId(resourceGroupId)
+            .labels(List.of(label));
+    try {
+      clients.resourceGroupApi().create(request);
+      logger.debug("Created resource group {} for tenant {}", resourceGroupId, tenantId);
+    } catch (OpenApiRequestException e) {
+      if (e.statusCode() != null && e.statusCode() == 409) {
+        logger.debug("Resource group {} already exists (409 Conflict), reusing", resourceGroupId);
+      } else {
+        throw e;
+      }
+    }
+    return resourceGroupId;
   }
 
-  private String createDeployment(
-      AICoreServiceImpl service,
-      String resourceGroupId,
-      ModelDeploymentSpec spec,
-      String cacheKey) {
-    DeploymentApi deploymentApi = service.getDeploymentApi();
-    ConfigurationApi configurationApi = service.getConfigurationApi();
+  // ──────────────────────────────────────────────────────────────────────────
+  // Deployment business logic
+  // ──────────────────────────────────────────────────────────────────────────
 
+  private String findOrCreateDeployment(String resourceGroupId, ModelDeploymentSpec spec) {
+    AiDeploymentList deploymentList = queryDeploymentsUntilReady(resourceGroupId, spec);
+    Optional<String> existing =
+        deploymentList.getResources().stream()
+            .filter(
+                d ->
+                    spec.configurationName().equals(d.getConfigurationName())
+                        && spec.matchesExisting().test(d)
+                        && (AiDeploymentStatus.RUNNING.equals(d.getStatus())
+                            || AiDeploymentStatus.PENDING.equals(d.getStatus())))
+            .findFirst()
+            .map(AiDeployment::getId);
+    if (existing.isPresent()) {
+      return existing.get();
+    }
+    return createDeployment(resourceGroupId, spec);
+  }
+
+  private String createDeployment(String resourceGroupId, ModelDeploymentSpec spec) {
     AiConfigurationList configList =
-        configurationApi.query(
-            resourceGroupId, spec.scenarioId(), null, null, null, null, null, null);
+        clients
+            .configurationApi()
+            .query(resourceGroupId, spec.scenarioId(), null, null, null, null, null, null);
     String configId =
         configList.getResources().stream()
             .filter(c -> spec.configurationName().equals(c.getName()))
@@ -211,35 +169,33 @@ public class AICoreApiHandler implements EventHandler {
                       resourceGroupId);
                   return c.getId();
                 })
-            .orElseGet(() -> createConfiguration(service, resourceGroupId, spec));
+            .orElseGet(() -> createConfiguration(resourceGroupId, spec));
 
-    Retry retry = service.getRetry();
+    Retry retry = resolver.getRetry();
     return Retry.decorateSupplier(
             retry,
             () -> {
               var deployRequest = AiDeploymentCreationRequest.create().configurationId(configId);
-              var deployResponse = deploymentApi.create(resourceGroupId, deployRequest);
+              var deployResponse = clients.deploymentApi().create(resourceGroupId, deployRequest);
               String deploymentId = deployResponse.getId();
               logger.debug(
                   "Created deployment {} ({}) in resource group {}, polling for RUNNING",
                   deploymentId,
                   spec.configurationName(),
                   resourceGroupId);
-              return pollUntilRunning(service, resourceGroupId, deploymentId, cacheKey);
+              return pollUntilRunning(resourceGroupId, deploymentId);
             })
         .get();
   }
 
-  private String createConfiguration(
-      AICoreServiceImpl service, String resourceGroupId, ModelDeploymentSpec spec) {
-    ConfigurationApi configurationApi = service.getConfigurationApi();
+  private String createConfiguration(String resourceGroupId, ModelDeploymentSpec spec) {
     AiConfigurationBaseData configRequest =
         AiConfigurationBaseData.create()
             .name(spec.configurationName())
             .executableId(spec.executableId())
             .scenarioId(spec.scenarioId())
             .parameterBindings(spec.parameterBindings());
-    String configId = configurationApi.create(resourceGroupId, configRequest).getId();
+    String configId = clients.configurationApi().create(resourceGroupId, configRequest).getId();
     logger.debug(
         "Created configuration {} ({}) in resource group {}",
         configId,
@@ -248,21 +204,14 @@ public class AICoreApiHandler implements EventHandler {
     return configId;
   }
 
-  private String pollUntilRunning(
-      AICoreServiceImpl service,
-      String resourceGroupId,
-      String deploymentId,
-      String cacheKey) {
-    DeploymentApi deploymentApi = service.getDeploymentApi();
-    int maxRetries = service.getMaxRetries();
-    long initialDelayMs = service.getInitialDelayMs();
-
+  private String pollUntilRunning(String resourceGroupId, String deploymentId) {
     Retry pollRetry =
         Retry.of(
             "pollDeployment",
             RetryConfig.<AiDeploymentResponseWithDetails>custom()
-                .maxAttempts(maxRetries)
-                .intervalFunction(IntervalFunction.ofExponentialBackoff(initialDelayMs, 2.0))
+                .maxAttempts(config.maxRetries())
+                .intervalFunction(
+                    IntervalFunction.ofExponentialBackoff(config.initialDelayMs(), 2.0))
                 .retryOnResult(
                     deployment -> !AiDeploymentStatus.RUNNING.equals(deployment.getStatus()))
                 .retryOnException(e -> false)
@@ -272,34 +221,33 @@ public class AICoreApiHandler implements EventHandler {
         Retry.decorateSupplier(
                 pollRetry,
                 () -> {
-                  var current = deploymentApi.get(resourceGroupId, deploymentId);
+                  var current = clients.deploymentApi().get(resourceGroupId, deploymentId);
                   logger.debug("Deployment {} status: {}", deploymentId, current.getStatus());
                   return current;
                 })
             .get();
 
     if (AiDeploymentStatus.RUNNING.equals(result.getStatus())) {
-      service.getResourceGroupDeploymentCaffeineCache().put(cacheKey, deploymentId);
       return deploymentId;
     }
     logger.error(
         "Deployment {} in resource group {} did not reach RUNNING status after {} retries",
         deploymentId,
         resourceGroupId,
-        maxRetries);
+        config.maxRetries());
     throw new ServiceException(
         ErrorStatuses.GATEWAY_TIMEOUT, "AI model deployment is not available");
   }
 
   private AiDeploymentList queryDeploymentsUntilReady(
-      AICoreServiceImpl service, String resourceGroupId, ModelDeploymentSpec spec) {
-    DeploymentApi deploymentApi = service.getDeploymentApi();
-    Retry retry = service.getRetry();
+      String resourceGroupId, ModelDeploymentSpec spec) {
+    Retry retry = resolver.getRetry();
     return Retry.decorateSupplier(
             retry,
             () ->
-                deploymentApi.query(
-                    resourceGroupId, null, null, spec.scenarioId(), null, null, null, null))
+                clients
+                    .deploymentApi()
+                    .query(resourceGroupId, null, null, spec.scenarioId(), null, null, null, null))
         .get();
   }
 }

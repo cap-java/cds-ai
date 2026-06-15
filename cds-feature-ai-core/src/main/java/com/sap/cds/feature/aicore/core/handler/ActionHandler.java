@@ -3,14 +3,14 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.ai.sdk.core.client.DeploymentApi;
-import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
-import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.DeploymentsStopContext;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.util.Map;
@@ -22,11 +22,8 @@ public class ActionHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ActionHandler.class);
 
-  private final DeploymentApi deploymentApi;
-
-  public ActionHandler(DeploymentApi deploymentApi, ResourceGroupApi resourceGroupApi) {
-    super(resourceGroupApi);
-    this.deploymentApi = deploymentApi;
+  public ActionHandler(AICoreConfig config, AICoreClients clients) {
+    super(config, clients);
   }
 
   @On(entity = Deployments_.CDS_NAME)
@@ -37,7 +34,7 @@ public class ActionHandler extends AbstractCrudHandler {
 
     AiDeploymentModificationRequest modRequest =
         AiDeploymentModificationRequest.create().targetStatus(AiDeploymentTargetStatus.STOPPED);
-    deploymentApi.modify(resourceGroupId, deploymentId, modRequest);
+    clients.deploymentApi().modify(resourceGroupId, deploymentId, modRequest);
     logger.debug("Stopped deployment {} in resource group {}", deploymentId, resourceGroupId);
     context.setCompleted();
   }

@@ -3,8 +3,6 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.ai.sdk.core.client.DeploymentApi;
-import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.AiDeployment;
 import com.sap.ai.sdk.core.model.AiDeploymentCreationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
@@ -12,6 +10,8 @@ import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
@@ -40,11 +40,8 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DeploymentHandler.class);
 
-  private final DeploymentApi deploymentApi;
-
-  public DeploymentHandler(DeploymentApi deploymentApi, ResourceGroupApi resourceGroupApi) {
-    super(resourceGroupApi);
-    this.deploymentApi = deploymentApi;
+  public DeploymentHandler(AICoreConfig config, AICoreClients clients) {
+    super(config, clients);
   }
 
   @On(entity = Deployments_.CDS_NAME)
@@ -60,11 +57,11 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
     String id = (String) keys.get(Deployments.ID);
     if (id != null) {
-      AiDeploymentResponseWithDetails deployment = deploymentApi.get(resourceGroupId, id);
+      AiDeploymentResponseWithDetails deployment = clients.deploymentApi().get(resourceGroupId, id);
       context.setResult(List.of(toDeployments(deployment, resourceGroupId)));
     } else {
       AiDeploymentList result =
-          deploymentApi.query(resourceGroupId, null, null, null, null, null, null, null);
+          clients.deploymentApi().query(resourceGroupId, null, null, null, null, null, null, null);
       context.setResult(
           mapResources(result.getResources(), d -> toDeployments(d, resourceGroupId)));
     }
@@ -86,7 +83,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
         request.ttl(entry.getTtl());
       }
 
-      var response = deploymentApi.create(resourceGroupId, request);
+      var response = clients.deploymentApi().create(resourceGroupId, request);
       entry.setId(response.getId());
       entry.setStatus(response.getStatus().getValue());
       results.add(entry);
@@ -124,7 +121,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
       modRequest.configurationId(data.getConfigurationId());
     }
 
-    deploymentApi.modify(resourceGroupId, deploymentId, modRequest);
+    clients.deploymentApi().modify(resourceGroupId, deploymentId, modRequest);
     logger.debug("Updated deployment {} in resource group {}", deploymentId, resourceGroupId);
     context.setResult(List.of(data));
   }
@@ -140,7 +137,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     String resourceGroupId = resolveResourceGroup(context, keys);
     ensureResourceGroupAccessible(context, resourceGroupId);
 
-    deploymentApi.delete(resourceGroupId, deploymentId);
+    clients.deploymentApi().delete(resourceGroupId, deploymentId);
     logger.debug("Deleted deployment {} in resource group {}", deploymentId, resourceGroupId);
     context.setResult(List.of());
   }

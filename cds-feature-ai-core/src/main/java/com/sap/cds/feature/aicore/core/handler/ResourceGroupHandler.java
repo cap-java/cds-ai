@@ -3,7 +3,6 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupLabel;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
@@ -11,8 +10,8 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupPatchRequest;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.ql.cqn.AnalysisResult;
@@ -41,11 +40,8 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceGroupHandler.class);
 
-  private final ResourceGroupApi resourceGroupApi;
-
-  public ResourceGroupHandler(ResourceGroupApi resourceGroupApi) {
-    super(resourceGroupApi);
-    this.resourceGroupApi = resourceGroupApi;
+  public ResourceGroupHandler(AICoreConfig config, AICoreClients clients) {
+    super(config, clients);
   }
 
   @On(entity = ResourceGroups_.CDS_NAME)
@@ -63,13 +59,13 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     }
 
     if (resourceGroupId != null) {
-      BckndResourceGroup rg = resourceGroupApi.get(resourceGroupId);
+      BckndResourceGroup rg = clients.resourceGroupApi().get(resourceGroupId);
       ensureOwnedByCurrentTenant(context, rg);
       context.setResult(List.of(toMap(rg)));
     } else {
       List<String> labelSelector = buildTenantLabelSelector(context, values);
       BckndResourceGroupList result =
-          resourceGroupApi.getAll(null, null, null, null, null, null, labelSelector);
+          clients.resourceGroupApi().getAll(null, null, null, null, null, null, labelSelector);
       context.setResult(mapResources(result.getResources(), this::toMap));
     }
   }
@@ -92,13 +88,12 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
       // the auto-generated one based on the tenantId field.
       boolean userSuppliedTenantLabel =
           labels != null
-              && labels.stream()
-                  .anyMatch(l -> AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.get("key")));
+              && labels.stream().anyMatch(l -> AICoreConfig.TENANT_LABEL_KEY.equals(l.get("key")));
 
       if (entry.getTenantId() != null && !userSuppliedTenantLabel) {
         mergedLabels.add(
             BckndResourceGroupLabel.create()
-                .key(AICoreServiceImpl.TENANT_LABEL_KEY)
+                .key(AICoreConfig.TENANT_LABEL_KEY)
                 .value(entry.getTenantId()));
       }
 
@@ -110,7 +105,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
         request.labels(mergedLabels);
       }
 
-      resourceGroupApi.create(request);
+      clients.resourceGroupApi().create(request);
       logger.debug("Created resource group {}", resourceGroupId);
       results.add(entry);
     }
@@ -125,7 +120,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analyzer.analyze(update).targetKeys();
 
     String resourceGroupId = resolveResourceGroupId(context, keys);
-    ensureOwnedByCurrentTenant(context, resourceGroupApi.get(resourceGroupId));
+    ensureOwnedByCurrentTenant(context, clients.resourceGroupApi().get(resourceGroupId));
 
     Map<String, Object> data = update.entries().get(0);
     BckndResourceGroupPatchRequest patchRequest = BckndResourceGroupPatchRequest.create();
@@ -136,7 +131,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
       patchRequest.labels(toSdkLabels(labels));
     }
 
-    resourceGroupApi.patch(resourceGroupId, patchRequest);
+    clients.resourceGroupApi().patch(resourceGroupId, patchRequest);
     logger.debug("Updated resource group {}", resourceGroupId);
     context.setResult(List.of(CdsData.create(data)));
   }
@@ -149,9 +144,9 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     Map<String, Object> keys = analyzer.analyze(delete).targetKeys();
 
     String resourceGroupId = resolveResourceGroupId(context, keys);
-    ensureOwnedByCurrentTenant(context, resourceGroupApi.get(resourceGroupId));
+    ensureOwnedByCurrentTenant(context, clients.resourceGroupApi().get(resourceGroupId));
 
-    resourceGroupApi.delete(resourceGroupId);
+    clients.resourceGroupApi().delete(resourceGroupId);
     logger.debug("Deleted resource group {}", resourceGroupId);
     context.setResult(List.of());
   }
@@ -160,11 +155,11 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     if (keys.containsKey(ResourceGroups.RESOURCE_GROUP_ID)) {
       return (String) keys.get(ResourceGroups.RESOURCE_GROUP_ID);
     }
-    AbstractAICoreService svc = getService(context);
     if (keys.containsKey(ResourceGroups.TENANT_ID)) {
-      return svc.resourceGroupForTenant((String) keys.get(ResourceGroups.TENANT_ID));
+      return ((AICoreService) context.getService())
+          .resourceGroupForTenant((String) keys.get(ResourceGroups.TENANT_ID));
     }
-    return svc.resourceGroup();
+    return ((AICoreService) context.getService()).resourceGroup();
   }
 
   /**
@@ -175,14 +170,13 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
     // If a specific tenantId is requested in the query, use that
     if (values.containsKey(ResourceGroups.TENANT_ID)) {
       String tenantId = (String) values.get(ResourceGroups.TENANT_ID);
-      return List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + tenantId);
+      return List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + tenantId);
     }
     // In MT mode, restrict non-provider users to their own tenant
-    AbstractAICoreService svc = getService(context);
-    if (svc.isMultiTenancyEnabled() && !svc.isProviderUser()) {
-      String currentTenant = svc.currentTenantId();
+    if (config.multiTenancyEnabled() && !isProviderUser(context)) {
+      String currentTenant = context.getUserInfo().getTenant();
       if (currentTenant != null) {
-        return List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + currentTenant);
+        return List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + currentTenant);
       }
     }
     return null;
@@ -194,14 +188,13 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
    * different tenant.
    */
   private void ensureOwnedByCurrentTenant(EventContext context, BckndResourceGroup rg) {
-    AbstractAICoreService svc = getService(context);
-    if (svc.isProviderUser()) {
+    if (isProviderUser(context)) {
       return;
     }
-    if (!svc.isMultiTenancyEnabled()) {
+    if (!config.multiTenancyEnabled()) {
       return;
     }
-    String currentTenant = svc.currentTenantId();
+    String currentTenant = context.getUserInfo().getTenant();
     if (currentTenant == null) {
       return;
     }
@@ -209,7 +202,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
         && rg.getLabels().stream()
             .anyMatch(
                 l ->
-                    AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.getKey())
+                    AICoreConfig.TENANT_LABEL_KEY.equals(l.getKey())
                         && currentTenant.equals(l.getValue()))) {
       return;
     }
@@ -239,7 +232,7 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
         lm.setKey(l.getKey());
         lm.setValue(l.getValue());
         labels.add(lm);
-        if (AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.getKey())) {
+        if (AICoreConfig.TENANT_LABEL_KEY.equals(l.getKey())) {
           data.setTenantId(l.getValue());
         }
       }
