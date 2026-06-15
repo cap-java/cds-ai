@@ -51,6 +51,17 @@ public interface AICoreService extends RemoteService {
   String resourceGroup();
 
   /**
+   * Returns the AI Core resource group ID associated with the given tenant.
+   *
+   * <p>This variant is used during subscribe/unsubscribe flows where the tenant ID is explicitly
+   * available from the context rather than the current request.
+   *
+   * @param tenantId the CDS tenant identifier
+   * @return the AI Core resource group ID for the specified tenant
+   */
+  String resourceGroupForTenant(String tenantId);
+
+  /**
    * Returns the deployment ID for the given model spec inside the given resource group.
    *
    * <p>Looks up an existing RUNNING/PENDING deployment that matches the spec, otherwise creates a
