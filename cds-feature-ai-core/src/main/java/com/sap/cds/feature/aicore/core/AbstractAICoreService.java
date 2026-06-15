@@ -4,10 +4,10 @@
 package com.sap.cds.feature.aicore.core;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.services.impl.cds.AbstractCdsDefinedService;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
-import com.sap.cds.services.utils.services.AbstractCqnService;
 import io.github.resilience4j.retry.Retry;
 import java.util.Map;
 
@@ -16,10 +16,14 @@ import java.util.Map;
  * cache access, configuration, and resource group resolution. These methods are not part of the
  * public {@link AICoreService} contract but are shared between the real and mock implementations.
  */
-public abstract class AbstractAICoreService extends AbstractCqnService implements AICoreService {
+public abstract class AbstractAICoreService extends AbstractCdsDefinedService
+    implements AICoreService {
+
+  /** The qualified CDS service definition name. */
+  private static final String CDS_DEFINITION_NAME = "AICore";
 
   protected AbstractAICoreService(String name, CdsRuntime runtime) {
-    super(name, runtime);
+    super(name, CDS_DEFINITION_NAME, runtime);
   }
 
   /** Returns the {@link CdsRuntime} that this service was created with. */

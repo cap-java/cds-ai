@@ -2,10 +2,7 @@ using {itest} from '../db/schema';
 using { AICore } from 'com.sap.cds/ai';
 
 service TestService {
-  entity Products       as projection on itest.Products;
-  entity Configurations as projection on AICore.configurations;
-  entity Deployments    as projection on AICore.deployments;
-  entity ResourceGroups as projection on AICore.resourceGroups;
+  entity Products as projection on itest.Products;
 }
 
 service RecommendationTestService @(requires: 'any') {
