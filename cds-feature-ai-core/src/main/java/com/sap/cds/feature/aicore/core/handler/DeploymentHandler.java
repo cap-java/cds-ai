@@ -12,6 +12,7 @@ import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
@@ -40,8 +41,9 @@ public class DeploymentHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DeploymentHandler.class);
 
-  public DeploymentHandler(AICoreConfig config, AICoreClients clients) {
-    super(config, clients);
+  public DeploymentHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    super(config, clients, resolver);
   }
 
   @On(entity = Deployments_.CDS_NAME)

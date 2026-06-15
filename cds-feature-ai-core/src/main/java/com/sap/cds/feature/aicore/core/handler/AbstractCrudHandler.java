@@ -4,9 +4,9 @@
 package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
@@ -21,15 +21,18 @@ abstract class AbstractCrudHandler implements EventHandler {
 
   protected final AICoreConfig config;
   protected final AICoreClients clients;
+  protected final DeploymentResolver resolver;
 
-  protected AbstractCrudHandler(AICoreConfig config, AICoreClients clients) {
+  protected AbstractCrudHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
     this.config = config;
     this.clients = clients;
+    this.resolver = resolver;
   }
 
   /**
    * Resolves the resource group ID from CQN keys. Checks for an explicit resource-group reference
-   * in the keys before falling back to the current tenant's default resource group via the service.
+   * in the keys before falling back to tenant-based resolution via the {@link DeploymentResolver}.
    */
   protected String resolveResourceGroup(EventContext context, Map<String, Object> keys) {
     if (keys.containsKey("resourceGroup_resourceGroupId")) {
@@ -39,8 +42,7 @@ abstract class AbstractCrudHandler implements EventHandler {
     if (rgObj instanceof Map<?, ?> rgMap && rgMap.containsKey("resourceGroupId")) {
       return (String) rgMap.get("resourceGroupId");
     }
-    // Fall back to the service's resource-group resolution for the current tenant
-    return ((AICoreService) context.getService()).resourceGroup();
+    return resolver.resolveResourceGroup(context.getUserInfo().getTenant());
   }
 
   /**

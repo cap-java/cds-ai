@@ -93,7 +93,7 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
 
       this.clients =
           new AICoreClients(deploymentApi, configurationApi, resourceGroupApi, sdkService);
-      this.resolver = new DeploymentResolver(config, deploymentApi);
+      this.resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
       logger.info("Registered AICoreService backed by AI Core binding.");
     } else {
       logger.info(
@@ -112,10 +112,10 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
     if (clients != null) {
       // Production path: real AI Core binding
       configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
-      configurer.eventHandler(new ResourceGroupHandler(config, clients));
-      configurer.eventHandler(new DeploymentHandler(config, clients));
-      configurer.eventHandler(new ConfigurationHandler(config, clients));
-      configurer.eventHandler(new ActionHandler(config, clients));
+      configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
+      configurer.eventHandler(new DeploymentHandler(config, clients, resolver));
+      configurer.eventHandler(new ConfigurationHandler(config, clients, resolver));
+      configurer.eventHandler(new ActionHandler(config, clients, resolver));
       logger.debug("Registered production AI Core event handlers.");
 
       if (config.multiTenancyEnabled()) {
@@ -124,12 +124,13 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
       }
     } else {
       // Mock path: no AI Core binding
+      MockAICoreApiHandler mockApiHandler = new MockAICoreApiHandler(config);
       configurer.eventHandler(new MockEntityHandler());
-      configurer.eventHandler(new MockAICoreApiHandler(config));
+      configurer.eventHandler(mockApiHandler);
       logger.debug("Registered mock AI Core event handlers.");
 
       if (config.multiTenancyEnabled()) {
-        configurer.eventHandler(new MockAICoreSetupHandler(config));
+        configurer.eventHandler(new MockAICoreSetupHandler(mockApiHandler));
         logger.debug("Registered mock AI Core setup handler for MTX subscribe/unsubscribe.");
       }
     }

@@ -12,6 +12,7 @@ import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.ql.cqn.AnalysisResult;
@@ -40,8 +41,9 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceGroupHandler.class);
 
-  public ResourceGroupHandler(AICoreConfig config, AICoreClients clients) {
-    super(config, clients);
+  public ResourceGroupHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    super(config, clients, resolver);
   }
 
   @On(entity = ResourceGroups_.CDS_NAME)
@@ -156,10 +158,9 @@ public class ResourceGroupHandler extends AbstractCrudHandler {
       return (String) keys.get(ResourceGroups.RESOURCE_GROUP_ID);
     }
     if (keys.containsKey(ResourceGroups.TENANT_ID)) {
-      return ((AICoreService) context.getService())
-          .resourceGroupForTenant((String) keys.get(ResourceGroups.TENANT_ID));
+      return resolver.resolveResourceGroup((String) keys.get(ResourceGroups.TENANT_ID));
     }
-    return ((AICoreService) context.getService()).resourceGroup();
+    return resolver.resolveResourceGroup(context.getUserInfo().getTenant());
   }
 
   /**

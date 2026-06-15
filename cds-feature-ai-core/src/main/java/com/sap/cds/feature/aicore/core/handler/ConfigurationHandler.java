@@ -10,6 +10,7 @@ import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ArtifactArgumentBinding;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
@@ -36,8 +37,9 @@ public class ConfigurationHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurationHandler.class);
 
-  public ConfigurationHandler(AICoreConfig config, AICoreClients clients) {
-    super(config, clients);
+  public ConfigurationHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    super(config, clients, resolver);
   }
 
   @On(entity = Configurations_.CDS_NAME)
