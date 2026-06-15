@@ -9,6 +9,8 @@ import com.sap.cds.feature.aicore.api.InferenceClientContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.services.ErrorStatuses;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -62,8 +64,9 @@ public class MockAICoreApiHandler implements EventHandler {
 
   @On
   public void onInferenceClient(InferenceClientContext context) {
-    throw new UnsupportedOperationException(
-        "Mock AI Core does not provide an inference client; tests should stub inference.");
+    throw new ServiceException(
+        ErrorStatuses.NOT_IMPLEMENTED,
+        "Inference client is not available without an AI Core service binding");
   }
 
   /** Returns the mock tenant cache for test inspection. */

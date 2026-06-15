@@ -3,10 +3,11 @@
  */
 package com.sap.cds.feature.aicore.core;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.core.handler.MockAICoreApiHandler;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
+import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.mt.DeploymentService;
 import com.sap.cds.services.mt.SubscribeEventContext;
@@ -19,33 +20,26 @@ public class MockAICoreSetupHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockAICoreSetupHandler.class);
 
-  private final AICoreConfig config;
+  private final MockAICoreApiHandler mockHandler;
 
-  public MockAICoreSetupHandler(AICoreConfig config) {
-    this.config = config;
+  public MockAICoreSetupHandler(MockAICoreApiHandler mockHandler) {
+    this.mockHandler = mockHandler;
   }
 
   @After(event = DeploymentService.EVENT_SUBSCRIBE)
+  @HandlerOrder(HandlerOrder.LATE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
-    // In mock mode, resourceGroupForTenant is handled by MockAICoreApiHandler's cache;
-    // just emit on the service to trigger it.
-    AICoreService service =
-        context
-            .getCdsRuntime()
-            .getServiceCatalog()
-            .getService(AICoreService.class, AICoreService.DEFAULT_NAME);
-    String resourceGroupId = service.resourceGroupForTenant(tenantId);
-    logger.info(
-        "Mock created in-memory resource group {} for tenant {}", resourceGroupId, tenantId);
+    // Trigger resource group creation in mock cache
+    mockHandler.getTenantResourceGroupCache().computeIfAbsent(tenantId, id -> "cds-" + id);
+    logger.info("Mock created in-memory resource group for tenant {}", tenantId);
   }
 
   @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
+  @HandlerOrder(HandlerOrder.EARLY)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
-    // Find the MockAICoreApiHandler to clear its cache.
-    // In mock mode, this is the simplest way to clean up in-memory state.
-    // The handler's cache is tenant-scoped so clearing one tenant is cheap.
+    mockHandler.clearTenantCache(tenantId);
     logger.info("Mock cleared in-memory caches for tenant {}", tenantId);
   }
 }

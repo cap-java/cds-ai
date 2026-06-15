@@ -10,6 +10,7 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
+import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.mt.DeploymentService;
 import com.sap.cds.services.mt.SubscribeEventContext;
@@ -33,13 +34,13 @@ public class AICoreSetupHandler implements EventHandler {
   }
 
   @After(event = DeploymentService.EVENT_SUBSCRIBE)
+  @HandlerOrder(HandlerOrder.LATE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
     logger.debug("Creating AI Core resources for tenant {}", tenantId);
     try {
-      String resourceGroupId =
-          resolver.resolveResourceGroup(tenantId, this::findOrCreateResourceGroup);
-      logger.info("Created AI Core resource group {} for tenant {}", resourceGroupId, tenantId);
+      String resourceGroupId = resolver.resolveResourceGroup(tenantId);
+      logger.info("Ensured AI Core resource group {} for tenant {}", resourceGroupId, tenantId);
     } catch (Exception e) {
       throw new ServiceException(
           ErrorStatuses.SERVER_ERROR,
@@ -50,6 +51,7 @@ public class AICoreSetupHandler implements EventHandler {
   }
 
   @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
+  @HandlerOrder(HandlerOrder.EARLY)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
     logger.debug("Deleting AI Core resources for tenant {}", tenantId);
@@ -59,22 +61,6 @@ public class AICoreSetupHandler implements EventHandler {
       // Always evict cache entries so a retry won't reuse stale state.
       resolver.invalidateTenant(tenantId);
     }
-  }
-
-  private String findOrCreateResourceGroup(String tenantId) {
-    List<String> labelSelector = List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + tenantId);
-    BckndResourceGroupList result =
-        clients.resourceGroupApi().getAll(null, null, null, null, null, null, labelSelector);
-    List<BckndResourceGroup> resources = result.getResources();
-    if (resources != null && !resources.isEmpty()) {
-      return resources.get(0).getResourceGroupId();
-    }
-    // This should not normally happen during subscribe (AICoreApiHandler creates it),
-    // but handle gracefully.
-    throw new ServiceException(
-        ErrorStatuses.SERVER_ERROR,
-        "Resource group not found for tenant {} during subscribe",
-        tenantId);
   }
 
   private void deleteResourceGroupForTenant(String tenantId) {
