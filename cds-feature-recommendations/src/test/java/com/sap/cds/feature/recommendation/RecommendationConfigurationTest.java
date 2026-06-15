@@ -7,8 +7,10 @@ import static org.mockito.Mockito.*;
 
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.services.ServiceCatalog;
+import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -20,12 +22,15 @@ class RecommendationConfigurationTest {
   @Mock private CdsRuntimeConfigurer configurer;
   @Mock private CdsRuntime runtime;
   @Mock private ServiceCatalog serviceCatalog;
+  @Mock private CdsEnvironment environment;
   @Mock private AICoreService aiCoreService;
 
   @Test
   void aiCoreServiceFound_registersHandler() {
     when(configurer.getCdsRuntime()).thenReturn(runtime);
     when(runtime.getServiceCatalog()).thenReturn(serviceCatalog);
+    when(runtime.getEnvironment()).thenReturn(environment);
+    when(environment.getServiceBindings()).thenReturn(Stream.empty());
     when(serviceCatalog.getService(AICoreService.class, AICoreService.DEFAULT_NAME))
         .thenReturn(aiCoreService);
 
