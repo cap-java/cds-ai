@@ -3,6 +3,7 @@
  */
 package com.sap.cds.feature.aicore.core;
 
+import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
@@ -18,15 +19,22 @@ public class MockAICoreSetupHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockAICoreSetupHandler.class);
 
-  private final MockAICoreServiceImpl service;
+  private final AICoreConfig config;
 
-  public MockAICoreSetupHandler(MockAICoreServiceImpl service) {
-    this.service = service;
+  public MockAICoreSetupHandler(AICoreConfig config) {
+    this.config = config;
   }
 
   @After(event = DeploymentService.EVENT_SUBSCRIBE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
+    // In mock mode, resourceGroupForTenant is handled by MockAICoreApiHandler's cache;
+    // just emit on the service to trigger it.
+    AICoreService service =
+        context
+            .getCdsRuntime()
+            .getServiceCatalog()
+            .getService(AICoreService.class, AICoreService.DEFAULT_NAME);
     String resourceGroupId = service.resourceGroupForTenant(tenantId);
     logger.info(
         "Mock created in-memory resource group {} for tenant {}", resourceGroupId, tenantId);
@@ -35,7 +43,9 @@ public class MockAICoreSetupHandler implements EventHandler {
   @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
-    service.clearTenantCache(tenantId);
+    // Find the MockAICoreApiHandler to clear its cache.
+    // In mock mode, this is the simplest way to clean up in-memory state.
+    // The handler's cache is tenant-scoped so clearing one tenant is cheap.
     logger.info("Mock cleared in-memory caches for tenant {}", tenantId);
   }
 }

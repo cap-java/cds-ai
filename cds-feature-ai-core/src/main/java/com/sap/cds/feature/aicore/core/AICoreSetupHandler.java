@@ -3,7 +3,6 @@
  */
 package com.sap.cds.feature.aicore.core;
 
-import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.cds.services.ErrorStatuses;
@@ -25,10 +24,12 @@ public class AICoreSetupHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreSetupHandler.class);
 
-  private final AICoreServiceImpl service;
+  private final AICoreClients clients;
+  private final DeploymentResolver resolver;
 
-  public AICoreSetupHandler(AICoreServiceImpl service) {
-    this.service = service;
+  public AICoreSetupHandler(AICoreClients clients, DeploymentResolver resolver) {
+    this.clients = clients;
+    this.resolver = resolver;
   }
 
   @After(event = DeploymentService.EVENT_SUBSCRIBE)
@@ -36,7 +37,8 @@ public class AICoreSetupHandler implements EventHandler {
     String tenantId = context.getTenant();
     logger.debug("Creating AI Core resources for tenant {}", tenantId);
     try {
-      String resourceGroupId = service.resourceGroupForTenant(tenantId);
+      String resourceGroupId =
+          resolver.resolveResourceGroup(tenantId, this::findOrCreateResourceGroup);
       logger.info("Created AI Core resource group {} for tenant {}", resourceGroupId, tenantId);
     } catch (Exception e) {
       throw new ServiceException(
@@ -55,8 +57,24 @@ public class AICoreSetupHandler implements EventHandler {
       deleteResourceGroupForTenant(tenantId);
     } finally {
       // Always evict cache entries so a retry won't reuse stale state.
-      service.clearTenantCache(tenantId);
+      resolver.invalidateTenant(tenantId);
     }
+  }
+
+  private String findOrCreateResourceGroup(String tenantId) {
+    List<String> labelSelector = List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + tenantId);
+    BckndResourceGroupList result =
+        clients.resourceGroupApi().getAll(null, null, null, null, null, null, labelSelector);
+    List<BckndResourceGroup> resources = result.getResources();
+    if (resources != null && !resources.isEmpty()) {
+      return resources.get(0).getResourceGroupId();
+    }
+    // This should not normally happen during subscribe (AICoreApiHandler creates it),
+    // but handle gracefully.
+    throw new ServiceException(
+        ErrorStatuses.SERVER_ERROR,
+        "Resource group not found for tenant {} during subscribe",
+        tenantId);
   }
 
   private void deleteResourceGroupForTenant(String tenantId) {
@@ -68,7 +86,7 @@ public class AICoreSetupHandler implements EventHandler {
       return;
     }
     try {
-      service.getResourceGroupApi().delete(resourceGroupId);
+      clients.resourceGroupApi().delete(resourceGroupId);
       logger.info("Deleted AI Core resource group {} for tenant {}", resourceGroupId, tenantId);
     } catch (OpenApiRequestException e) {
       if (e.statusCode() != null && e.statusCode() == 404) {
@@ -92,17 +110,16 @@ public class AICoreSetupHandler implements EventHandler {
    * Core API filtered by the tenant label. Returns {@code null} if no resource group is found.
    */
   private String resolveResourceGroupId(String tenantId) {
-    String cached = service.getTenantResourceGroupCache().get(tenantId);
+    String cached = resolver.getTenantResourceGroupCacheView().get(tenantId);
     if (cached != null) {
       return cached;
     }
     logger.debug(
         "No cached resource group for tenant {}, falling back to AI Core lookup", tenantId);
-    ResourceGroupApi api = service.getResourceGroupApi();
-    List<String> labelSelector = List.of(AICoreServiceImpl.TENANT_LABEL_KEY + "=" + tenantId);
+    List<String> labelSelector = List.of(AICoreConfig.TENANT_LABEL_KEY + "=" + tenantId);
     BckndResourceGroupList result;
     try {
-      result = api.getAll(null, null, null, null, null, null, labelSelector);
+      result = clients.resourceGroupApi().getAll(null, null, null, null, null, null, labelSelector);
     } catch (OpenApiRequestException e) {
       throw new ServiceException(
           ErrorStatuses.SERVER_ERROR,
