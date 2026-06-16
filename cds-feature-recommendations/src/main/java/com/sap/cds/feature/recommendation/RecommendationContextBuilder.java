@@ -147,9 +147,10 @@ class RecommendationContextBuilder {
   private List<String> computeContextColumns() {
     return rowType
         .concreteNonAssociationElements()
-        .filter(e -> e.getType().isSimple())
         .filter(
-            e -> SUPPORTED_CONTEXT_TYPES.contains(e.getType().as(CdsSimpleType.class).getType()))
+            e ->
+                e.getType() instanceof CdsSimpleType st
+                    && SUPPORTED_CONTEXT_TYPES.contains(st.getType()))
         .filter(e -> !Drafts.ELEMENTS.contains(e.getName()))
         .filter(byAnnotation(COMPUTED_ANNOTATION).negate())
         .filter(byAnnotation(READONLY_ANNOTATION).negate())
