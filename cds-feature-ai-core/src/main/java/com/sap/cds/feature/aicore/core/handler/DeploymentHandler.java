@@ -69,7 +69,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     }
   }
 
-  @On(entity = Deployments_.CDS_NAME)
+  @On
   public void onCreate(CdsCreateEventContext context, List<Deployments> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
@@ -94,7 +94,7 @@ public class DeploymentHandler extends AbstractCrudHandler {
     context.setResult(results);
   }
 
-  @On(entity = Deployments_.CDS_NAME)
+  @On
   public void onUpdate(CdsUpdateEventContext context, List<Deployments> entries) {
     if (entries.isEmpty()) {
       throw new ServiceException(ErrorStatuses.BAD_REQUEST, "No update payload provided");

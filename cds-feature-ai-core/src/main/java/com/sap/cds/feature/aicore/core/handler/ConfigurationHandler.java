@@ -75,7 +75,7 @@ public class ConfigurationHandler extends AbstractCrudHandler {
     }
   }
 
-  @On(entity = Configurations_.CDS_NAME)
+  @On
   public void onCreate(CdsCreateEventContext context, List<Configurations> entries) {
     List<Map<String, Object>> results = new ArrayList<>();
 
