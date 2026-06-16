@@ -103,7 +103,7 @@ class FioriRecommendationHandler implements EventHandler {
     }
 
     if (builder.contextColumns().isEmpty()) {
-      logger.debug("No suitable context columns found, skipping predictions.");
+      logger.trace("No suitable context columns found, skipping predictions.");
       return;
     }
 
