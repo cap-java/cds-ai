@@ -93,8 +93,9 @@ public class RptInferenceClient implements RecommendationClient {
     return (keyNames.size() == 1 && "ID".equals(keyNames.get(0))) ? "ID" : SYNTHETIC_INDEX_COLUMN;
   }
 
-  // Compute the synthetic key as a concatenated string from the keys listed in keyNames
-  private static String computeSyntheticKey(Map<String, Object> row, List<String> keyNames) {
+  // '\0' is used as separator because it cannot appear in database string values
+  // (VARCHAR/NVARCHAR), so concatenation of any composite key values is guaranteed collision-free.
+  static String computeSyntheticKey(Map<String, Object> row, List<String> keyNames) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < keyNames.size(); i++) {
       if (i > 0) sb.append('\0');
