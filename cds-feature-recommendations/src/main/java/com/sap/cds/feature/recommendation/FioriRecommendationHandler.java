@@ -111,15 +111,16 @@ class FioriRecommendationHandler implements EventHandler {
         context
             .getServiceCatalog()
             .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
-    List<CdsData> contextRows = new ArrayList<>(db.run(builder.buildContextQuery()).list());
-    if (contextRows.size() < 2) {
-      logger.debug("Not enough context rows (minimum 2), skipping predictions.");
-      return;
-    }
 
     CdsData predictRow = builder.buildPredictRow(row);
     if (predictRow == null) {
       logger.debug("Current row already has values for all prediction columns, skipping.");
+      return;
+    }
+
+    List<CdsData> contextRows = new ArrayList<>(db.run(builder.buildContextQuery()).list());
+    if (contextRows.size() < 2) {
+      logger.debug("Not enough context rows (minimum 2), skipping predictions.");
       return;
     }
 
