@@ -117,11 +117,10 @@ public class RptInferenceClient implements RecommendationClient {
     }
   }
 
-  // Returns a copy of the predictRow without the fields in Drafts.ELEMENTS and with a
-  // prediction placeholder for empty values in the predictinonColumns
+  // Returns a copy of the predictRow with a prediction placeholder replacing empty values
+  // in the predictionColumns - these will get filled by the predict method.
   private static CdsData preparePredictRow(CdsData predictRow, List<String> predictionColumns) {
     Map<String, Object> preparedPredictRowMap = new HashMap<>(predictRow);
-    // Drafts.ELEMENTS.forEach(preparedPredictRowMap::remove);
     for (String col : predictionColumns) {
       preparedPredictRowMap.putIfAbsent(col, PREDICT);
     }
