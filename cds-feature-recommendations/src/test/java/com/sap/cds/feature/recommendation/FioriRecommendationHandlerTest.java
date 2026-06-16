@@ -204,6 +204,23 @@ class FioriRecommendationHandlerTest {
   }
 
   @Test
+  void contextQuery_excludesPredictionRowByRequiringNonNullPredictionColumns() {
+    runIn(
+        () -> {
+          Map<String, Object> row = draftRow("genre_ID", null);
+          CdsReadEventContext ctx = readContext("test.Books", List.of(row));
+          ArgumentCaptor<CqnSelect> selectCaptor = ArgumentCaptor.forClass(CqnSelect.class);
+          when(db.run(selectCaptor.capture())).thenReturn(twoContextRows());
+          cut.afterRead(ctx, dataList(row));
+          // The WHERE clause requires all prediction columns to be non-null, so the current row
+          // (which has genre_ID = null) is automatically excluded from the context.
+          String selectSql = selectCaptor.getAllValues().get(0).toString();
+          assertThat(selectSql).contains("\"is not\",\"null\"");
+          assertThat(selectSql).contains("genre_ID");
+        });
+  }
+
+  @Test
   void blobAndVectorFields_areExcludedFromContextSelect() {
     runIn(
         () -> {

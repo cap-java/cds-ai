@@ -97,6 +97,8 @@ class RecommendationContextBuilder {
             .columns(selectColumns.toArray(String[]::new))
             .where(
                 predictionElementNames.stream()
+                    // the row for which we want to do predictions is automatically
+                    // excluded by this isNotNull check
                     .map(col -> CQL.get(col).isNotNull())
                     .collect(CQL.withAnd()))
             .limit(contextRowLimit);
