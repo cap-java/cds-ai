@@ -118,6 +118,7 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
+    // Result.list() returns List<Row>; the ArrayList copy also converts it to List<CdsData>.
     List<CdsData> contextRows = new ArrayList<>(db.run(builder.buildContextQuery()).list());
     if (contextRows.size() < 2) {
       logger.debug("Not enough context rows (minimum 2), skipping predictions.");
