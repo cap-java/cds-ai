@@ -52,10 +52,10 @@ public class RptInferenceClient implements RecommendationClient {
 
   private static final Retry INFERENCE_RETRY = buildInferenceRetry();
 
-  private final DefaultApi api;
+  private final DefaultApi rpt;
 
   public RptInferenceClient(ApiClient apiClient) {
-    this.api =
+    this.rpt =
         new DefaultApi(apiClient.withObjectMapper(JacksonConfiguration.getDefaultObjectMapper()));
   }
 
@@ -79,7 +79,7 @@ public class RptInferenceClient implements RecommendationClient {
     return Retry.decorateSupplier(
             INFERENCE_RETRY,
             () -> {
-              var response = api.predict(request);
+              var response = rpt.predict(request);
               logger.debug("Prediction response id: {}", response.getId());
               List<Map<String, Object>> raw =
                   JacksonConfiguration.getDefaultObjectMapper()
@@ -140,32 +140,28 @@ public class RptInferenceClient implements RecommendationClient {
                         .taskType(TargetColumnConfig.TaskTypeEnum.CLASSIFICATION))
             .toList();
 
-    var sdkRows =
-        rows.stream()
-            .map(
-                row -> {
-                  Map<String, RowsInnerValue> sdkRow = new HashMap<>();
-                  row.forEach(
-                      (k, v) -> {
-                        if (v != null
-                            && !Drafts.ELEMENTS.contains(k)
-                            && !MANAGED_FIELDS.contains(k)) {
-                          sdkRow.put(k, RowsInnerValue.create(v.toString()));
-                        }
-                      });
-                  for (String target : predictionColumns) {
-                    if (!row.containsKey(target) || row.get(target) == null) {
-                      sdkRow.put(target, RowsInnerValue.create(PREDICT));
-                    }
-                  }
-                  return sdkRow;
-                })
-            .toList();
+    var sdkRows = rows.stream().map(row -> toSdkRow(row, predictionColumns)).toList();
 
     return PredictRequestPayload.create()
         .predictionConfig(PredictionConfig.create().targetColumns(targetColumns))
         .rows(sdkRows)
         .indexColumn(indexColumn);
+  }
+
+  private static Map<String, RowsInnerValue> toSdkRow(CdsData row, List<String> predictionColumns) {
+    Map<String, RowsInnerValue> sdkRow = new HashMap<>();
+    row.forEach(
+        (k, v) -> {
+          if (v != null && !Drafts.ELEMENTS.contains(k) && !MANAGED_FIELDS.contains(k)) {
+            sdkRow.put(k, RowsInnerValue.create(v.toString()));
+          }
+        });
+    for (String target : predictionColumns) {
+      if (!row.containsKey(target) || row.get(target) == null) {
+        sdkRow.put(target, RowsInnerValue.create(PREDICT));
+      }
+    }
+    return sdkRow;
   }
 
   private static Retry buildInferenceRetry() {
