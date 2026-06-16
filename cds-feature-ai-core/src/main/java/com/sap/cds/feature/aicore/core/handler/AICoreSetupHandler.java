@@ -1,10 +1,13 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.aicore.core;
+package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
@@ -33,7 +36,7 @@ public class AICoreSetupHandler implements EventHandler {
     this.resolver = resolver;
   }
 
-  @After(event = DeploymentService.EVENT_SUBSCRIBE)
+  @After
   @HandlerOrder(HandlerOrder.LATE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
@@ -50,7 +53,7 @@ public class AICoreSetupHandler implements EventHandler {
     }
   }
 
-  @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
+  @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
