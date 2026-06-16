@@ -12,7 +12,6 @@ import com.sap.ai.sdk.foundationmodels.rpt.generated.model.PredictionPlaceholder
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.RowsInnerValue;
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.TargetColumnConfig;
 import com.sap.cds.CdsData;
-import com.sap.cds.services.draft.Drafts;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import io.github.resilience4j.core.IntervalFunction;
@@ -21,7 +20,6 @@ import io.github.resilience4j.retry.RetryConfig;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +44,6 @@ public class RptInferenceClient implements RecommendationClient {
 
   // RPT-1 specific: the placeholder value that marks a column as a prediction target in the request
   public static final String PREDICT = "[PREDICT]";
-
-  private static final Set<String> MANAGED_FIELDS =
-      Set.of("createdBy", "modifiedBy", "createdAt", "modifiedAt");
 
   private static final Retry INFERENCE_RETRY = buildInferenceRetry();
 
@@ -139,7 +134,7 @@ public class RptInferenceClient implements RecommendationClient {
                         .taskType(TargetColumnConfig.TaskTypeEnum.CLASSIFICATION))
             .toList();
 
-    var sdkRows = rows.stream().map(row -> toSdkRow(row, predictionColumns)).toList();
+    var sdkRows = rows.stream().map(row -> toSdkRow(row)).toList();
 
     return PredictRequestPayload.create()
         .predictionConfig(PredictionConfig.create().targetColumns(targetColumns))
@@ -147,19 +142,15 @@ public class RptInferenceClient implements RecommendationClient {
         .indexColumn(indexColumn);
   }
 
-  private static Map<String, RowsInnerValue> toSdkRow(CdsData row, List<String> predictionColumns) {
+  // Converts a CdsData row to the RPT SDK row format, i.e., into Map<String, RowsInnerValue>
+  private static Map<String, RowsInnerValue> toSdkRow(CdsData row) {
     Map<String, RowsInnerValue> sdkRow = new HashMap<>();
     row.forEach(
         (k, v) -> {
-          if (v != null && !Drafts.ELEMENTS.contains(k) && !MANAGED_FIELDS.contains(k)) {
+          if (v != null) {
             sdkRow.put(k, RowsInnerValue.create(v.toString()));
           }
         });
-    for (String target : predictionColumns) {
-      if (!row.containsKey(target) || row.get(target) == null) {
-        sdkRow.put(target, RowsInnerValue.create(PREDICT));
-      }
-    }
     return sdkRow;
   }
 

@@ -17,6 +17,7 @@ import com.sap.cds.services.draft.Drafts;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,8 @@ class RecommendationContextBuilder {
   private static final String VALUE_LIST_ANNOTATION = "@Common.ValueList";
   private static final String VALUE_LIST_WITH_FIXED_VALUES_ANNOTATION =
       "@Common.ValueListWithFixedValues";
+  private static final String COMPUTED_ANNOTATION = "@Core.Computed";
+  private static final String READONLY_ANNOTATION = "@readonly";
   private static final Set<CdsBaseType> SUPPORTED_CONTEXT_TYPES =
       EnumSet.of(
           CdsBaseType.STRING,
@@ -111,12 +114,20 @@ class RecommendationContextBuilder {
     return select;
   }
 
+  // Builds the predict row from only the allowed columns (same set used in buildContextQuery),
+  // so draft, computed, and readonly fields are excluded by construction rather than explicit
+  // removal.
   CdsData buildPredictRow(CdsData row) {
     if (predictionElementNames.stream().noneMatch(c -> row.get(c) == null)) {
       return null;
     }
-    Map<String, Object> predictRow = new HashMap<>(row);
-    Drafts.ELEMENTS.forEach(predictRow::remove);
+    Set<String> allowed = new HashSet<>(contextColumns);
+    allowed.addAll(keyNames);
+    Map<String, Object> predictRow = new HashMap<>();
+    allowed.forEach(
+        col -> {
+          if (row.containsKey(col)) predictRow.put(col, row.get(col));
+        });
     return CdsData.create(predictRow);
   }
 
@@ -138,6 +149,8 @@ class RecommendationContextBuilder {
         .filter(
             e -> SUPPORTED_CONTEXT_TYPES.contains(e.getType().as(CdsSimpleType.class).getType()))
         .filter(e -> !Drafts.ELEMENTS.contains(e.getName()))
+        .filter(byAnnotation(COMPUTED_ANNOTATION).negate())
+        .filter(byAnnotation(READONLY_ANNOTATION).negate())
         .map(CdsElement::getName)
         .toList();
   }
