@@ -103,6 +103,8 @@ class RecommendationContextBuilder {
                     .collect(CQL.withAnd()))
             .limit(contextRowLimit);
     target
+        // ensure there is some stable ordering of the contextRows, if possible order by
+        // "most recently changed" so the model gets the most up-to-date data
         .concreteNonAssociationElements()
         .filter(byAnnotation("cds.on.update"))
         .map(CdsElement::getName)
