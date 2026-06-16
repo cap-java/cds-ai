@@ -14,7 +14,6 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsSimpleType;
 import com.sap.cds.reflect.CdsStructuredType;
 import com.sap.cds.services.draft.Drafts;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -90,12 +89,9 @@ class RecommendationContextBuilder {
   }
 
   CqnSelect buildContextQuery() {
-    List<String> selectColumns = new ArrayList<>(contextColumns);
-    for (String key : keyNames) {
-      if (!selectColumns.contains(key)) {
-        selectColumns.add(key);
-      }
-    }
+    Set<String> selectColumns = new HashSet<>(contextColumns);
+    selectColumns.addAll(keyNames);
+
     var select =
         Select.from(target.getQualifiedName())
             .columns(selectColumns.toArray(String[]::new))
