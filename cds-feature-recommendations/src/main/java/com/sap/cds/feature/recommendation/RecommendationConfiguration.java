@@ -9,6 +9,7 @@ import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
 import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.services.ServiceCatalog;
+import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
@@ -33,13 +34,17 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
       return;
     }
 
+    PersistenceService db =
+        serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
+
     boolean hasBind = hasAICoreBinding(runtime);
     RecommendationClientResolver resolver =
         hasBind
             ? RecommendationConfiguration::resolveRptClient
             : service -> new MockRecommendationClient();
 
-    FioriRecommendationHandler handler = new FioriRecommendationHandler(aiCoreService, resolver);
+    FioriRecommendationHandler handler =
+        new FioriRecommendationHandler(aiCoreService, resolver, db);
     configurer.eventHandler(handler);
     configurer.eventHandler(new RecommendationModelChangedHandler(handler));
   }

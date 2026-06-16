@@ -67,7 +67,7 @@ class FioriRecommendationHandlerTest {
     reset(db);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
     predictionClient = randomPickClient();
-    cut = new FioriRecommendationHandler(aiCoreService, (service) -> predictionClient);
+    cut = new FioriRecommendationHandler(aiCoreService, (service) -> predictionClient, db);
   }
 
   // ── tests ──────────────────────────────────────────────────────────────────

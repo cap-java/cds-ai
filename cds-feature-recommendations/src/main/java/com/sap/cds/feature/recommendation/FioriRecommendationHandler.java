@@ -33,6 +33,7 @@ class FioriRecommendationHandler implements EventHandler {
 
   private final AICoreService aiCoreService;
   private final RecommendationClientResolver clientResolver;
+  private final PersistenceService db;
   private final RecommendationResultParser resultParser = new RecommendationResultParser();
   // Avoids re-evaluating the CDS model on every read to check whether an entity has prediction
   // columns. Keys are "<tenantId>:<entityName>" because if an entity needs a prediction can be
@@ -41,9 +42,12 @@ class FioriRecommendationHandler implements EventHandler {
       Caffeine.newBuilder().maximumSize(10_000).build();
 
   FioriRecommendationHandler(
-      AICoreService aiCoreService, RecommendationClientResolver clientResolver) {
+      AICoreService aiCoreService,
+      RecommendationClientResolver clientResolver,
+      PersistenceService db) {
     this.aiCoreService = aiCoreService;
     this.clientResolver = clientResolver;
+    this.db = db;
   }
 
   void invalidateTenant(String tenantId) {
@@ -108,10 +112,6 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    PersistenceService db =
-        context
-            .getServiceCatalog()
-            .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
 
     CdsData predictRow = builder.buildPredictRow(row);
     if (predictRow == null) {
