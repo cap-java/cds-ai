@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * String rg = service.resourceGroup();
  * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
  * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId));
- * List<CdsData> predictions = client.predict(rows, List.of("targetColumn"), "ID");
+ * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"), List.of("ID"));
  * }</pre>
  */
 public class RptInferenceClient implements RecommendationClient {
