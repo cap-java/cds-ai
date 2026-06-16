@@ -5,11 +5,34 @@ package com.sap.cds.feature.recommendation.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class RptInferenceClientTest {
+
+  private static String resolveIndexColumn(List<String> keyNames) throws Exception {
+    Method m = RptInferenceClient.class.getDeclaredMethod("resolveIndexColumn", List.class);
+    m.setAccessible(true);
+    return (String) m.invoke(null, keyNames);
+  }
+
+  @Test
+  void resolveIndexColumn_singleKey_usesItDirectly() throws Exception {
+    assertThat(resolveIndexColumn(List.of("isbn"))).isEqualTo("isbn");
+  }
+
+  @Test
+  void resolveIndexColumn_singleKeyNamedId_usesItDirectly() throws Exception {
+    assertThat(resolveIndexColumn(List.of("ID"))).isEqualTo("ID");
+  }
+
+  @Test
+  void resolveIndexColumn_compositeKey_usesSyntheticColumn() throws Exception {
+    assertThat(resolveIndexColumn(List.of("order_ID", "item_no")))
+        .isEqualTo("SAP_RECOMMENDATIONS_ID");
+  }
 
   @Test
   void computeSyntheticKey_singleKey() {

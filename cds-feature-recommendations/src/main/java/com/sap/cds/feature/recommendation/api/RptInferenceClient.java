@@ -88,9 +88,10 @@ public class RptInferenceClient implements RecommendationClient {
   // is computed by concatenating all key fields and injected into each row before sending.
   private static final String SYNTHETIC_INDEX_COLUMN = "SAP_RECOMMENDATIONS_ID";
 
-  // If there is one key, use it directly and don't compute a synthetic key
+  // If there is one key, use it directly; for composite keys a synthetic string column is needed
+  // since RPT-1 requires a single string index column.
   private static String resolveIndexColumn(List<String> keyNames) {
-    return (keyNames.size() == 1 && "ID".equals(keyNames.get(0))) ? "ID" : SYNTHETIC_INDEX_COLUMN;
+    return keyNames.size() == 1 ? keyNames.get(0) : SYNTHETIC_INDEX_COLUMN;
   }
 
   // '\0' is used as separator because it cannot appear in database string values
