@@ -46,6 +46,16 @@ entity PlainEntity {
   title    : String;
 }
 
+@odata.draft.enabled
+entity BooksWithDisabledValueList {
+  key ID          : UUID;
+  @Common.ValueListWithFixedValues
+  genre_ID        : Integer;
+  @Common.ValueListWithFixedValues
+  @cds.odata.valuelist: false
+  suppressed_ID   : Integer;
+}
+
 service TestService {
   entity Books        as projection on test.Books;
   entity Genres       as projection on test.Genres;
@@ -53,4 +63,5 @@ service TestService {
   entity OrderItems   as projection on test.OrderItems;
   entity IsbnBooks    as projection on test.IsbnBooks;
   entity PlainEntity  as projection on test.PlainEntity;
+  entity BooksWithDisabledValueList as projection on test.BooksWithDisabledValueList;
 }

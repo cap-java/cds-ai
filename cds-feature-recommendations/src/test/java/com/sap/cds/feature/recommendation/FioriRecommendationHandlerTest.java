@@ -221,6 +221,38 @@ class FioriRecommendationHandlerTest {
   }
 
   @Test
+  void cdsoDataValueListFalse_fieldIsExcludedFromPredictions() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", null);
+          row.put("suppressed_ID", null);
+          CdsReadEventContext ctx = readContext("test.BooksWithDisabledValueList", List.of(row));
+          when(db.run(any(CqnSelect.class)))
+              .thenReturn(
+                  ResultBuilder.selectedRows(
+                          new ArrayList<>(
+                              List.of(
+                                  new HashMap<>(
+                                      Map.of("ID", "x1", "genre_ID", 1, "suppressed_ID", 10)),
+                                  new HashMap<>(
+                                      Map.of("ID", "x2", "genre_ID", 2, "suppressed_ID", 20)))))
+                      .result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          cut.afterRead(ctx, dataList(row));
+          // genre_ID has @Common.ValueListWithFixedValues → predicted
+          // suppressed_ID has @cds.odata.valuelist: false → excluded
+          assertThat(row).containsKey("SAP_Recommendations");
+          @SuppressWarnings("unchecked")
+          Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
+          assertThat(recs).containsKey("genre_ID");
+          assertThat(recs).doesNotContainKey("suppressed_ID");
+        });
+  }
+
+  @Test
   void blobAndVectorFields_areExcludedFromContextSelect() {
     runIn(
         () -> {
