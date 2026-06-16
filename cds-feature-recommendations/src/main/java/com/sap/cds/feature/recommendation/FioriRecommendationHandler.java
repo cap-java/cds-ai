@@ -29,6 +29,7 @@ class FioriRecommendationHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(FioriRecommendationHandler.class);
   private static final int DEFAULT_CONTEXT_ROW_LIMIT = 2000;
+  private static final String SAP_RECOMMENDATIONS = "SAP_Recommendations";
 
   private final AICoreService aiCoreService;
   private final RecommendationClientResolver clientResolver;
@@ -143,6 +144,6 @@ class FioriRecommendationHandler implements EventHandler {
     Map<String, Object> recommendations =
         resultParser.buildRecommendations(
             db, predictions.get(0), missingPredictionElementNames, context, rowType);
-    row.put("SAP_Recommendations", recommendations);
+    row.put(SAP_RECOMMENDATIONS, recommendations);
   }
 }
