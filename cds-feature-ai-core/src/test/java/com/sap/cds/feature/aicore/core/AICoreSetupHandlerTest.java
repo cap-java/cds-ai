@@ -18,6 +18,7 @@ import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
 import com.sap.ai.sdk.core.model.BckndResourceGroupList;
+import com.sap.cds.feature.aicore.core.handler.AICoreSetupHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.mt.UnsubscribeEventContext;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;

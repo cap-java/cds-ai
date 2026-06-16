@@ -5,6 +5,7 @@ package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnDelete;
 import com.sap.cds.ql.cqn.CqnInsert;
@@ -38,14 +39,25 @@ public class MockEntityHandler implements EventHandler {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
     CqnAnalyzer analyzer = CqnAnalyzer.create(model);
-    Map<String, Object> keys = analyzer.analyze(select).targetKeys();
+    AnalysisResult analysis = analyzer.analyze(select);
+    Map<String, Object> keys = analysis.targetKeys();
 
     String id = (String) keys.get("resourceGroupId");
     if (id != null) {
       Map<String, Object> rg = resourceGroups.get(id);
       context.setResult(rg != null ? List.of(rg) : List.of());
     } else {
-      context.setResult(List.copyOf(resourceGroups.values()));
+      Map<String, Object> values = analysis.targetValues();
+      String tenantId = (String) values.get("tenantId");
+      if (tenantId != null) {
+        List<Map<String, Object>> filtered =
+            resourceGroups.values().stream()
+                .filter(rg -> tenantId.equals(rg.get("tenantId")))
+                .toList();
+        context.setResult(filtered);
+      } else {
+        context.setResult(List.copyOf(resourceGroups.values()));
+      }
     }
   }
 
