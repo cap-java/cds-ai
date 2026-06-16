@@ -1,5 +1,7 @@
 namespace test;
 
+// genre_ID and currency_code are declared as plain scalars here because this is a test model.
+// In a real CDS model these would be generated foreign key columns from annotated associations.
 @odata.draft.enabled
 entity Books {
   key ID         : UUID;
