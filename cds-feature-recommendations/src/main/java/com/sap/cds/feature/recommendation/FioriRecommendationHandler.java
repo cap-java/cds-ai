@@ -112,7 +112,6 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-
     CdsData predictRow = builder.buildPredictRow(row);
     if (predictRow == null) {
       logger.debug("Current row already has values for all prediction columns, skipping.");
@@ -125,10 +124,12 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
+    List<String> missingPredictionElementNames =
+        builder.predictionElementNames().stream().filter(c -> row.get(c) == null).toList();
+
     RecommendationClient client = clientResolver.resolve(aiCoreService);
     List<CdsData> predictions =
-        client.predict(
-            predictRow, contextRows, builder.predictionElementNames(), builder.keyNames());
+        client.predict(predictRow, contextRows, missingPredictionElementNames, builder.keyNames());
 
     if (predictions.isEmpty()) {
       logger.warn("No predictions returned from AI client.");
@@ -139,8 +140,6 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    List<String> missingPredictionElementNames =
-        builder.predictionElementNames().stream().filter(c -> row.get(c) == null).toList();
     Map<String, Object> recommendations =
         resultParser.buildRecommendations(
             db, predictions.get(0), missingPredictionElementNames, context, rowType);
