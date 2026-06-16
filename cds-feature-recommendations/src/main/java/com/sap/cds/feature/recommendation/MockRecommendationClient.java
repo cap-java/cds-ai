@@ -10,8 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+// Mock implementation used when no AI Core binding is present. For each prediction column that
+// is null in the predict row, it picks a random non-null value from the same column across the
+// context rows and returns it as the prediction. Columns already filled are left unchanged.
 class MockRecommendationClient implements RecommendationClient {
 
+  // We use random here so you can see a difference in the UI. The actual value returned here is not
+  // relevant for tests.
   private final Random random = new Random();
 
   @Override
@@ -31,6 +36,8 @@ class MockRecommendationClient implements RecommendationClient {
                 ? null
                 : availableValues.get(random.nextInt(availableValues.size()));
         Map<String, Object> predictionEntry = new HashMap<>();
+        // Replace the empty entry in col with a randomly picked value of entries in the
+        // contextRows.
         predictionEntry.put("prediction", contextValue);
         prediction.put(col, List.of(predictionEntry));
       }
