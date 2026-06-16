@@ -64,9 +64,13 @@ public class RptInferenceClient implements RecommendationClient {
       CdsData predictionRow,
       List<CdsData> contextRows,
       List<String> predictionColumns,
-      String indexColumn) {
+      List<String> keyNames) {
+    String indexColumn = resolveIndexColumn(keyNames);
+    CdsData preparedPredictRow = preparePredictRow(predictionRow, predictionColumns);
     List<CdsData> allRows = new java.util.ArrayList<>(contextRows);
-    allRows.add(predictionRow);
+    allRows.add(preparedPredictRow);
+    addSyntheticKeyIfNeeded(allRows, keyNames, indexColumn);
+
     PredictRequestPayload request = buildRequest(allRows, predictionColumns, indexColumn);
     logger.debug(
         "Sending prediction request for one row with {} context rows, {} target columns",
@@ -83,6 +87,45 @@ public class RptInferenceClient implements RecommendationClient {
               return raw.stream().map(CdsData::create).toList();
             })
         .get();
+  }
+
+  // RPT-1 specific: when the entity has a composite or non-ID key, a synthetic string index column
+  // is computed by concatenating all key fields and injected into each row before sending.
+  private static final String SYNTHETIC_INDEX_COLUMN = "SAP_RECOMMENDATIONS_ID";
+
+  // If there is one key, use it directly and don't compute a synthetic key
+  private static String resolveIndexColumn(List<String> keyNames) {
+    return (keyNames.size() == 1 && "ID".equals(keyNames.get(0))) ? "ID" : SYNTHETIC_INDEX_COLUMN;
+  }
+
+  // Compute the synthetic key as a concatenated string from the keys listed in keyNames
+  private static String computeSyntheticKey(Map<String, Object> row, List<String> keyNames) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < keyNames.size(); i++) {
+      if (i > 0) sb.append('\0');
+      sb.append(keyNames.get(i)).append('\0');
+      Object value = row.get(keyNames.get(i));
+      if (value != null) sb.append(value);
+    }
+    return sb.toString();
+  }
+
+  private static void addSyntheticKeyIfNeeded(
+      List<CdsData> rows, List<String> keyNames, String indexColumn) {
+    if (SYNTHETIC_INDEX_COLUMN.equals(indexColumn)) {
+      rows.forEach(r -> r.put(SYNTHETIC_INDEX_COLUMN, computeSyntheticKey(r, keyNames)));
+    }
+  }
+
+  // Returns a copy of the predictRow without the fields in Drafts.ELEMENTS and with a
+  // prediction placeholder for empty values in the predictinonColumns
+  private static CdsData preparePredictRow(CdsData predictRow, List<String> predictionColumns) {
+    Map<String, Object> preparedPredictRowMap = new HashMap<>(predictRow);
+    // Drafts.ELEMENTS.forEach(preparedPredictRowMap::remove);
+    for (String col : predictionColumns) {
+      preparedPredictRowMap.putIfAbsent(col, PREDICT);
+    }
+    return CdsData.create(preparedPredictRowMap);
   }
 
   private static PredictRequestPayload buildRequest(

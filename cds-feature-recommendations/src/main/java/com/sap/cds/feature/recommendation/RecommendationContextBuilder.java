@@ -6,7 +6,6 @@ package com.sap.cds.feature.recommendation;
 import static com.sap.cds.reflect.CdsAnnotatable.byAnnotation;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -24,14 +23,14 @@ import java.util.Set;
 
 /**
  * Builds the context data needed for prediction: determines which elements to predict, which
- * columns provide context, builds the context query, and prepares rows for the AI model.
+ * columns provide context and builds the context query. This class is cds-model aware, but does not
+ * know about which client will be used for the predictions.
  */
 class RecommendationContextBuilder {
 
   private static final String VALUE_LIST_ANNOTATION = "@Common.ValueList";
   private static final String VALUE_LIST_WITH_FIXED_VALUES_ANNOTATION =
       "@Common.ValueListWithFixedValues";
-  private static final String SYNTHETIC_KEY_COLUMN = "SAP_RECOMMENDATIONS_ID";
   private static final Set<CdsBaseType> SUPPORTED_CONTEXT_TYPES =
       EnumSet.of(
           CdsBaseType.STRING,
@@ -65,8 +64,6 @@ class RecommendationContextBuilder {
   private final List<String> predictionElementNames;
   private final List<String> contextColumns;
   private final List<String> keyNames;
-  private final boolean syntheticKeyNeeded;
-  private final String indexColumn;
 
   RecommendationContextBuilder(CdsStructuredType target, CdsStructuredType rowType, int limit) {
     this.target = target;
@@ -75,10 +72,6 @@ class RecommendationContextBuilder {
     this.predictionElementNames = computePredictionElements();
     this.contextColumns = computeContextColumns();
     this.keyNames = target.keyElements().map(CdsElement::getName).toList();
-    this.syntheticKeyNeeded =
-        keyNames.size() > 1 || (keyNames.size() == 1 && !"ID".equals(keyNames.get(0)));
-    this.indexColumn =
-        syntheticKeyNeeded ? SYNTHETIC_KEY_COLUMN : keyNames.stream().findFirst().orElse("ID");
   }
 
   List<String> predictionElementNames() {
@@ -89,12 +82,8 @@ class RecommendationContextBuilder {
     return contextColumns;
   }
 
-  String indexColumn() {
-    return indexColumn;
-  }
-
-  boolean syntheticKeyNeeded() {
-    return syntheticKeyNeeded;
+  List<String> keyNames() {
+    return keyNames;
   }
 
   CqnSelect buildContextQuery() {
@@ -128,46 +117,7 @@ class RecommendationContextBuilder {
     }
     Map<String, Object> predictRow = new HashMap<>(row);
     Drafts.ELEMENTS.forEach(predictRow::remove);
-    for (String col : predictionElementNames) {
-      predictRow.putIfAbsent(col, RptInferenceClient.PREDICT);
-    }
     return CdsData.create(predictRow);
-  }
-
-  private String computeSyntheticKey(Map<String, Object> row) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < keyNames.size(); i++) {
-      if (i > 0) {
-        sb.append('\0');
-      }
-      sb.append(keyNames.get(i));
-      sb.append('\0');
-      Object value = row.get(keyNames.get(i));
-      if (value != null) {
-        sb.append(value);
-      }
-    }
-    return sb.toString();
-  }
-
-  /**
-   * Injects a synthetic index column into the given row if the entity has a composite or non-ID
-   * key. The synthetic key is a concatenation of all key fields, used as the RPT-1 index column.
-   * No-op when a plain {@code ID} key is sufficient.
-   */
-  void addSyntheticKey(CdsData row) {
-    if (syntheticKeyNeeded) {
-      row.put(SYNTHETIC_KEY_COLUMN, computeSyntheticKey(row));
-    }
-  }
-
-  /**
-   * Convenience overload that applies {@link #addSyntheticKey(CdsData)} to each row in the list.
-   */
-  void addSyntheticKey(List<CdsData> rows) {
-    if (syntheticKeyNeeded) {
-      rows.forEach(this::addSyntheticKey);
-    }
   }
 
   private List<String> computePredictionElements() {

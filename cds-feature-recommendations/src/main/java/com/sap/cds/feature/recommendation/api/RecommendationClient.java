@@ -14,9 +14,15 @@ public interface RecommendationClient {
   //     so predictions only fire on single-entity reads.
   // (2) FioriRecommendationHandler also rejects responses with more than one prediction back from
   //     the model, treating it as an unexpected state.
+  //
+  // @param predictionRow  the single entity row to predict values for; prediction columns contain
+  //                       null for missing values that the model should fill
+  // @param contextRows    historical rows from the same entity used as training context
+  // @param predictionColumns  names of the columns the model should predict
+  // @param keyNames       names of the entity's key columns, used to identify rows in the response
   List<CdsData> predict(
       CdsData predictionRow,
       List<CdsData> contextRows,
       List<String> predictionColumns,
-      String indexColumn);
+      List<String> keyNames);
 }
