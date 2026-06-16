@@ -37,6 +37,12 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
     PersistenceService db =
         serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
 
+    if (db == null) {
+      logger.info(
+          "No PersistenceService found, skipping Fiori recommendation handler registration.");
+      return;
+    }
+
     boolean hasBind = hasAICoreBinding(runtime);
     RecommendationClientResolver resolver =
         hasBind
