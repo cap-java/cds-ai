@@ -81,6 +81,8 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
+    // rowType reflects the projected shape (columns actually selected); target is the full entity.
+    // Fall back to target when rowType is absent, e.g. when the result carries no type metadata.
     CdsStructuredType rowType = context.getResult().rowType();
     if (rowType == null) {
       rowType = target;
