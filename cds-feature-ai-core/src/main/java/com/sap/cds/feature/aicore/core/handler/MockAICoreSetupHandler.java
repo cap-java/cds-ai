@@ -1,9 +1,8 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.aicore.core;
+package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.cds.feature.aicore.core.handler.MockAICoreApiHandler;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
@@ -26,7 +25,7 @@ public class MockAICoreSetupHandler implements EventHandler {
     this.mockHandler = mockHandler;
   }
 
-  @After(event = DeploymentService.EVENT_SUBSCRIBE)
+  @After
   @HandlerOrder(HandlerOrder.LATE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
@@ -35,7 +34,7 @@ public class MockAICoreSetupHandler implements EventHandler {
     logger.info("Mock created in-memory resource group for tenant {}", tenantId);
   }
 
-  @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
+  @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
