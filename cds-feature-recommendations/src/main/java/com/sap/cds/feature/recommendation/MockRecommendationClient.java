@@ -42,7 +42,9 @@ class MockRecommendationClient implements RecommendationClient {
         prediction.put(col, List.of(predictionEntry));
       }
     }
-    prediction.put(indexColumn, predictionRow.get(keyNames.get(0)));
+    if (!keyNames.isEmpty()) {
+      prediction.put(indexColumn, predictionRow.get(keyNames.get(0)));
+    }
     return List.of(CdsData.create(prediction));
   }
 }

@@ -108,6 +108,11 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
+    if (builder.keyNames().isEmpty()) {
+      logger.debug("Entity has no key elements, skipping predictions.");
+      return;
+    }
+
     if (builder.contextColumns().isEmpty()) {
       logger.trace("No suitable context columns found, skipping predictions.");
       return;
