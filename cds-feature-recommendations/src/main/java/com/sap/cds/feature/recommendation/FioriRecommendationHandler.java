@@ -82,7 +82,8 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    if (!Boolean.FALSE.equals(row.get(Drafts.IS_ACTIVE_ENTITY))) {
+    if (row.containsKey(Drafts.IS_ACTIVE_ENTITY)
+        && !Boolean.FALSE.equals(row.get(Drafts.IS_ACTIVE_ENTITY))) {
       return;
     }
 
