@@ -51,7 +51,7 @@ public abstract class BaseIntegrationTest {
     return AICoreConfig.from(runtime.getEnvironment(), mt);
   }
 
-  protected RemoteService getAICoreCqnService() {
+  protected RemoteService getAICoreRemoteService() {
     return getAICoreService();
   }
 
@@ -60,7 +60,7 @@ public abstract class BaseIntegrationTest {
     return CACHED_DEPLOYMENT_IDS.computeIfAbsent(
         resourceGroup,
         rg -> {
-          ensureResourceGroupProvisioned(getAICoreCqnService(), rg);
+          ensureResourceGroupProvisioned(getAICoreRemoteService(), rg);
           RemoteService service = getAICoreService();
           DeploymentIdContext depCtx = DeploymentIdContext.create();
           depCtx.setResourceGroupId(rg);

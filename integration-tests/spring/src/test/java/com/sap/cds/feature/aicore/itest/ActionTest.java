@@ -29,7 +29,8 @@ class ActionTest extends BaseIntegrationTest {
 
   @BeforeAll
   void ensureResourceGroupReady() {
-    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreConfig().defaultResourceGroup());
+    ensureResourceGroupProvisioned(
+        getAICoreRemoteService(), getAICoreConfig().defaultResourceGroup());
   }
 
   @Test
@@ -95,7 +96,7 @@ class ActionTest extends BaseIntegrationTest {
           + "re-enable once test creates its own isolated deployment")
   @Test
   void stop_deployment_changesTargetStatus() {
-    RemoteService service = getAICoreCqnService();
+    RemoteService service = getAICoreRemoteService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     Result deployments =

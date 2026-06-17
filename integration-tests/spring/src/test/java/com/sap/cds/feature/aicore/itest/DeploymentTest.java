@@ -19,7 +19,7 @@ class DeploymentTest extends BaseIntegrationTest {
 
   @Test
   void readAll_returnsDeployments() {
-    RemoteService service = getAICoreCqnService();
+    RemoteService service = getAICoreRemoteService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
@@ -31,7 +31,7 @@ class DeploymentTest extends BaseIntegrationTest {
 
   @Test
   void readSingle_returnsDeploymentDetails() {
-    RemoteService service = getAICoreCqnService();
+    RemoteService service = getAICoreRemoteService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result all =
         service.run(
@@ -62,7 +62,7 @@ class DeploymentTest extends BaseIntegrationTest {
           + "re-enable once test creates its own isolated deployment")
   @Test
   void update_targetStatus_stopsRunningDeployment() {
-    RemoteService service = getAICoreCqnService();
+    RemoteService service = getAICoreRemoteService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     Result deployments =
