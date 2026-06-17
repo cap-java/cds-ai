@@ -17,6 +17,7 @@ import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class RptInferenceClient implements RecommendationClient {
       List<String> keyNames) {
     String indexColumn = resolveIndexColumn(keyNames, predictionRow);
     CdsData preparedPredictRow = preparePredictRow(predictionRow, predictionColumns);
-    List<CdsData> allRows = new java.util.ArrayList<>(contextRows);
+    List<CdsData> allRows = new ArrayList<>(contextRows);
     allRows.add(preparedPredictRow);
     addSyntheticKeyIfNeeded(allRows, keyNames, indexColumn);
 
