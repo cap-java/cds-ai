@@ -3,12 +3,16 @@
  */
 package com.sap.cds.feature.recommendation;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
+import com.sap.cds.feature.aicore.api.InferenceClientContext;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
 import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.services.ServiceCatalog;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -26,8 +30,8 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
     CdsRuntime runtime = configurer.getCdsRuntime();
     ServiceCatalog serviceCatalog = runtime.getServiceCatalog();
 
-    AICoreService aiCoreService =
-        serviceCatalog.getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    RemoteService aiCoreService =
+        serviceCatalog.getService(RemoteService.class, AICore.SERVICE_NAME);
 
     if (aiCoreService == null) {
       logger.info("No AICoreService found, skipping Fiori recommendation handler registration.");
@@ -60,13 +64,26 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
         .getEnvironment()
         .getServiceBindings()
         .filter(b -> ServiceBindingUtils.matches(b, "aicore"))
-        .findFirst()
+        .findAny()
         .isPresent();
   }
 
-  private static RecommendationClient resolveRptClient(AICoreService service) {
-    String resourceGroup = service.resourceGroup();
-    String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
-    return new RptInferenceClient(service.inferenceClient(resourceGroup, deploymentId));
+  private static RecommendationClient resolveRptClient(RemoteService service) {
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    service.emit(rgCtx);
+    String resourceGroup = rgCtx.getResult();
+
+    DeploymentIdContext depCtx = DeploymentIdContext.create();
+    depCtx.setResourceGroupId(resourceGroup);
+    depCtx.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx);
+    String deploymentId = depCtx.getResult();
+
+    InferenceClientContext infCtx = InferenceClientContext.create();
+    infCtx.setResourceGroupId(resourceGroup);
+    infCtx.setDeploymentId(deploymentId);
+    service.emit(infCtx);
+
+    return new RptInferenceClient(infCtx.getResult());
   }
 }

@@ -13,11 +13,11 @@ import static org.mockito.Mockito.when;
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.ResultBuilder;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.services.Service;
 import com.sap.cds.services.cds.CdsReadEventContext;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.impl.utils.CdsServiceUtils;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.RequestContext;
@@ -45,7 +45,7 @@ class FioriRecommendationHandlerTest {
   private static PersistenceService db;
 
   @Mock(answer = Answers.CALLS_REAL_METHODS)
-  private AICoreService aiCoreService;
+  private RemoteService aiCoreService;
 
   private FioriRecommendationHandler cut;
   private RecommendationClient predictionClient;

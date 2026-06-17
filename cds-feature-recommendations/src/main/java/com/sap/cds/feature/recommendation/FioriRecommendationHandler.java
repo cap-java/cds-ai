@@ -6,12 +6,12 @@ package com.sap.cds.feature.recommendation;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
 import com.sap.cds.reflect.CdsStructuredType;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsReadEventContext;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.draft.Drafts;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
@@ -31,7 +31,7 @@ class FioriRecommendationHandler implements EventHandler {
   private static final int DEFAULT_CONTEXT_ROW_LIMIT = 2000;
   private static final String SAP_RECOMMENDATIONS = "SAP_Recommendations";
 
-  private final AICoreService aiCoreService;
+  private final RemoteService aiCoreService;
   private final RecommendationClientResolver clientResolver;
   private final PersistenceService db;
   private final RecommendationResultParser resultParser = new RecommendationResultParser();
@@ -42,7 +42,7 @@ class FioriRecommendationHandler implements EventHandler {
       Caffeine.newBuilder().maximumSize(10_000).build();
 
   FioriRecommendationHandler(
-      AICoreService aiCoreService,
+      RemoteService aiCoreService,
       RecommendationClientResolver clientResolver,
       PersistenceService db) {
     this.aiCoreService = aiCoreService;

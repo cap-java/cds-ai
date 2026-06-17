@@ -3,12 +3,12 @@
  */
 package com.sap.cds.feature.recommendation.api;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.services.cds.RemoteService;
 
 // The annotation @FunctionalInterface ensures this interface has only one method, such that
 // callers can supply a custom client by providing this one method e.g. via a lambda.
 @FunctionalInterface
 public interface RecommendationClientResolver {
 
-  RecommendationClient resolve(AICoreService aiCoreService);
+  RecommendationClient resolve(RemoteService aiCoreService);
 }

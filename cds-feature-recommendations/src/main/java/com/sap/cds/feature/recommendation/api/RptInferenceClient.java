@@ -31,10 +31,19 @@ import org.slf4j.LoggerFactory;
  * <p>Example usage:
  *
  * <pre>{@code
- * AICoreService service = ...;
- * String rg = service.resourceGroup();
- * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
- * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId));
+ * RemoteService service = runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+ * ResourceGroupContext rgCtx = ResourceGroupContext.create();
+ * service.emit(rgCtx);
+ * String rg = rgCtx.getResult();
+ * DeploymentIdContext depCtx = DeploymentIdContext.create();
+ * depCtx.setResourceGroupId(rg);
+ * depCtx.setSpec(RptModelSpec.rpt1());
+ * service.emit(depCtx);
+ * InferenceClientContext infCtx = InferenceClientContext.create();
+ * infCtx.setResourceGroupId(rg);
+ * infCtx.setDeploymentId(depCtx.getResult());
+ * service.emit(infCtx);
+ * RptInferenceClient client = new RptInferenceClient(infCtx.getResult());
  * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"), List.of("ID"));
  * }</pre>
  */
