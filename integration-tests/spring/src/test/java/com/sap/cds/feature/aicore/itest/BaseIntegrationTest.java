@@ -5,12 +5,13 @@ package com.sap.cds.feature.aicore.itest;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.util.List;
@@ -39,8 +40,8 @@ public abstract class BaseIntegrationTest {
 
   @Autowired protected CdsRuntime runtime;
 
-  protected AICoreService getAICoreService() {
-    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  protected RemoteService getAICoreService() {
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
   }
 
   protected AICoreConfig getAICoreConfig() {
@@ -50,8 +51,8 @@ public abstract class BaseIntegrationTest {
     return AICoreConfig.from(runtime.getEnvironment(), mt);
   }
 
-  protected CqnService getAICoreCqnService() {
-    return (CqnService) getAICoreService();
+  protected RemoteService getAICoreCqnService() {
+    return getAICoreService();
   }
 
   protected String ensureRptDeploymentReady() {
@@ -60,11 +61,16 @@ public abstract class BaseIntegrationTest {
         resourceGroup,
         rg -> {
           ensureResourceGroupProvisioned(getAICoreCqnService(), rg);
-          return getAICoreService().deploymentId(rg, RptModelSpec.rpt1());
+          RemoteService service = getAICoreService();
+          DeploymentIdContext depCtx = DeploymentIdContext.create();
+          depCtx.setResourceGroupId(rg);
+          depCtx.setSpec(RptModelSpec.rpt1());
+          service.emit(depCtx);
+          return depCtx.getResult();
         });
   }
 
-  protected void ensureResourceGroupProvisioned(CqnService service, String resourceGroup) {
+  protected void ensureResourceGroupProvisioned(RemoteService service, String resourceGroup) {
     if (!resourceGroupExists(service, resourceGroup)) {
       logger.info("Creating resource group {} with itest owner label", resourceGroup);
       service.run(
@@ -79,7 +85,7 @@ public abstract class BaseIntegrationTest {
     waitForResourceGroupProvisioned(service, resourceGroup);
   }
 
-  private boolean resourceGroupExists(CqnService service, String resourceGroup) {
+  private boolean resourceGroupExists(RemoteService service, String resourceGroup) {
     Result all = service.run(Select.from("AICore.resourceGroups"));
     for (Row row : all) {
       if (resourceGroup.equals(row.get("resourceGroupId"))) {
@@ -89,7 +95,7 @@ public abstract class BaseIntegrationTest {
     return false;
   }
 
-  private void waitForResourceGroupProvisioned(CqnService service, String resourceGroup) {
+  private void waitForResourceGroupProvisioned(RemoteService service, String resourceGroup) {
     for (int i = 0; i < 30; i++) {
       Result all = service.run(Select.from("AICore.resourceGroups"));
       for (Row row : all) {

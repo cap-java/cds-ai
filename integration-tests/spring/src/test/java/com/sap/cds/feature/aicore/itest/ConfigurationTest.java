@@ -9,7 +9,7 @@ import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void readAll_returnsConfigurations() {
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreCqnService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
@@ -30,7 +30,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void readAll_filterByScenario() {
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreCqnService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
@@ -46,7 +46,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void create_andReadById() {
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreCqnService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     String configName = "itest-config-" + System.currentTimeMillis();
@@ -91,7 +91,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void create_withParameterBindings_mapsCorrectly() {
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreCqnService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     String configName = "itest-params-" + System.currentTimeMillis();
