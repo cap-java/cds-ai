@@ -12,6 +12,7 @@ import com.sap.ai.sdk.foundationmodels.rpt.generated.model.PredictionPlaceholder
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.RowsInnerValue;
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.TargetColumnConfig;
 import com.sap.cds.CdsData;
+import com.sap.cds.feature.recommendation.RptIndexColumns;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import io.github.resilience4j.core.IntervalFunction;
@@ -61,7 +62,7 @@ public class RptInferenceClient implements RecommendationClient {
       List<CdsData> contextRows,
       List<String> predictionColumns,
       List<String> keyNames) {
-    String indexColumn = resolveIndexColumn(keyNames, predictionRow);
+    String indexColumn = RptIndexColumns.resolveIndexColumn(keyNames, predictionRow);
     CdsData preparedPredictRow = preparePredictRow(predictionRow, predictionColumns);
     List<CdsData> allRows = new ArrayList<>(contextRows);
     allRows.add(preparedPredictRow);
@@ -85,21 +86,6 @@ public class RptInferenceClient implements RecommendationClient {
         .get();
   }
 
-  // RPT-1 specific: when the entity has a composite or non-ID key, a synthetic string index column
-  // is computed by concatenating all key fields and injected into each row before sending.
-  private static final String SYNTHETIC_INDEX_COLUMN = "SAP_RECOMMENDATIONS_ID";
-
-  // If there is one string-typed key, use it directly; for composite keys or non-string keys a
-  // synthetic string column is needed since RPT-1 requires a single string index column.
-  // Non-string single keys fall back to synthetic rather than just converting to a string.
-  // RPT-1 may reject a column declared as the index if its values are not strings.
-  private static String resolveIndexColumn(List<String> keyNames, CdsData sampleRow) {
-    if (keyNames.size() == 1 && sampleRow.get(keyNames.get(0)) instanceof String) {
-      return keyNames.get(0);
-    }
-    return SYNTHETIC_INDEX_COLUMN;
-  }
-
   // '\0' is used as separator because it cannot appear in database string values
   // (VARCHAR/NVARCHAR), so concatenation of any composite key values is guaranteed collision-free.
   static String computeSyntheticKey(Map<String, Object> row, List<String> keyNames) {
@@ -115,8 +101,8 @@ public class RptInferenceClient implements RecommendationClient {
 
   private static void addSyntheticKeyIfNeeded(
       List<CdsData> rows, List<String> keyNames, String indexColumn) {
-    if (SYNTHETIC_INDEX_COLUMN.equals(indexColumn)) {
-      rows.forEach(r -> r.put(SYNTHETIC_INDEX_COLUMN, computeSyntheticKey(r, keyNames)));
+    if (RptIndexColumns.SYNTHETIC_INDEX_COLUMN.equals(indexColumn)) {
+      rows.forEach(r -> r.put(RptIndexColumns.SYNTHETIC_INDEX_COLUMN, computeSyntheticKey(r, keyNames)));
     }
   }
 

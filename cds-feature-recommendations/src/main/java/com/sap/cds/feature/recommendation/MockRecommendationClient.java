@@ -25,7 +25,7 @@ class MockRecommendationClient implements RecommendationClient {
       List<CdsData> contextRows,
       List<String> predictionColumns,
       List<String> keyNames) {
-    String indexColumn = keyNames.size() == 1 ? keyNames.get(0) : "SAP_RECOMMENDATIONS_ID";
+    String indexColumn = RptIndexColumns.resolveIndexColumn(keyNames, predictionRow);
     Map<String, Object> prediction = new HashMap<>();
     for (String col : predictionColumns) {
       if (predictionRow.get(col) == null) {
