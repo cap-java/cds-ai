@@ -25,12 +25,8 @@ public interface RecommendationClient {
    *     null for missing values that the model should fill
    * @param contextRows historical rows from the same entity used as training context
    * @param predictionColumns names of the columns the model should predict
-   * @param keyNames names of the entity's key columns, used to identify rows in the response
    * @return the predicted values as a list of result rows
    */
   List<CdsData> predict(
-      CdsData predictionRow,
-      List<CdsData> contextRows,
-      List<String> predictionColumns,
-      List<String> keyNames);
+      CdsData predictionRow, List<CdsData> contextRows, List<String> predictionColumns);
 }

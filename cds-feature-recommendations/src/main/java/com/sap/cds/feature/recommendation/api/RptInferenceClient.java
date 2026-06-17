@@ -36,8 +36,8 @@ import org.slf4j.LoggerFactory;
  * AICoreService service = ...;
  * String rg = service.resourceGroup();
  * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
- * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId));
- * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"), List.of("ID"));
+ * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId), keyNames);
+ * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"));
  * }</pre>
  */
 public class RptInferenceClient implements RecommendationClient {
@@ -50,18 +50,17 @@ public class RptInferenceClient implements RecommendationClient {
   private static final Retry INFERENCE_RETRY = buildInferenceRetry();
 
   private final DefaultApi rpt;
+  private final List<String> keyNames;
 
-  public RptInferenceClient(ApiClient apiClient) {
+  public RptInferenceClient(ApiClient apiClient, List<String> keyNames) {
     this.rpt =
         new DefaultApi(apiClient.withObjectMapper(JacksonConfiguration.getDefaultObjectMapper()));
+    this.keyNames = keyNames;
   }
 
   @Override
   public List<CdsData> predict(
-      CdsData predictionRow,
-      List<CdsData> contextRows,
-      List<String> predictionColumns,
-      List<String> keyNames) {
+      CdsData predictionRow, List<CdsData> contextRows, List<String> predictionColumns) {
     String indexColumn = RptIndexColumns.resolveIndexColumn(keyNames, predictionRow);
     CdsData preparedPredictRow = preparePredictRow(predictionRow, predictionColumns);
     List<CdsData> allRows = new ArrayList<>(contextRows);

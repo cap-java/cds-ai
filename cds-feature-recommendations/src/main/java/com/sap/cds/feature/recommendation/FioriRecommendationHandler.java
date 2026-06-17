@@ -6,7 +6,6 @@ package com.sap.cds.feature.recommendation;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
 import com.sap.cds.reflect.CdsStructuredType;
@@ -31,8 +30,7 @@ class FioriRecommendationHandler implements EventHandler {
   private static final int DEFAULT_CONTEXT_ROW_LIMIT = 2000;
   private static final String SAP_RECOMMENDATIONS = "SAP_Recommendations";
 
-  private final AICoreService aiCoreService;
-  private final RecommendationClientResolver clientResolver;
+  private final RecommendationClientResolver<List<String>> clientResolver;
   private final PersistenceService db;
   private final RecommendationResultParser resultParser = new RecommendationResultParser();
   // Avoids re-evaluating the CDS model on every read to check whether an entity has prediction
@@ -42,10 +40,7 @@ class FioriRecommendationHandler implements EventHandler {
       Caffeine.newBuilder().maximumSize(10_000).build();
 
   FioriRecommendationHandler(
-      AICoreService aiCoreService,
-      RecommendationClientResolver clientResolver,
-      PersistenceService db) {
-    this.aiCoreService = aiCoreService;
+      RecommendationClientResolver<List<String>> clientResolver, PersistenceService db) {
     this.clientResolver = clientResolver;
     this.db = db;
   }
@@ -134,9 +129,9 @@ class FioriRecommendationHandler implements EventHandler {
     List<String> missingPredictionElementNames =
         builder.predictionElementNames().stream().filter(c -> row.get(c) == null).toList();
 
-    RecommendationClient client = clientResolver.resolve(aiCoreService);
+    RecommendationClient client = clientResolver.resolve(builder.keyNames());
     List<CdsData> predictions =
-        client.predict(predictRow, contextRows, missingPredictionElementNames, builder.keyNames());
+        client.predict(predictRow, contextRows, missingPredictionElementNames);
 
     if (predictions.isEmpty()) {
       logger.warn("No predictions returned from AI client.");

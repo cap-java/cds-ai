@@ -129,13 +129,13 @@ public class AICoreShowcaseHandler implements EventHandler {
     AICoreService service = getAICoreService();
     String rg = service.resourceGroup();
     String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
-    RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId));
+    RptInferenceClient client =
+        new RptInferenceClient(service.inferenceClient(rg, deploymentId), List.of("ID"));
 
     List<Map<String, Object>> results = new ArrayList<>();
     for (Map<String, Object> product : products) {
       CdsData predictionRow = CdsData.create(new HashMap<>(product));
-      List<CdsData> predictions =
-          client.predict(predictionRow, contextRows, List.of("category"), List.of("ID"));
+      List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("category"));
       for (CdsData prediction : predictions) {
         String id = (String) prediction.get("ID");
         Object categoryObj = prediction.get("category");

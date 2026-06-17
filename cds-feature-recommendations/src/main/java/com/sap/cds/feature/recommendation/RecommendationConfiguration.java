@@ -14,6 +14,7 @@ import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import com.sap.cds.services.utils.environment.ServiceBindingUtils;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,13 +45,15 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
     }
 
     boolean hasBind = hasAICoreBinding(runtime);
-    RecommendationClientResolver resolver =
+    // The real resolver is a lambda resolved at prediction time. That's necessary because
+    // resource group and deployment ID are tenant-specific and are only available at
+    // prediction time from the request context. AICoreService is captured in the closure.
+    RecommendationClientResolver<List<String>> clientResolver =
         hasBind
-            ? RecommendationConfiguration::resolveRptClient
-            : service -> new MockRecommendationClient();
+            ? keyNames -> resolveRptClient(aiCoreService, keyNames)
+            : keyNames -> new MockRecommendationClient(keyNames);
 
-    FioriRecommendationHandler handler =
-        new FioriRecommendationHandler(aiCoreService, resolver, db);
+    FioriRecommendationHandler handler = new FioriRecommendationHandler(clientResolver, db);
     configurer.eventHandler(handler);
     configurer.eventHandler(new RecommendationModelChangedHandler(handler));
   }
@@ -64,9 +67,10 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
         .isPresent();
   }
 
-  private static RecommendationClient resolveRptClient(AICoreService service) {
+  private static RecommendationClient resolveRptClient(
+      AICoreService service, List<String> keyNames) {
     String resourceGroup = service.resourceGroup();
     String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
-    return new RptInferenceClient(service.inferenceClient(resourceGroup, deploymentId));
+    return new RptInferenceClient(service.inferenceClient(resourceGroup, deploymentId), keyNames);
   }
 }

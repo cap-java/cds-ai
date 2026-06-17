@@ -3,12 +3,12 @@
  */
 package com.sap.cds.feature.recommendation.api;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
-
-// The annotation @FunctionalInterface ensures this interface has only one method, such that
-// callers can supply a custom client by providing this one method e.g. via a lambda.
+// A single-method interface so callers can supply a custom client via lambda.
+// @FunctionalInterface enforces this and causes a compile error if a second method is ever added.
+// The type parameter T allows the resolver to receive any context the client might need (e.g. key
+// names).
 @FunctionalInterface
-public interface RecommendationClientResolver {
+public interface RecommendationClientResolver<T> {
 
-  RecommendationClient resolve(AICoreService aiCoreService);
+  RecommendationClient resolve(T context);
 }
