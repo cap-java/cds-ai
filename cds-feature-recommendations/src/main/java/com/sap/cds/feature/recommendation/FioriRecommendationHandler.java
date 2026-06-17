@@ -6,7 +6,6 @@ package com.sap.cds.feature.recommendation;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.feature.recommendation.api.RecommendationClientResolver;
 import com.sap.cds.reflect.CdsStructuredType;
@@ -29,9 +28,10 @@ class FioriRecommendationHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(FioriRecommendationHandler.class);
   private static final int DEFAULT_CONTEXT_ROW_LIMIT = 2000;
+  private static final String SAP_RECOMMENDATIONS = "SAP_Recommendations";
 
-  private final AICoreService aiCoreService;
-  private final RecommendationClientResolver clientResolver;
+  private final RecommendationClientResolver<List<String>> clientResolver;
+  private final PersistenceService db;
   private final RecommendationResultParser resultParser = new RecommendationResultParser();
   // Avoids re-evaluating the CDS model on every read to check whether an entity has prediction
   // columns. Keys are "<tenantId>:<entityName>" because if an entity needs a prediction can be
@@ -40,9 +40,9 @@ class FioriRecommendationHandler implements EventHandler {
       Caffeine.newBuilder().maximumSize(10_000).build();
 
   FioriRecommendationHandler(
-      AICoreService aiCoreService, RecommendationClientResolver clientResolver) {
-    this.aiCoreService = aiCoreService;
+      RecommendationClientResolver<List<String>> clientResolver, PersistenceService db) {
     this.clientResolver = clientResolver;
+    this.db = db;
   }
 
   void invalidateTenant(String tenantId) {
@@ -77,10 +77,13 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    if (!Boolean.FALSE.equals(row.get(Drafts.IS_ACTIVE_ENTITY))) {
+    if (row.containsKey(Drafts.IS_ACTIVE_ENTITY)
+        && !Boolean.FALSE.equals(row.get(Drafts.IS_ACTIVE_ENTITY))) {
       return;
     }
 
+    // rowType reflects the projected shape (columns actually selected); target is the full entity.
+    // Fall back to target when rowType is absent, e.g. when the result carries no type metadata.
     CdsStructuredType rowType = context.getResult().rowType();
     if (rowType == null) {
       rowType = target;
@@ -100,18 +103,13 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    if (builder.contextColumns().isEmpty()) {
-      logger.debug("No suitable context columns found, skipping predictions.");
+    if (builder.keyNames().isEmpty()) {
+      logger.debug("Entity has no key elements, skipping predictions.");
       return;
     }
 
-    PersistenceService db =
-        context
-            .getServiceCatalog()
-            .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
-    List<CdsData> contextRows = new ArrayList<>(db.run(builder.buildContextQuery()).list());
-    if (contextRows.size() < 2) {
-      logger.debug("Not enough context rows (minimum 2), skipping predictions.");
+    if (builder.contextColumns().isEmpty()) {
+      logger.trace("No suitable context columns found, skipping predictions.");
       return;
     }
 
@@ -121,11 +119,19 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    List<CdsData> allRows = builder.assembleRows(contextRows, predictRow, row);
+    // Result.list() returns List<Row>; the ArrayList copy also converts it to List<CdsData>.
+    List<CdsData> contextRows = new ArrayList<>(db.run(builder.buildContextQuery()).list());
+    if (contextRows.size() < 2) {
+      logger.debug("Not enough context rows (minimum 2), skipping predictions.");
+      return;
+    }
 
-    RecommendationClient client = clientResolver.resolve(aiCoreService);
+    List<String> missingPredictionElementNames =
+        builder.predictionElementNames().stream().filter(c -> row.get(c) == null).toList();
+
+    RecommendationClient client = clientResolver.resolve(builder.keyNames());
     List<CdsData> predictions =
-        client.predict(allRows, builder.predictionElementNames(), builder.indexColumn());
+        client.predict(predictRow, contextRows, missingPredictionElementNames);
 
     if (predictions.isEmpty()) {
       logger.warn("No predictions returned from AI client.");
@@ -136,11 +142,9 @@ class FioriRecommendationHandler implements EventHandler {
       return;
     }
 
-    List<String> missingPredictionElementNames =
-        builder.predictionElementNames().stream().filter(c -> row.get(c) == null).toList();
     Map<String, Object> recommendations =
         resultParser.buildRecommendations(
             db, predictions.get(0), missingPredictionElementNames, context, rowType);
-    row.put("SAP_Recommendations", recommendations);
+    row.put(SAP_RECOMMENDATIONS, recommendations);
   }
 }

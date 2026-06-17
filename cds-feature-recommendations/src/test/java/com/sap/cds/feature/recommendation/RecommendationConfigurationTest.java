@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import java.util.stream.Stream;
@@ -24,6 +25,7 @@ class RecommendationConfigurationTest {
   @Mock private ServiceCatalog serviceCatalog;
   @Mock private CdsEnvironment environment;
   @Mock private AICoreService aiCoreService;
+  @Mock private PersistenceService persistenceService;
 
   @Test
   void aiCoreServiceFound_registersHandler() {
@@ -33,6 +35,8 @@ class RecommendationConfigurationTest {
     when(environment.getServiceBindings()).thenReturn(Stream.empty());
     when(serviceCatalog.getService(AICoreService.class, AICoreService.DEFAULT_NAME))
         .thenReturn(aiCoreService);
+    when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
+        .thenReturn(persistenceService);
 
     new RecommendationConfiguration().eventHandlers(configurer);
 

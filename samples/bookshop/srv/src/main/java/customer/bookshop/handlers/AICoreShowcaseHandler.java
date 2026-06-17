@@ -112,45 +112,39 @@ public class AICoreShowcaseHandler implements EventHandler {
   public void onPredictCategory(EventContext context) {
     List<Map<String, Object>> products = (List<Map<String, Object>>) context.get("products");
 
-    List<CdsData> rows = new ArrayList<>();
-    rows.add(
-        CdsData.create(
-            Map.of("ID", "ctx-1", "name", "Laptop", "price", "999.99", "category", "Electronics")));
-    rows.add(
-        CdsData.create(
-            Map.of("ID", "ctx-2", "name", "Mouse", "price", "29.99", "category", "Electronics")));
-    rows.add(
-        CdsData.create(
-            Map.of("ID", "ctx-3", "name", "Shirt", "price", "49.99", "category", "Clothing")));
-    rows.add(
-        CdsData.create(
-            Map.of("ID", "ctx-4", "name", "Novel", "price", "14.99", "category", "Books")));
-    rows.add(
-        CdsData.create(
-            Map.of("ID", "ctx-5", "name", "Blender", "price", "89.99", "category", "Appliances")));
-
-    for (Map<String, Object> product : products) {
-      Map<String, Object> row = new HashMap<>(product);
-      row.put("category", "[PREDICT]");
-      rows.add(CdsData.create(row));
-    }
+    List<CdsData> contextRows =
+        List.of(
+            CdsData.create(
+                Map.of("ID", "ctx-1", "name", "Laptop", "price", "999.99", "category", "Electronics")),
+            CdsData.create(
+                Map.of("ID", "ctx-2", "name", "Mouse", "price", "29.99", "category", "Electronics")),
+            CdsData.create(
+                Map.of("ID", "ctx-3", "name", "Shirt", "price", "49.99", "category", "Clothing")),
+            CdsData.create(
+                Map.of("ID", "ctx-4", "name", "Novel", "price", "14.99", "category", "Books")),
+            CdsData.create(
+                Map.of(
+                    "ID", "ctx-5", "name", "Blender", "price", "89.99", "category", "Appliances")));
 
     AICoreService service = getAICoreService();
     String rg = service.resourceGroup();
     String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
     RptInferenceClient client =
-        new RptInferenceClient(service.inferenceClient(rg, deploymentId));
-    List<CdsData> predictions = client.predict(rows, List.of("category"), "ID");
+        new RptInferenceClient(service.inferenceClient(rg, deploymentId), List.of("ID"));
 
     List<Map<String, Object>> results = new ArrayList<>();
-    for (CdsData prediction : predictions) {
-      String id = (String) prediction.get("ID");
-      Object categoryObj = prediction.get("category");
-      String category =
-          categoryObj instanceof List<?> list && !list.isEmpty()
-              ? extractPrediction(list)
-              : String.valueOf(categoryObj);
-      results.add(Map.of("ID", id, "category", category));
+    for (Map<String, Object> product : products) {
+      CdsData predictionRow = CdsData.create(new HashMap<>(product));
+      List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("category"));
+      for (CdsData prediction : predictions) {
+        String id = (String) prediction.get("ID");
+        Object categoryObj = prediction.get("category");
+        String category =
+            categoryObj instanceof List<?> list && !list.isEmpty()
+                ? extractPrediction(list)
+                : String.valueOf(categoryObj);
+        results.add(Map.of("ID", id, "category", category));
+      }
     }
 
     context.put("result", results);
