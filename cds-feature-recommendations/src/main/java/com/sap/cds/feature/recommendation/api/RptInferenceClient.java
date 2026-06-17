@@ -66,9 +66,8 @@ public class RptInferenceClient implements RecommendationClient {
     CdsData preparedPredictRow = preparePredictRow(predictionRow, predictionColumns);
     List<CdsData> allRows = new ArrayList<>(contextRows);
     allRows.add(preparedPredictRow);
-    addSyntheticKeyIfNeeded(allRows, keyNames, indexColumn);
 
-    PredictRequestPayload request = buildRequest(allRows, predictionColumns, indexColumn);
+    PredictRequestPayload request = buildRequest(allRows, predictionColumns, indexColumn, keyNames);
     logger.debug(
         "Sending prediction request for one row with {} context rows, {} target columns",
         contextRows.size(),
@@ -99,13 +98,6 @@ public class RptInferenceClient implements RecommendationClient {
     return sb.toString();
   }
 
-  private static void addSyntheticKeyIfNeeded(
-      List<CdsData> rows, List<String> keyNames, String indexColumn) {
-    if (RptIndexColumns.SYNTHETIC_INDEX_COLUMN.equals(indexColumn)) {
-      rows.forEach(r -> r.put(RptIndexColumns.SYNTHETIC_INDEX_COLUMN, computeSyntheticKey(r, keyNames)));
-    }
-  }
-
   // Returns a copy of the predictRow with a prediction placeholder replacing empty values
   // in the predictionColumns - these will get filled by the predict method.
   private static CdsData preparePredictRow(CdsData predictRow, List<String> predictionColumns) {
@@ -117,7 +109,10 @@ public class RptInferenceClient implements RecommendationClient {
   }
 
   private static PredictRequestPayload buildRequest(
-      List<CdsData> rows, List<String> predictionColumns, String indexColumn) {
+      List<CdsData> rows,
+      List<String> predictionColumns,
+      String indexColumn,
+      List<String> keyNames) {
     var targetColumns =
         predictionColumns.stream()
             .map(
@@ -128,7 +123,24 @@ public class RptInferenceClient implements RecommendationClient {
                         .taskType(TargetColumnConfig.TaskTypeEnum.CLASSIFICATION))
             .toList();
 
-    var sdkRows = rows.stream().map(row -> toSdkRow(row)).toList();
+    // RPT-1 requires exactly one string-typed index column per row to identify predictions.
+    // When the entity key is composite or non-string, then the index column is
+    // RptIndexColumns.SYNTHETIC_INDEX_COLUMN and we need to compute the sytheticKey for all rows
+    // before sending them to RPT-1.
+    boolean syntheticKeyNeeded = RptIndexColumns.SYNTHETIC_INDEX_COLUMN.equals(indexColumn);
+    var sdkRows =
+        rows.stream()
+            .map(
+                row -> {
+                  Map<String, RowsInnerValue> sdkRow = toSdkRow(row);
+                  if (syntheticKeyNeeded) {
+                    sdkRow.put(
+                        RptIndexColumns.SYNTHETIC_INDEX_COLUMN,
+                        RowsInnerValue.create(computeSyntheticKey(row, keyNames)));
+                  }
+                  return sdkRow;
+                })
+            .toList();
 
     return PredictRequestPayload.create()
         .predictionConfig(PredictionConfig.create().targetColumns(targetColumns))
