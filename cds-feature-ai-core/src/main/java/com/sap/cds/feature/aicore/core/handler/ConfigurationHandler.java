@@ -7,7 +7,7 @@ import com.sap.ai.sdk.core.model.AiConfiguration;
 import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.AICore;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
@@ -32,7 +32,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName(AICoreService.DEFAULT_NAME)
+@ServiceName(AICore.SERVICE_NAME)
 public class ConfigurationHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurationHandler.class);
