@@ -22,15 +22,16 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupPatchRequest;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.AICore;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.environment.CdsProperties.Remote.RemoteServiceConfig;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -51,7 +52,7 @@ import org.mockito.ArgumentCaptor;
 class ResourceGroupHandlerTest {
 
   private static CdsRuntime runtime;
-  private static AICoreServiceImpl service;
+  private static RemoteService service;
   private static ResourceGroupApi resourceGroupApi;
 
   @BeforeAll
@@ -60,8 +61,14 @@ class ResourceGroupHandlerTest {
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
     ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    CdsProperties props = new CdsProperties();
+    RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore.SERVICE_NAME);
+    rsConfig.setModel(AICore.SERVICE_NAME);
+    props.getRemote().getServices().put(AICore.SERVICE_NAME, rsConfig);
+
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
     configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
     runtime = configurer.getCdsRuntime();
 
     AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
@@ -70,11 +77,11 @@ class ResourceGroupHandlerTest {
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
     DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
-    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
-    configurer.service(service);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
     configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
     configurer.complete();
+
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
   }
 
   @BeforeEach
@@ -199,7 +206,7 @@ class ResourceGroupHandlerTest {
   class MultiTenancyTests {
 
     private static CdsRuntime mtRuntime;
-    private static AICoreServiceImpl mtService;
+    private static RemoteService mtService;
     private static ResourceGroupApi mtResourceGroupApi;
 
     @BeforeAll
@@ -208,9 +215,14 @@ class ResourceGroupHandlerTest {
       DeploymentApi deploymentApi = mock(DeploymentApi.class);
       ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-      var configurer =
-          CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+      CdsProperties props = new CdsProperties();
+      RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore.SERVICE_NAME);
+      rsConfig.setModel(AICore.SERVICE_NAME);
+      props.getRemote().getServices().put(AICore.SERVICE_NAME, rsConfig);
+
+      var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
       configurer.cdsModel("edmx/csn.json");
+      configurer.serviceConfigurations();
       mtRuntime = configurer.getCdsRuntime();
 
       AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, true);
@@ -220,11 +232,12 @@ class ResourceGroupHandlerTest {
       DeploymentResolver resolver =
           new DeploymentResolver(config, deploymentApi, mtResourceGroupApi);
 
-      mtService = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, mtRuntime);
-      configurer.service(mtService);
       configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
       configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
       configurer.complete();
+
+      mtService =
+          mtRuntime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
     }
 
     @BeforeEach
