@@ -2,7 +2,10 @@ package customer.bookshop.handlers;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
+import com.sap.cds.feature.aicore.api.InferenceClientContext;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
@@ -11,6 +14,7 @@ import com.sap.cds.ql.Update;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -28,8 +32,8 @@ public class AICoreShowcaseHandler implements EventHandler {
 
   @Autowired private CdsRuntime runtime;
 
-  private AICoreService getAICoreService() {
-    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private RemoteService getAICoreService() {
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
   }
 
   // This handler is NOT required - the plugin automatically delegates reads on projections
@@ -42,14 +46,20 @@ public class AICoreShowcaseHandler implements EventHandler {
 
   @On(event = "setupTenantResources")
   public void onSetupTenantResources(EventContext context) {
-    String rgId = getAICoreService().resourceGroup();
+    RemoteService service = getAICoreService();
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    service.emit(rgCtx);
+    String rgId = rgCtx.getResult();
     context.put("result", rgId);
     context.setCompleted();
   }
 
   @On(event = "getMyResourceGroup")
   public void onGetMyResourceGroup(EventContext context) {
-    String rgId = getAICoreService().resourceGroup();
+    RemoteService service = getAICoreService();
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    service.emit(rgCtx);
+    String rgId = rgCtx.getResult();
     context.put("result", rgId);
     context.setCompleted();
   }
@@ -57,7 +67,12 @@ public class AICoreShowcaseHandler implements EventHandler {
   @On(event = "provisionRpt1")
   public void onProvisionRpt1(EventContext context) {
     String resourceGroupId = (String) context.get("resourceGroupId");
-    String deploymentId = getAICoreService().deploymentId(resourceGroupId, RptModelSpec.rpt1());
+    RemoteService service = getAICoreService();
+    DeploymentIdContext depCtx = DeploymentIdContext.create();
+    depCtx.setResourceGroupId(resourceGroupId);
+    depCtx.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx);
+    String deploymentId = depCtx.getResult();
     context.put("result", deploymentId);
     context.setCompleted();
   }
@@ -126,10 +141,23 @@ public class AICoreShowcaseHandler implements EventHandler {
                 Map.of(
                     "ID", "ctx-5", "name", "Blender", "price", "89.99", "category", "Appliances")));
 
-    AICoreService service = getAICoreService();
-    String rg = service.resourceGroup();
-    String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
-    RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId));
+    RemoteService service = getAICoreService();
+
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    service.emit(rgCtx);
+    String rg = rgCtx.getResult();
+
+    DeploymentIdContext depCtx = DeploymentIdContext.create();
+    depCtx.setResourceGroupId(rg);
+    depCtx.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx);
+    String deploymentId = depCtx.getResult();
+
+    InferenceClientContext infCtx = InferenceClientContext.create();
+    infCtx.setResourceGroupId(rg);
+    infCtx.setDeploymentId(deploymentId);
+    service.emit(infCtx);
+    RptInferenceClient client = new RptInferenceClient(infCtx.getResult());
 
     List<Map<String, Object>> results = new ArrayList<>();
     for (Map<String, Object> product : products) {
