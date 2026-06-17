@@ -12,13 +12,11 @@ import com.sap.ai.sdk.foundationmodels.rpt.generated.model.PredictionPlaceholder
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.RowsInnerValue;
 import com.sap.ai.sdk.foundationmodels.rpt.generated.model.TargetColumnConfig;
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.recommendation.RptIndexColumns;
 import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,11 +31,20 @@ import org.slf4j.LoggerFactory;
  * <p>Example usage:
  *
  * <pre>{@code
- * AICoreService service = ...;
- * String rg = service.resourceGroup();
- * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
- * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId), keyNames);
- * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"));
+ * RemoteService service = runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+ * ResourceGroupContext rgCtx = ResourceGroupContext.create();
+ * service.emit(rgCtx);
+ * String rg = rgCtx.getResult();
+ * DeploymentIdContext depCtx = DeploymentIdContext.create();
+ * depCtx.setResourceGroupId(rg);
+ * depCtx.setSpec(RptModelSpec.rpt1());
+ * service.emit(depCtx);
+ * InferenceClientContext infCtx = InferenceClientContext.create();
+ * infCtx.setResourceGroupId(rg);
+ * infCtx.setDeploymentId(depCtx.getResult());
+ * service.emit(infCtx);
+ * RptInferenceClient client = new RptInferenceClient(infCtx.getResult());
+ * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"), List.of("ID"));
  * }</pre>
  */
 public class RptInferenceClient implements RecommendationClient {
@@ -50,23 +57,25 @@ public class RptInferenceClient implements RecommendationClient {
   private static final Retry INFERENCE_RETRY = buildInferenceRetry();
 
   private final DefaultApi rpt;
-  private final List<String> keyNames;
 
-  public RptInferenceClient(ApiClient apiClient, List<String> keyNames) {
+  public RptInferenceClient(ApiClient apiClient) {
     this.rpt =
         new DefaultApi(apiClient.withObjectMapper(JacksonConfiguration.getDefaultObjectMapper()));
-    this.keyNames = keyNames;
   }
 
   @Override
   public List<CdsData> predict(
-      CdsData predictionRow, List<CdsData> contextRows, List<String> predictionColumns) {
-    String indexColumn = RptIndexColumns.resolveIndexColumn(keyNames, predictionRow);
+      CdsData predictionRow,
+      List<CdsData> contextRows,
+      List<String> predictionColumns,
+      List<String> keyNames) {
+    String indexColumn = resolveIndexColumn(keyNames, predictionRow);
     CdsData preparedPredictRow = preparePredictRow(predictionRow, predictionColumns);
-    List<CdsData> allRows = new ArrayList<>(contextRows);
+    List<CdsData> allRows = new java.util.ArrayList<>(contextRows);
     allRows.add(preparedPredictRow);
+    addSyntheticKeyIfNeeded(allRows, keyNames, indexColumn);
 
-    PredictRequestPayload request = buildRequest(allRows, predictionColumns, indexColumn, keyNames);
+    PredictRequestPayload request = buildRequest(allRows, predictionColumns, indexColumn);
     logger.debug(
         "Sending prediction request for one row with {} context rows, {} target columns",
         contextRows.size(),
@@ -84,6 +93,21 @@ public class RptInferenceClient implements RecommendationClient {
         .get();
   }
 
+  // RPT-1 specific: when the entity has a composite or non-ID key, a synthetic string index column
+  // is computed by concatenating all key fields and injected into each row before sending.
+  private static final String SYNTHETIC_INDEX_COLUMN = "SAP_RECOMMENDATIONS_ID";
+
+  // If there is one string-typed key, use it directly; for composite keys or non-string keys a
+  // synthetic string column is needed since RPT-1 requires a single string index column.
+  // Non-string single keys fall back to synthetic rather than just converting to a string.
+  // RPT-1 may reject a column declared as the index if its values are not strings.
+  private static String resolveIndexColumn(List<String> keyNames, CdsData sampleRow) {
+    if (keyNames.size() == 1 && sampleRow.get(keyNames.get(0)) instanceof String) {
+      return keyNames.get(0);
+    }
+    return SYNTHETIC_INDEX_COLUMN;
+  }
+
   // '\0' is used as separator because it cannot appear in database string values
   // (VARCHAR/NVARCHAR), so concatenation of any composite key values is guaranteed collision-free.
   static String computeSyntheticKey(Map<String, Object> row, List<String> keyNames) {
@@ -97,6 +121,13 @@ public class RptInferenceClient implements RecommendationClient {
     return sb.toString();
   }
 
+  private static void addSyntheticKeyIfNeeded(
+      List<CdsData> rows, List<String> keyNames, String indexColumn) {
+    if (SYNTHETIC_INDEX_COLUMN.equals(indexColumn)) {
+      rows.forEach(r -> r.put(SYNTHETIC_INDEX_COLUMN, computeSyntheticKey(r, keyNames)));
+    }
+  }
+
   // Returns a copy of the predictRow with a prediction placeholder replacing empty values
   // in the predictionColumns - these will get filled by the predict method.
   private static CdsData preparePredictRow(CdsData predictRow, List<String> predictionColumns) {
@@ -108,10 +139,7 @@ public class RptInferenceClient implements RecommendationClient {
   }
 
   private static PredictRequestPayload buildRequest(
-      List<CdsData> rows,
-      List<String> predictionColumns,
-      String indexColumn,
-      List<String> keyNames) {
+      List<CdsData> rows, List<String> predictionColumns, String indexColumn) {
     var targetColumns =
         predictionColumns.stream()
             .map(
@@ -122,24 +150,7 @@ public class RptInferenceClient implements RecommendationClient {
                         .taskType(TargetColumnConfig.TaskTypeEnum.CLASSIFICATION))
             .toList();
 
-    // RPT-1 requires exactly one string-typed index column per row to identify predictions.
-    // When the entity key is composite or non-string, then the index column is
-    // RptIndexColumns.SYNTHETIC_INDEX_COLUMN and we need to compute the sytheticKey for all rows
-    // before sending them to RPT-1.
-    boolean syntheticKeyNeeded = RptIndexColumns.SYNTHETIC_INDEX_COLUMN.equals(indexColumn);
-    var sdkRows =
-        rows.stream()
-            .map(
-                row -> {
-                  Map<String, RowsInnerValue> sdkRow = toSdkRow(row);
-                  if (syntheticKeyNeeded) {
-                    sdkRow.put(
-                        RptIndexColumns.SYNTHETIC_INDEX_COLUMN,
-                        RowsInnerValue.create(computeSyntheticKey(row, keyNames)));
-                  }
-                  return sdkRow;
-                })
-            .toList();
+    var sdkRows = rows.stream().map(row -> toSdkRow(row)).toList();
 
     return PredictRequestPayload.create()
         .predictionConfig(PredictionConfig.create().targetColumns(targetColumns))

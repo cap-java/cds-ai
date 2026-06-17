@@ -31,7 +31,7 @@ class RecommendationContextBuilder {
   private static final String VALUE_LIST_ANNOTATION = "@Common.ValueList";
   private static final String VALUE_LIST_WITH_FIXED_VALUES_ANNOTATION =
       "@Common.ValueListWithFixedValues";
-  private static final String ODATA_VALUE_LIST_ANNOTATION = "@cds.odata.valuelist";
+  private static final String ODATA_VALUE_LIST_ANNOTATION = "cds.odata.valuelist";
   private static final String COMPUTED_ANNOTATION = "@Core.Computed";
   private static final String READONLY_ANNOTATION = "@readonly";
   private static final Set<CdsBaseType> SUPPORTED_CONTEXT_TYPES =
@@ -124,10 +124,11 @@ class RecommendationContextBuilder {
     }
     Set<String> allowed = new HashSet<>(contextColumns);
     allowed.addAll(keyNames);
-    Map<String, Object> predictRow =
-        allowed.stream()
-            .filter(row::containsKey)
-            .collect(HashMap::new, (m, col) -> m.put(col, row.get(col)), HashMap::putAll);
+    Map<String, Object> predictRow = new HashMap<>();
+    allowed.forEach(
+        col -> {
+          if (row.containsKey(col)) predictRow.put(col, row.get(col));
+        });
     return CdsData.create(predictRow);
   }
 

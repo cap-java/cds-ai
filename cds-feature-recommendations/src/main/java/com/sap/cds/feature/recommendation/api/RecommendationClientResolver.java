@@ -3,12 +3,12 @@
  */
 package com.sap.cds.feature.recommendation.api;
 
-// A single-method interface so callers can supply a custom client via lambda.
-// @FunctionalInterface enforces this and causes a compile error if a second method is ever added.
-// The type parameter T allows the resolver to receive any context the client might need (e.g. key
-// names).
-@FunctionalInterface
-public interface RecommendationClientResolver<T> {
+import com.sap.cds.services.cds.RemoteService;
 
-  RecommendationClient resolve(T context);
+// The annotation @FunctionalInterface ensures this interface has only one method, such that
+// callers can supply a custom client by providing this one method e.g. via a lambda.
+@FunctionalInterface
+public interface RecommendationClientResolver {
+
+  RecommendationClient resolve(RemoteService aiCoreService);
 }

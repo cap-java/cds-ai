@@ -5,11 +5,46 @@ package com.sap.cds.feature.recommendation.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.sap.cds.CdsData;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class RptInferenceClientTest {
+
+  private static String resolveIndexColumn(List<String> keyNames, CdsData sampleRow)
+      throws Exception {
+    Method m =
+        RptInferenceClient.class.getDeclaredMethod("resolveIndexColumn", List.class, CdsData.class);
+    m.setAccessible(true);
+    return (String) m.invoke(null, keyNames, sampleRow);
+  }
+
+  @Test
+  void resolveIndexColumn_singleStringKey_usesItDirectly() throws Exception {
+    CdsData row = CdsData.create(Map.of("isbn", "978-3-16"));
+    assertThat(resolveIndexColumn(List.of("isbn"), row)).isEqualTo("isbn");
+  }
+
+  @Test
+  void resolveIndexColumn_singleUuidKey_usesItDirectly() throws Exception {
+    CdsData row = CdsData.create(Map.of("ID", "a009c640-434a-4542-ac68-51b400c880ec"));
+    assertThat(resolveIndexColumn(List.of("ID"), row)).isEqualTo("ID");
+  }
+
+  @Test
+  void resolveIndexColumn_singleIntegerKey_usesSyntheticColumn() throws Exception {
+    CdsData row = CdsData.create(Map.of("order_ID", 42));
+    assertThat(resolveIndexColumn(List.of("order_ID"), row)).isEqualTo("SAP_RECOMMENDATIONS_ID");
+  }
+
+  @Test
+  void resolveIndexColumn_compositeKey_usesSyntheticColumn() throws Exception {
+    CdsData row = CdsData.create(Map.of("order_ID", 1, "item_no", 10));
+    assertThat(resolveIndexColumn(List.of("order_ID", "item_no"), row))
+        .isEqualTo("SAP_RECOMMENDATIONS_ID");
+  }
 
   @Test
   void computeSyntheticKey_singleKey() {
