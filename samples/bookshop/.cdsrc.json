@@ -2,13 +2,13 @@
   "requires": {
     "db": "hana",
     "AICore": {
-      "model": "com.sap.cds/ai"
+      "model": "@cap-js/ai/srv/AICoreService"
     },
     "[production]": {
       "auth": "xsuaa"
     }
   },
   "cdsc": {
-    "moduleLookupDirectories": ["node_modules/", "target/cds/"]
+    "moduleLookupDirectories": ["node_modules/"]
   }
 }

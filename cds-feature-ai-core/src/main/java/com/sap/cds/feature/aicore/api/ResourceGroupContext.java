@@ -9,9 +9,9 @@ import com.sap.cds.services.EventName;
 /**
  * Typed {@link EventContext} for the {@code resourceGroup} event.
  *
- * <p>Emitted by {@link AICoreService#resourceGroup()} to resolve the AI Core resource group ID for
- * the current tenant. In multi-tenancy mode, the resource group is created on-demand if it does not
- * exist. In single-tenancy mode, the configured default resource group is returned.
+ * <p>Emitted on the AI Core service to resolve the AI Core resource group ID for the current
+ * tenant. In multi-tenancy mode, the resource group is created on-demand if it does not exist. In
+ * single-tenancy mode, the configured default resource group is returned.
  *
  * <p>If {@link #getTenantId()} is non-null, the handler uses the explicit tenant ID. Otherwise, the
  * current tenant is read from the {@code RequestContext}.

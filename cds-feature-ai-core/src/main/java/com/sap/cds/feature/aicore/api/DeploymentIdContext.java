@@ -9,9 +9,9 @@ import com.sap.cds.services.EventName;
 /**
  * Typed {@link EventContext} for the {@code deploymentId} event.
  *
- * <p>Emitted by {@link AICoreService#deploymentId(String, ModelDeploymentSpec)} to resolve (or
- * create) a deployment matching the given spec inside the given resource group. The ON handler
- * performs cache lookup, retry, configuration creation, deployment creation and polling.
+ * <p>Emitted on the AI Core service to resolve (or create) a deployment matching the given spec
+ * inside the given resource group. The ON handler performs cache lookup, retry, configuration
+ * creation, deployment creation and polling.
  */
 @EventName(DeploymentIdContext.EVENT)
 public interface DeploymentIdContext extends EventContext {
