@@ -17,7 +17,6 @@ import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.services.Service;
 import com.sap.cds.services.cds.CdsReadEventContext;
-import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.impl.utils.CdsServiceUtils;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.RequestContext;
@@ -32,20 +31,12 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class FioriRecommendationHandlerTest {
 
   private static CdsRuntime runtime;
   private static PersistenceService db;
-
-  @Mock(answer = Answers.CALLS_REAL_METHODS)
-  private RemoteService aiCoreService;
 
   private FioriRecommendationHandler cut;
   private RecommendationClient predictionClient;
@@ -67,7 +58,7 @@ class FioriRecommendationHandlerTest {
     reset(db);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
     predictionClient = randomPickClient();
-    cut = new FioriRecommendationHandler(aiCoreService, (service) -> predictionClient, db);
+    cut = new FioriRecommendationHandler((keyNames) -> predictionClient, db);
   }
 
   // ── tests ──────────────────────────────────────────────────────────────────
@@ -152,7 +143,7 @@ class FioriRecommendationHandlerTest {
           Map<String, Object> row = draftRow("genre_ID", null);
           CdsReadEventContext ctx = readContext("test.Books", List.of(row));
           when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
-          predictionClient = (predictionRow, contextRows, cols, keyNames) -> List.of();
+          predictionClient = (predictionRow, contextRows, cols) -> List.of();
           cut.afterRead(ctx, dataList(row));
           assertThat(row).doesNotContainKey("SAP_Recommendations");
         });
@@ -166,7 +157,7 @@ class FioriRecommendationHandlerTest {
           CdsReadEventContext ctx = readContext("test.Books", List.of(row));
           when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
           predictionClient =
-              (predictionRow, contextRows, cols, idx) ->
+              (predictionRow, contextRows, cols) ->
                   List.of(
                       CdsData.create(Map.of("ID", "id-1")), CdsData.create(Map.of("ID", "id-2")));
           cut.afterRead(ctx, dataList(row));
@@ -442,7 +433,7 @@ class FioriRecommendationHandlerTest {
 
   private static RecommendationClient rptStyleClient() {
     Random random = new Random(42);
-    return (predictionRow, contextRows, predictionColumns, keyNames) -> {
+    return (predictionRow, contextRows, predictionColumns) -> {
       Map<String, Object> prediction = new HashMap<>();
       for (String col : predictionColumns) {
         List<Object> available =
@@ -450,14 +441,14 @@ class FioriRecommendationHandlerTest {
         Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
         prediction.put(col, List.of(Map.of("prediction", val)));
       }
-      prediction.put(keyNames.get(0), predictionRow.get(keyNames.get(0)));
+      prediction.put("ID", predictionRow.get("ID"));
       return List.of(CdsData.create(prediction));
     };
   }
 
   private static RecommendationClient randomPickClient() {
     Random random = new Random(42);
-    return (predictionRow, contextRows, predictionColumns, keyNames) -> {
+    return (predictionRow, contextRows, predictionColumns) -> {
       Map<String, Object> prediction = new HashMap<>();
       for (String col : predictionColumns) {
         if (predictionRow.get(col) == null) {
@@ -467,7 +458,7 @@ class FioriRecommendationHandlerTest {
           prediction.put(col, List.of(Map.of("prediction", val)));
         }
       }
-      prediction.put(keyNames.get(0), predictionRow.get(keyNames.get(0)));
+      prediction.put("ID", predictionRow.get("ID"));
       return List.of(CdsData.create(prediction));
     };
   }
