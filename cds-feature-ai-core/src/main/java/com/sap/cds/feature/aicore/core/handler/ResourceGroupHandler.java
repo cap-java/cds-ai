@@ -9,7 +9,7 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupPatchRequest;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
@@ -36,7 +36,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName(AICore.SERVICE_NAME)
+@ServiceName(AICore_.CDS_NAME)
 public class ResourceGroupHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceGroupHandler.class);

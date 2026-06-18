@@ -7,7 +7,6 @@ import com.sap.ai.sdk.core.AiCoreService;
 import com.sap.ai.sdk.core.client.ConfigurationApi;
 import com.sap.ai.sdk.core.client.DeploymentApi;
 import com.sap.ai.sdk.core.client.ResourceGroupApi;
-import com.sap.cds.feature.aicore.api.AICore;
 import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
 import com.sap.cds.feature.aicore.core.handler.AICoreSetupHandler;
 import com.sap.cds.feature.aicore.core.handler.ActionHandler;
@@ -17,6 +16,7 @@ import com.sap.cds.feature.aicore.core.handler.MockAICoreApiHandler;
 import com.sap.cds.feature.aicore.core.handler.MockAICoreSetupHandler;
 import com.sap.cds.feature.aicore.core.handler.MockEntityHandler;
 import com.sap.cds.feature.aicore.core.handler.ResourceGroupHandler;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.environment.CdsProperties.Remote.RemoteServiceConfig;
 import com.sap.cds.services.mt.DeploymentService;
@@ -55,15 +55,15 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
    */
   @Override
   public void environment(CdsRuntimeConfigurer configurer) {
-    RemoteServiceConfig remoteConfig = new RemoteServiceConfig(AICore.SERVICE_NAME);
-    remoteConfig.setModel(AICore.SERVICE_NAME);
+    RemoteServiceConfig remoteConfig = new RemoteServiceConfig(AICore_.CDS_NAME);
+    remoteConfig.setModel(AICore_.CDS_NAME);
     configurer
         .getCdsRuntime()
         .getEnvironment()
         .getCdsProperties()
         .getRemote()
         .getServices()
-        .putIfAbsent(AICore.SERVICE_NAME, remoteConfig);
+        .putIfAbsent(AICore_.CDS_NAME, remoteConfig);
   }
 
   @Override
@@ -127,7 +127,7 @@ public class AICoreServiceConfiguration implements CdsRuntimeConfiguration {
   }
 
   private static boolean hasAICoreModel(CdsRuntime runtime) {
-    return runtime.getCdsModel().findService(AICore.SERVICE_NAME).isPresent();
+    return runtime.getCdsModel().findService(AICore_.CDS_NAME).isPresent();
   }
 
   private static boolean hasAICoreBinding(CdsRuntime runtime) {

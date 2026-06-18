@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  * <p>Example usage:
  *
  * <pre>{@code
- * RemoteService service = runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+ * RemoteService service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
  * ResourceGroupContext rgCtx = ResourceGroupContext.create();
  * service.emit(rgCtx);
  * String rg = rgCtx.getResult();

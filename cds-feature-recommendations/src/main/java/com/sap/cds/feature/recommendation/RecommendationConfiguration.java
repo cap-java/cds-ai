@@ -3,7 +3,7 @@
  */
 package com.sap.cds.feature.recommendation;
 
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.InferenceClientContext;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
@@ -32,7 +32,7 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
     ServiceCatalog serviceCatalog = runtime.getServiceCatalog();
 
     RemoteService aiCoreService =
-        serviceCatalog.getService(RemoteService.class, AICore.SERVICE_NAME);
+        serviceCatalog.getService(RemoteService.class, AICore_.CDS_NAME);
 
     if (aiCoreService == null) {
       logger.info("No AICoreService found, skipping Fiori recommendation handler registration.");

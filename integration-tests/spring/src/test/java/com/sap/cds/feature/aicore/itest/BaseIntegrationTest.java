@@ -5,7 +5,7 @@ package com.sap.cds.feature.aicore.itest;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
@@ -41,7 +41,7 @@ public abstract class BaseIntegrationTest {
   @Autowired protected CdsRuntime runtime;
 
   protected RemoteService getAICoreService() {
-    return runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   protected AICoreConfig getAICoreConfig() {

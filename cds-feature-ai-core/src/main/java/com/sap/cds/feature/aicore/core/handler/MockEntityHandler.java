@@ -4,7 +4,10 @@
 package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnDelete;
@@ -25,7 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@ServiceName(AICore.SERVICE_NAME)
+@ServiceName(AICore_.CDS_NAME)
 public class MockEntityHandler implements EventHandler {
 
   private final Map<String, Map<String, Object>> resourceGroups = new ConcurrentHashMap<>();
@@ -34,7 +37,7 @@ public class MockEntityHandler implements EventHandler {
 
   // --- Resource Groups ---
 
-  @On(entity = AICore.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void readResourceGroups(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -61,7 +64,7 @@ public class MockEntityHandler implements EventHandler {
     }
   }
 
-  @On(entity = AICore.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void createResourceGroups(CdsCreateEventContext context) {
     CqnInsert insert = context.getCqn();
     List<Map<String, Object>> results = new ArrayList<>();
@@ -76,7 +79,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(results);
   }
 
-  @On(entity = AICore.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void updateResourceGroups(CdsUpdateEventContext context) {
     CqnUpdate update = context.getCqn();
     CdsModel model = context.getModel();
@@ -92,7 +95,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(List.of(CdsData.create(existing)));
   }
 
-  @On(entity = AICore.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void deleteResourceGroups(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();
@@ -105,7 +108,7 @@ public class MockEntityHandler implements EventHandler {
 
   // --- Deployments ---
 
-  @On(entity = AICore.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void readDeployments(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -121,7 +124,7 @@ public class MockEntityHandler implements EventHandler {
     }
   }
 
-  @On(entity = AICore.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void createDeployments(CdsCreateEventContext context) {
     CqnInsert insert = context.getCqn();
     List<Map<String, Object>> results = new ArrayList<>();
@@ -136,7 +139,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(results);
   }
 
-  @On(entity = AICore.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void updateDeployments(CdsUpdateEventContext context) {
     CqnUpdate update = context.getCqn();
     CdsModel model = context.getModel();
@@ -152,7 +155,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(List.of(CdsData.create(existing)));
   }
 
-  @On(entity = AICore.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void deleteDeployments(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();
@@ -165,7 +168,7 @@ public class MockEntityHandler implements EventHandler {
 
   // --- Configurations ---
 
-  @On(entity = AICore.CONFIGURATIONS)
+  @On(entity = Configurations_.CDS_NAME)
   public void readConfigurations(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -181,7 +184,7 @@ public class MockEntityHandler implements EventHandler {
     }
   }
 
-  @On(entity = AICore.CONFIGURATIONS)
+  @On(entity = Configurations_.CDS_NAME)
   public void createConfigurations(CdsCreateEventContext context) {
     CqnInsert insert = context.getCqn();
     List<Map<String, Object>> results = new ArrayList<>();

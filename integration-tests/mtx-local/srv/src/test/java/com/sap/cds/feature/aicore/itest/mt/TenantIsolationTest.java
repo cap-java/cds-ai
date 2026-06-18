@@ -6,7 +6,7 @@ package com.sap.cds.feature.aicore.itest.mt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
@@ -81,7 +81,7 @@ class TenantIsolationTest {
   }
 
   private RemoteService getService() {
-    return runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   private AICoreConfig getConfig() {

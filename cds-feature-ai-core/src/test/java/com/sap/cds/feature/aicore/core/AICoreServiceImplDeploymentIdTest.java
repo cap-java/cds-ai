@@ -23,7 +23,7 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
@@ -72,9 +72,9 @@ class AICoreServiceImplDeploymentIdTest {
    */
   private RemoteService createService(boolean multiTenancy) {
     CdsProperties props = new CdsProperties();
-    RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore.SERVICE_NAME);
-    rsConfig.setModel(AICore.SERVICE_NAME);
-    props.getRemote().getServices().put(AICore.SERVICE_NAME, rsConfig);
+    RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore_.CDS_NAME);
+    rsConfig.setModel(AICore_.CDS_NAME);
+    props.getRemote().getServices().put(AICore_.CDS_NAME, rsConfig);
 
     CdsRuntimeConfigurer configurer =
         CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
@@ -91,7 +91,7 @@ class AICoreServiceImplDeploymentIdTest {
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
     configurer.complete();
 
-    return runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach

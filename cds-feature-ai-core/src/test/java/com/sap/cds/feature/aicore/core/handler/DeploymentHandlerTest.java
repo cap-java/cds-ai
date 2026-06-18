@@ -21,10 +21,11 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiExecutionStatus;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICore;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.ErrorStatuses;
@@ -77,7 +78,7 @@ class DeploymentHandlerTest {
     configurer.eventHandler(new DeploymentHandler(config, clients, resolver));
     configurer.complete();
 
-    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -100,7 +101,7 @@ class DeploymentHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Insert.into("AICore.deployments")
+                            Insert.into(Deployments_.CDS_NAME)
                                 .entry(
                                     Map.of(
                                         "configurationId", "cfg-1",
@@ -127,7 +128,7 @@ class DeploymentHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Insert.into("AICore.deployments")
+                        Insert.into(Deployments_.CDS_NAME)
                             .entry(
                                 Map.of(
                                     "configurationId", "cfg-2",
@@ -148,7 +149,7 @@ class DeploymentHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Update.entity("AICore.deployments")
+                        Update.entity(Deployments_.CDS_NAME)
                             .where(d -> d.get("id").eq("dep-123"))
                             .data("targetStatus", "STOPPED")));
 
@@ -166,7 +167,7 @@ class DeploymentHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Update.entity("AICore.deployments")
+                        Update.entity(Deployments_.CDS_NAME)
                             .where(d -> d.get("id").eq("dep-789"))
                             .data("configurationId", "config-456")));
 
@@ -186,7 +187,7 @@ class DeploymentHandlerTest {
                         (Function<RequestContext, Result>)
                             ctx ->
                                 service.run(
-                                    Update.entity("AICore.deployments")
+                                    Update.entity(Deployments_.CDS_NAME)
                                         .where(d -> d.get("id").eq("dep-x"))
                                         .data("ttl", "1d"))))
         .isInstanceOfSatisfying(

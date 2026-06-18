@@ -5,7 +5,7 @@ package com.sap.cds.feature.aicore.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.sap.cds.feature.aicore.api.AICore;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
@@ -34,7 +34,7 @@ class AICoreServiceConfigurationTest {
             .complete();
 
     RemoteService service =
-        runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+        runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
 
     assertThat(service).isNotNull();
   }
@@ -57,7 +57,7 @@ class AICoreServiceConfigurationTest {
             .complete();
 
     RemoteService service =
-        runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+        runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
 
     assertThat(service).isNotNull();
   }
@@ -71,7 +71,7 @@ class AICoreServiceConfigurationTest {
             .complete();
 
     RemoteService service =
-        runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+        runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
 
     assertThat(service).isNull();
   }

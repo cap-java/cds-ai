@@ -20,10 +20,11 @@ import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationCreationResponse;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICore;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.services.cds.RemoteService;
@@ -73,7 +74,7 @@ class ConfigurationHandlerTest {
     configurer.eventHandler(new ConfigurationHandler(config, clients, resolver));
     configurer.complete();
 
-    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore.SERVICE_NAME);
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -101,7 +102,7 @@ class ConfigurationHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Select.from("AICore.configurations")
+                            Select.from(Configurations_.CDS_NAME)
                                 .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
     verify(configurationApi).query(eq("default"), any(), any(), any(), any(), any(), any(), any());
@@ -124,7 +125,7 @@ class ConfigurationHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Select.from("AICore.configurations")
+                            Select.from(Configurations_.CDS_NAME)
                                 .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
     assertThat(result.list()).isEmpty();
@@ -144,7 +145,7 @@ class ConfigurationHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Insert.into("AICore.configurations")
+                            Insert.into(Configurations_.CDS_NAME)
                                 .entry(
                                     Map.of(
                                         "name", "test-config",
