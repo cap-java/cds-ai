@@ -13,11 +13,12 @@ import static org.mockito.Mockito.when;
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.ResultBuilder;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.services.Service;
 import com.sap.cds.services.cds.CdsReadEventContext;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.impl.utils.CdsServiceUtils;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.RequestContext;
@@ -32,20 +33,12 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class FioriRecommendationHandlerTest {
 
   private static CdsRuntime runtime;
   private static PersistenceService db;
-
-  @Mock(answer = Answers.CALLS_REAL_METHODS)
-  private AICoreService aiCoreService;
 
   private FioriRecommendationHandler cut;
   private RecommendationClient predictionClient;
@@ -54,8 +47,10 @@ class FioriRecommendationHandlerTest {
   static void bootRuntime() {
     db = mock(PersistenceService.class);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
+    CdsProperties properties = new CdsProperties();
+    properties.getModel().setIncludeUiAnnotations(true);
     runtime =
-        CdsRuntimeConfigurer.create()
+        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(properties))
             .cdsModel("model/csn.json")
             .serviceConfigurations()
             .service(db)
@@ -67,7 +62,7 @@ class FioriRecommendationHandlerTest {
     reset(db);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
     predictionClient = randomPickClient();
-    cut = new FioriRecommendationHandler(aiCoreService, (service) -> predictionClient);
+    cut = new FioriRecommendationHandler((keyNames) -> predictionClient, db);
   }
 
   // ── tests ──────────────────────────────────────────────────────────────────
@@ -152,7 +147,7 @@ class FioriRecommendationHandlerTest {
           Map<String, Object> row = draftRow("genre_ID", null);
           CdsReadEventContext ctx = readContext("test.Books", List.of(row));
           when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
-          predictionClient = (rows, cols, idx) -> List.of();
+          predictionClient = (predictionRow, contextRows, cols) -> List.of();
           cut.afterRead(ctx, dataList(row));
           assertThat(row).doesNotContainKey("SAP_Recommendations");
         });
@@ -166,7 +161,7 @@ class FioriRecommendationHandlerTest {
           CdsReadEventContext ctx = readContext("test.Books", List.of(row));
           when(db.run(any(CqnSelect.class))).thenReturn(twoContextRows());
           predictionClient =
-              (rows, cols, idx) ->
+              (predictionRow, contextRows, cols) ->
                   List.of(
                       CdsData.create(Map.of("ID", "id-1")), CdsData.create(Map.of("ID", "id-2")));
           cut.afterRead(ctx, dataList(row));
@@ -200,6 +195,158 @@ class FioriRecommendationHandlerTest {
           Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
           assertThat((List<?>) recs.get("genre_ID")).hasSize(1);
           assertThat((List<?>) recs.get("currency_code")).hasSize(1);
+        });
+  }
+
+  @Test
+  void contextQuery_excludesPredictionRowByRequiringNonNullPredictionColumns() {
+    runIn(
+        () -> {
+          Map<String, Object> row = draftRow("genre_ID", null);
+          CdsReadEventContext ctx = readContext("test.Books", List.of(row));
+          ArgumentCaptor<CqnSelect> selectCaptor = ArgumentCaptor.forClass(CqnSelect.class);
+          when(db.run(selectCaptor.capture())).thenReturn(twoContextRows());
+          cut.afterRead(ctx, dataList(row));
+          // The WHERE clause requires all prediction columns to be non-null, so the current row
+          // (which has genre_ID = null) is automatically excluded from the context.
+          String selectSql = selectCaptor.getAllValues().get(0).toString();
+          assertThat(selectSql).contains("\"is not\",\"null\"");
+          assertThat(selectSql).contains("genre_ID");
+        });
+  }
+
+  @Test
+  void cdsoDataValueListFalse_fieldIsExcludedFromPredictions() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", null);
+          row.put("suppressed_ID", null);
+          CdsReadEventContext ctx = readContext("test.BooksWithDisabledValueList", List.of(row));
+          when(db.run(any(CqnSelect.class)))
+              .thenReturn(
+                  ResultBuilder.selectedRows(
+                          new ArrayList<>(
+                              List.of(
+                                  new HashMap<>(
+                                      Map.of("ID", "x1", "genre_ID", 1, "suppressed_ID", 10)),
+                                  new HashMap<>(
+                                      Map.of("ID", "x2", "genre_ID", 2, "suppressed_ID", 20)))))
+                      .result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          cut.afterRead(ctx, dataList(row));
+          // genre_ID has @Common.ValueListWithFixedValues → predicted
+          // suppressed_ID has @cds.odata.valuelist: false → excluded
+          assertThat(row).containsKey("SAP_Recommendations");
+          @SuppressWarnings("unchecked")
+          Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
+          assertThat(recs).containsKey("genre_ID");
+          assertThat(recs).doesNotContainKey("suppressed_ID");
+        });
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void recommendationStateZero_fieldIsExcludedFromPredictions() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", null);
+          row.put("disabled_ID", null);
+          row.put("enabled_ID", null);
+          CdsReadEventContext ctx = readContext("test.BooksWithRecommendationState", List.of(row));
+          when(db.run(any(CqnSelect.class)))
+              .thenReturn(
+                  ResultBuilder.selectedRows(
+                          new ArrayList<>(
+                              List.of(
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x1",
+                                          "genre_ID",
+                                          1,
+                                          "disabled_ID",
+                                          10,
+                                          "enabled_ID",
+                                          100)),
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x2",
+                                          "genre_ID",
+                                          2,
+                                          "disabled_ID",
+                                          20,
+                                          "enabled_ID",
+                                          200)))))
+                      .result(),
+                  ResultBuilder.selectedRows(List.of()).result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          cut.afterRead(ctx, dataList(row));
+          // genre_ID has no @UI.RecommendationState → predicted
+          // disabled_ID has @UI.RecommendationState: 0 → excluded
+          // enabled_ID has @UI.RecommendationState: 1 → predicted
+          assertThat(row).containsKey("SAP_Recommendations");
+          Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
+          assertThat(recs).containsKey("genre_ID");
+          assertThat(recs).doesNotContainKey("disabled_ID");
+          assertThat(recs).containsKey("enabled_ID");
+        });
+  }
+
+  @Test
+  void recommendationStateZero_fieldIsExcludedFromContextQuery() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", null);
+          row.put("disabled_ID", null);
+          row.put("enabled_ID", null);
+          CdsReadEventContext ctx = readContext("test.BooksWithRecommendationState", List.of(row));
+          ArgumentCaptor<CqnSelect> selectCaptor = ArgumentCaptor.forClass(CqnSelect.class);
+          when(db.run(selectCaptor.capture()))
+              .thenReturn(
+                  ResultBuilder.selectedRows(
+                          new ArrayList<>(
+                              List.of(
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x1",
+                                          "genre_ID",
+                                          1,
+                                          "disabled_ID",
+                                          10,
+                                          "enabled_ID",
+                                          100)),
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x2",
+                                          "genre_ID",
+                                          2,
+                                          "disabled_ID",
+                                          20,
+                                          "enabled_ID",
+                                          200)))))
+                      .result(),
+                  ResultBuilder.selectedRows(List.of()).result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          cut.afterRead(ctx, dataList(row));
+          // The context query WHERE clause should NOT require disabled_ID to be non-null
+          // (it is still a valid context *column* for SELECT, but not a prediction target)
+          CqnSelect contextQuery = selectCaptor.getAllValues().get(0);
+          String whereSql = contextQuery.where().map(Object::toString).orElse("");
+          assertThat(whereSql).contains("genre_ID");
+          assertThat(whereSql).contains("enabled_ID");
+          assertThat(whereSql).doesNotContain("disabled_ID");
         });
   }
 
@@ -393,55 +540,33 @@ class FioriRecommendationHandlerTest {
 
   private static RecommendationClient rptStyleClient() {
     Random random = new Random(42);
-    return (rows, predictionColumns, indexColumn) -> {
-      List<CdsData> predictions = new ArrayList<>();
-      for (CdsData row : rows) {
-        if (predictionColumns.stream().noneMatch(col -> "[PREDICT]".equals(row.get(col)))) {
-          continue;
-        }
-        Map<String, Object> prediction = new HashMap<>();
-        for (String col : predictionColumns) {
-          List<Object> available =
-              rows.stream()
-                  .filter(r -> r.get(col) != null && !"[PREDICT]".equals(r.get(col)))
-                  .map(r -> r.get(col))
-                  .toList();
-          Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
-          prediction.put(col, List.of(Map.of("prediction", val)));
-        }
-        prediction.put(indexColumn, row.get(indexColumn));
-        predictions.add(CdsData.create(prediction));
+    return (predictionRow, contextRows, predictionColumns) -> {
+      Map<String, Object> prediction = new HashMap<>();
+      for (String col : predictionColumns) {
+        List<Object> available =
+            contextRows.stream().filter(r -> r.get(col) != null).map(r -> r.get(col)).toList();
+        Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
+        prediction.put(col, List.of(Map.of("prediction", val)));
       }
-      return predictions;
+      prediction.put("ID", predictionRow.get("ID"));
+      return List.of(CdsData.create(prediction));
     };
   }
 
   private static RecommendationClient randomPickClient() {
     Random random = new Random(42);
-    return (rows, predictionColumns, indexColumn) -> {
-      List<CdsData> predictions = new ArrayList<>();
-      for (CdsData row : rows) {
-        Map<String, Object> prediction = new HashMap<>();
-        boolean addPrediction = false;
-        for (String col : predictionColumns) {
-          if ("[PREDICT]".equals(row.get(col))) {
-            addPrediction = true;
-            List<Object> available =
-                rows.stream()
-                    .filter(r -> r.get(col) != null && !"[PREDICT]".equals(r.get(col)))
-                    .map(r -> r.get(col))
-                    .toList();
-            Object val =
-                available.isEmpty() ? null : available.get(random.nextInt(available.size()));
-            prediction.put(col, List.of(Map.of("prediction", val)));
-          }
-        }
-        if (addPrediction) {
-          prediction.put(indexColumn, row.get(indexColumn));
-          predictions.add(CdsData.create(prediction));
+    return (predictionRow, contextRows, predictionColumns) -> {
+      Map<String, Object> prediction = new HashMap<>();
+      for (String col : predictionColumns) {
+        if (predictionRow.get(col) == null) {
+          List<Object> available =
+              contextRows.stream().filter(r -> r.get(col) != null).map(r -> r.get(col)).toList();
+          Object val = available.isEmpty() ? null : available.get(random.nextInt(available.size()));
+          prediction.put(col, List.of(Map.of("prediction", val)));
         }
       }
-      return predictions;
+      prediction.put("ID", predictionRow.get("ID"));
+      return List.of(CdsData.create(prediction));
     };
   }
 }

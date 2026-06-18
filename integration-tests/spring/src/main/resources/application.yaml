@@ -7,6 +7,8 @@ spring:
       mode: always
 
 cds:
+  model:
+    include-ui-annotations: true
   ai:
     core:
       resourceGroup: ${CDS_AICORE_TEST_RESOURCE_GROUP:cap-java-ai-default}

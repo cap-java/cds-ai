@@ -7,9 +7,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,30 +50,31 @@ class MtxLifecycleTest {
 
   @Test
   void unsubscribe_isIdempotent() throws Exception {
-    AbstractAICoreService service = getService();
-
     subscriptionEndpointClient.subscribeTenant(TENANT);
     subscriptionEndpointClient.unsubscribeTenant(TENANT);
 
     assertThatCode(() -> subscriptionEndpointClient.unsubscribeTenant(TENANT))
         .doesNotThrowAnyException();
-    assertThat(service.getTenantResourceGroupCache()).doesNotContainKey(TENANT);
   }
 
   @Test
   void subscribeUnsubscribe_repeatedTwice_completesCleanly() throws Exception {
-    AbstractAICoreService service = getService();
+    RemoteService service = getService();
 
     for (int i = 0; i < 2; i++) {
       subscriptionEndpointClient.subscribeTenant(TENANT);
-      assertThat(service.getTenantResourceGroupCache()).containsKey(TENANT);
+      // After subscribe, the service should resolve a resource group for this tenant
+      ResourceGroupContext rgCtx = ResourceGroupContext.create();
+      rgCtx.setTenantId(TENANT);
+      service.emit(rgCtx);
+      String rg = rgCtx.getResult();
+      assertThat(rg).isNotNull().isNotBlank();
 
       subscriptionEndpointClient.unsubscribeTenant(TENANT);
-      assertThat(service.getTenantResourceGroupCache()).doesNotContainKey(TENANT);
     }
   }
 
-  private AbstractAICoreService getService() {
-    return (AbstractAICoreService) runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private RemoteService getService() {
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 }

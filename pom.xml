@@ -59,6 +59,9 @@
     <!-- OUR VERSION -->
     <revision>1.0.0-SNAPSHOT</revision>
 
+    <!-- SONAR -->
+    <sonar.coverage.exclusions>**/Mock*.java</sonar.coverage.exclusions>
+
     <!-- DEPENDENCIES VERSION -->
     <java.version>17</java.version>
     <!-- https://central.sonatype.com/artifact/com.sap.cds/cds-services-bom/versions -->

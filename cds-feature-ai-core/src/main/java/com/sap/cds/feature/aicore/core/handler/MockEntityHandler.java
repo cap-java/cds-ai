@@ -4,7 +4,11 @@
 package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
+import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnDelete;
 import com.sap.cds.ql.cqn.CqnInsert;
@@ -15,7 +19,6 @@ import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.cds.CdsDeleteEventContext;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -25,7 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@ServiceName(AICoreService.DEFAULT_NAME)
+@ServiceName(AICore_.CDS_NAME)
 public class MockEntityHandler implements EventHandler {
 
   private final Map<String, Map<String, Object>> resourceGroups = new ConcurrentHashMap<>();
@@ -34,23 +37,34 @@ public class MockEntityHandler implements EventHandler {
 
   // --- Resource Groups ---
 
-  @On(event = CqnService.EVENT_READ, entity = AICoreService.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void readResourceGroups(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
     CqnAnalyzer analyzer = CqnAnalyzer.create(model);
-    Map<String, Object> keys = analyzer.analyze(select).targetKeys();
+    AnalysisResult analysis = analyzer.analyze(select);
+    Map<String, Object> keys = analysis.targetKeys();
 
     String id = (String) keys.get("resourceGroupId");
     if (id != null) {
       Map<String, Object> rg = resourceGroups.get(id);
       context.setResult(rg != null ? List.of(rg) : List.of());
     } else {
-      context.setResult(List.copyOf(resourceGroups.values()));
+      Map<String, Object> values = analysis.targetValues();
+      String tenantId = (String) values.get("tenantId");
+      if (tenantId != null) {
+        List<Map<String, Object>> filtered =
+            resourceGroups.values().stream()
+                .filter(rg -> tenantId.equals(rg.get("tenantId")))
+                .toList();
+        context.setResult(filtered);
+      } else {
+        context.setResult(List.copyOf(resourceGroups.values()));
+      }
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = AICoreService.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void createResourceGroups(CdsCreateEventContext context) {
     CqnInsert insert = context.getCqn();
     List<Map<String, Object>> results = new ArrayList<>();
@@ -65,7 +79,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(results);
   }
 
-  @On(event = CqnService.EVENT_UPDATE, entity = AICoreService.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void updateResourceGroups(CdsUpdateEventContext context) {
     CqnUpdate update = context.getCqn();
     CdsModel model = context.getModel();
@@ -81,7 +95,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(List.of(CdsData.create(existing)));
   }
 
-  @On(event = CqnService.EVENT_DELETE, entity = AICoreService.RESOURCE_GROUPS)
+  @On(entity = ResourceGroups_.CDS_NAME)
   public void deleteResourceGroups(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();
@@ -94,7 +108,7 @@ public class MockEntityHandler implements EventHandler {
 
   // --- Deployments ---
 
-  @On(event = CqnService.EVENT_READ, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void readDeployments(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -110,7 +124,7 @@ public class MockEntityHandler implements EventHandler {
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void createDeployments(CdsCreateEventContext context) {
     CqnInsert insert = context.getCqn();
     List<Map<String, Object>> results = new ArrayList<>();
@@ -125,7 +139,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(results);
   }
 
-  @On(event = CqnService.EVENT_UPDATE, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void updateDeployments(CdsUpdateEventContext context) {
     CqnUpdate update = context.getCqn();
     CdsModel model = context.getModel();
@@ -141,7 +155,7 @@ public class MockEntityHandler implements EventHandler {
     context.setResult(List.of(CdsData.create(existing)));
   }
 
-  @On(event = CqnService.EVENT_DELETE, entity = AICoreService.DEPLOYMENTS)
+  @On(entity = Deployments_.CDS_NAME)
   public void deleteDeployments(CdsDeleteEventContext context) {
     CqnDelete delete = context.getCqn();
     CdsModel model = context.getModel();
@@ -154,7 +168,7 @@ public class MockEntityHandler implements EventHandler {
 
   // --- Configurations ---
 
-  @On(event = CqnService.EVENT_READ, entity = AICoreService.CONFIGURATIONS)
+  @On(entity = Configurations_.CDS_NAME)
   public void readConfigurations(CdsReadEventContext context) {
     CqnSelect select = context.getCqn();
     CdsModel model = context.getModel();
@@ -170,7 +184,7 @@ public class MockEntityHandler implements EventHandler {
     }
   }
 
-  @On(event = CqnService.EVENT_CREATE, entity = AICoreService.CONFIGURATIONS)
+  @On(entity = Configurations_.CDS_NAME)
   public void createConfigurations(CdsCreateEventContext context) {
     CqnInsert insert = context.getCqn();
     List<Map<String, Object>> results = new ArrayList<>();

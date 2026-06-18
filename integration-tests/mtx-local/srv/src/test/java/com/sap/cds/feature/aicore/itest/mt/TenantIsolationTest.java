@@ -6,9 +6,12 @@ package com.sap.cds.feature.aicore.itest.mt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sap.cds.feature.aicore.api.AICoreService;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
+import com.sap.cds.services.cds.RemoteService;
+import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,19 +40,26 @@ class TenantIsolationTest {
 
   @Test
   void multiTenancyEnabled() {
-    AbstractAICoreService service = getService();
-    assertThat(service.isMultiTenancyEnabled()).isTrue();
+    AICoreConfig config = getConfig();
+    assertThat(config.multiTenancyEnabled()).isTrue();
   }
 
   @Test
   void differentTenants_getDifferentResourceGroups() throws Exception {
-    AbstractAICoreService service = getService();
+    RemoteService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-1");
     subscriptionEndpointClient.subscribeTenant("tenant-2");
 
-    String rg1 = service.getTenantResourceGroupCache().get("tenant-1");
-    String rg2 = service.getTenantResourceGroupCache().get("tenant-2");
+    ResourceGroupContext rgCtx1 = ResourceGroupContext.create();
+    rgCtx1.setTenantId("tenant-1");
+    service.emit(rgCtx1);
+    String rg1 = rgCtx1.getResult();
+
+    ResourceGroupContext rgCtx2 = ResourceGroupContext.create();
+    rgCtx2.setTenantId("tenant-2");
+    service.emit(rgCtx2);
+    String rg2 = rgCtx2.getResult();
 
     assertThat(rg1).isNotNull();
     assertThat(rg2).isNotNull();
@@ -58,31 +68,27 @@ class TenantIsolationTest {
 
   @Test
   void resourceGroupPrefix_applied() throws Exception {
-    AbstractAICoreService service = getService();
+    AICoreConfig config = getConfig();
+    RemoteService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-1");
-    String rg = service.getTenantResourceGroupCache().get("tenant-1");
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    rgCtx.setTenantId("tenant-1");
+    service.emit(rgCtx);
+    String rg = rgCtx.getResult();
 
-    assertThat(rg).startsWith(service.getResourceGroupPrefix());
+    assertThat(rg).startsWith(config.resourceGroupPrefix());
   }
 
-  @Test
-  void clearTenantCache_onlyAffectsTarget() throws Exception {
-    AbstractAICoreService service = getService();
-
-    subscriptionEndpointClient.subscribeTenant("tenant-1");
-    subscriptionEndpointClient.subscribeTenant("tenant-2");
-
-    String rg2 = service.getTenantResourceGroupCache().get("tenant-2");
-
-    service.clearTenantCache("tenant-1");
-
-    assertThat(service.getTenantResourceGroupCache()).doesNotContainKey("tenant-1");
-    assertThat(service.getTenantResourceGroupCache()).containsEntry("tenant-2", rg2);
+  private RemoteService getService() {
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
-  private AbstractAICoreService getService() {
-    return (AbstractAICoreService) runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private AICoreConfig getConfig() {
+    CdsProperties props = runtime.getEnvironment().getCdsProperties();
+    String sidecarUrl = props.getMultiTenancy().getSidecar().getUrl();
+    boolean mt = sidecarUrl != null && !sidecarUrl.isBlank();
+    return AICoreConfig.from(runtime.getEnvironment(), mt);
   }
 
   @AfterEach

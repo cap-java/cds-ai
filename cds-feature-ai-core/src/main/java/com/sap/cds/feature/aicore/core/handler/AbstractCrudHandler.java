@@ -4,10 +4,14 @@
 package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.ai.sdk.core.model.BckndResourceGroup;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
 import com.sap.cds.services.ErrorStatuses;
+import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.request.UserInfo;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,14 +19,30 @@ import java.util.function.Function;
 
 abstract class AbstractCrudHandler implements EventHandler {
 
-  protected final AICoreServiceImpl service;
+  protected final AICoreConfig config;
+  protected final AICoreClients clients;
+  protected final DeploymentResolver resolver;
 
-  protected AbstractCrudHandler(AICoreServiceImpl service) {
-    this.service = service;
+  protected AbstractCrudHandler(
+      AICoreConfig config, AICoreClients clients, DeploymentResolver resolver) {
+    this.config = config;
+    this.clients = clients;
+    this.resolver = resolver;
   }
 
-  protected String resolveResourceGroup(Map<String, Object> keys) {
-    return service.resolveResourceGroupFromKeys(keys);
+  /**
+   * Resolves the resource group ID from CQN keys. Checks for an explicit resource-group reference
+   * in the keys before falling back to tenant-based resolution via the {@link DeploymentResolver}.
+   */
+  protected String resolveResourceGroup(EventContext context, Map<String, Object> keys) {
+    if (keys.containsKey("resourceGroup_resourceGroupId")) {
+      return (String) keys.get("resourceGroup_resourceGroupId");
+    }
+    Object rgObj = keys.get("resourceGroup");
+    if (rgObj instanceof Map<?, ?> rgMap && rgMap.containsKey("resourceGroupId")) {
+      return (String) rgMap.get("resourceGroupId");
+    }
+    return resolver.resolveResourceGroup(context.getUserInfo().getTenant());
   }
 
   /**
@@ -30,24 +50,32 @@ abstract class AbstractCrudHandler implements EventHandler {
    * users may access any resource group. In single-tenancy mode, no restriction is applied. Throws
    * 404 if the resource group does not belong to the current tenant.
    */
-  protected void ensureResourceGroupAccessible(String resourceGroupId) {
-    if (service.isProviderUser() || !service.isMultiTenancyEnabled()) {
+  protected void ensureResourceGroupAccessible(EventContext context, String resourceGroupId) {
+    if (isProviderUser(context) || !config.multiTenancyEnabled()) {
       return;
     }
-    String currentTenant = service.currentTenantId();
+    String currentTenant = context.getUserInfo().getTenant();
     if (currentTenant == null) {
       return;
     }
-    BckndResourceGroup rg = service.getResourceGroupApi().get(resourceGroupId);
+    BckndResourceGroup rg = clients.resourceGroupApi().get(resourceGroupId);
     if (rg.getLabels() != null
         && rg.getLabels().stream()
             .anyMatch(
                 l ->
-                    AICoreServiceImpl.TENANT_LABEL_KEY.equals(l.getKey())
+                    AICoreConfig.TENANT_LABEL_KEY.equals(l.getKey())
                         && currentTenant.equals(l.getValue()))) {
       return;
     }
     throw new ServiceException(ErrorStatuses.NOT_FOUND, "Resource not found");
+  }
+
+  /**
+   * Returns whether the current request user is a system/provider user (bypasses tenant checks).
+   */
+  protected static boolean isProviderUser(EventContext context) {
+    UserInfo userInfo = context.getUserInfo();
+    return userInfo.isSystemUser() || userInfo.isInternalUser();
   }
 
   protected static Map<String, Object> merge(Map<String, Object> keys, Map<String, Object> values) {

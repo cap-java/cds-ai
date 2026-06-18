@@ -4,6 +4,7 @@
 package com.sap.cds.feature.aicore.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -22,19 +23,28 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
-import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
+import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.services.cds.RemoteService;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.environment.CdsProperties.Remote.RemoteServiceConfig;
+import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.runtime.CdsRuntime;
+import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the happy paths of {@link AICoreServiceImpl#deploymentId(String,
- * ModelDeploymentSpec)}: cache hit on a RUNNING deployment, stale-cache invalidation when the
- * cached deployment is gone, and reuse of an existing matching deployment found via query.
+ * Unit tests for the happy paths of deployment ID resolution: cache hit on a RUNNING deployment,
+ * stale-cache invalidation when the cached deployment is gone, and reuse of an existing matching
+ * deployment found via query.
  */
 class AICoreServiceImplDeploymentIdTest {
 
@@ -46,15 +56,42 @@ class AICoreServiceImplDeploymentIdTest {
   private DeploymentApi deploymentApi;
   private ConfigurationApi configurationApi;
   private ResourceGroupApi resourceGroupApi;
-  private AICoreServiceImpl service;
+  private RemoteService service;
+  private DeploymentResolver resolver;
 
   private final ModelDeploymentSpec spec =
       new ModelDeploymentSpec(SCENARIO, "exec", CONFIG_NAME, List.of(), d -> true);
 
   private String cacheKey() {
-    // Derive via the production helper rather than hardcoding RG + "::" + CONFIG_NAME so a
-    // change to the cache-key format is caught here instead of silently passing wrong-path.
-    return AICoreServiceImpl.deploymentCacheKey(RG, spec);
+    return DeploymentResolver.deploymentCacheKey(RG, spec);
+  }
+
+  /**
+   * Creates a {@link RemoteService} properly registered with a CDS runtime and the {@link
+   * AICoreApiHandler} so that {@code emit()} dispatches to the handler.
+   */
+  private RemoteService createService(boolean multiTenancy) {
+    CdsProperties props = new CdsProperties();
+    RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore_.CDS_NAME);
+    rsConfig.setModel(AICore_.CDS_NAME);
+    props.getRemote().getServices().put(AICore_.CDS_NAME, rsConfig);
+
+    CdsRuntimeConfigurer configurer =
+        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
+    configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
+    CdsRuntime runtime = configurer.getCdsRuntime();
+
+    AICoreConfig config = new AICoreConfig("default", "cds-", 1, 1L, multiTenancy);
+    AICoreClients clients =
+        new AICoreClients(
+            deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
+    resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
+
+    configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+    configurer.complete();
+
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -62,41 +99,18 @@ class AICoreServiceImplDeploymentIdTest {
     deploymentApi = mock(DeploymentApi.class);
     configurationApi = mock(ConfigurationApi.class);
     resourceGroupApi = mock(ResourceGroupApi.class);
-    AiCoreService sdkService = mock(AiCoreService.class);
-
-    CdsRuntime runtime = mock(CdsRuntime.class);
-    CdsEnvironment env = mock(CdsEnvironment.class);
-    when(runtime.getEnvironment()).thenReturn(env);
-    // Use small retry counts so failures don't slow tests.
-    when(env.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any()))
-        .thenReturn(1);
-    when(env.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any()))
-        .thenReturn(1L);
-    when(env.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
-        .thenReturn("default");
-    when(env.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
-        .thenReturn("cds-");
-
-    service =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            runtime,
-            false,
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            sdkService);
+    service = createService(false);
   }
 
   @Test
-  void cacheHit_runningDeployment_returnsCachedIdWithoutQuery() {
-    service.getResourceGroupDeploymentCache().put(cacheKey(), DEPLOYMENT_ID);
+  void cacheHit_runningDeployment_returnsCachedIdWithoutQuery() throws Exception {
+    putInDeploymentCache(resolver, cacheKey(), DEPLOYMENT_ID);
 
     AiDeploymentResponseWithDetails running = mock(AiDeploymentResponseWithDetails.class);
     when(running.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
     when(deploymentApi.get(RG, DEPLOYMENT_ID)).thenReturn(running);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
     verify(deploymentApi).get(RG, DEPLOYMENT_ID);
@@ -105,9 +119,9 @@ class AICoreServiceImplDeploymentIdTest {
   }
 
   @Test
-  void cacheStale_404OnGet_invalidatesAndReturnsExistingFromQuery() {
+  void cacheStale_404OnGet_invalidatesAndReturnsExistingFromQuery() throws Exception {
     String otherDeployment = "dep-456";
-    service.getResourceGroupDeploymentCache().put(cacheKey(), "stale-id");
+    putInDeploymentCache(resolver, cacheKey(), "stale-id");
 
     OpenApiRequestException notFound = new OpenApiRequestException("gone").statusCode(404);
     when(deploymentApi.get(RG, "stale-id")).thenThrow(notFound);
@@ -121,34 +135,29 @@ class AICoreServiceImplDeploymentIdTest {
     when(deploymentApi.query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any()))
         .thenReturn(list);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(otherDeployment);
-    assertThat(service.getResourceGroupDeploymentCache())
-        .containsEntry(cacheKey(), otherDeployment);
+    assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), otherDeployment);
     verify(deploymentApi, never()).create(any(), any());
   }
 
   @Test
-  void cacheStale_5xxOnGet_propagatesAndPreservesCacheEntry() {
-    // Transient 5xx must NOT invalidate a potentially valid cache entry. The exception is
-    // propagated so the caller's retry/backoff policy can handle it.
-    service.getResourceGroupDeploymentCache().put(cacheKey(), "still-valid-id");
+  void cacheStale_5xxOnGet_propagatesAndPreservesCacheEntry() throws Exception {
+    putInDeploymentCache(resolver, cacheKey(), "still-valid-id");
 
     OpenApiRequestException serverError = new OpenApiRequestException("boom").statusCode(503);
     when(deploymentApi.get(RG, "still-valid-id")).thenThrow(serverError);
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.deploymentId(RG, spec))
-        .isSameAs(serverError);
+    assertThatThrownBy(() -> emitDeploymentId(service, RG, spec)).rootCause().isSameAs(serverError);
 
-    assertThat(service.getResourceGroupDeploymentCache())
-        .containsEntry(cacheKey(), "still-valid-id");
+    assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), "still-valid-id");
     verify(deploymentApi, never()).query(any(), any(), any(), any(), any(), any(), any(), any());
     verify(deploymentApi, never()).create(any(), any());
   }
 
   @Test
-  void noCache_existingMatchingDeployment_isReusedAndCached() {
+  void noCache_existingMatchingDeployment_isReusedAndCached() throws Exception {
     AiDeployment existing = mock(AiDeployment.class);
     when(existing.getId()).thenReturn(DEPLOYMENT_ID);
     when(existing.getConfigurationName()).thenReturn(CONFIG_NAME);
@@ -158,10 +167,10 @@ class AICoreServiceImplDeploymentIdTest {
     when(deploymentApi.query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any()))
         .thenReturn(list);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
-    assertThat(service.getResourceGroupDeploymentCache()).containsEntry(cacheKey(), DEPLOYMENT_ID);
+    assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), DEPLOYMENT_ID);
     verify(deploymentApi, never()).create(any(), any());
     verify(deploymentApi, never()).get(any(), any());
   }
@@ -181,12 +190,11 @@ class AICoreServiceImplDeploymentIdTest {
     when(running.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
     when(deploymentApi.get(RG, DEPLOYMENT_ID)).thenReturn(running);
 
-    String first = service.deploymentId(RG, spec);
-    String second = service.deploymentId(RG, spec);
+    String first = emitDeploymentId(service, RG, spec);
+    String second = emitDeploymentId(service, RG, spec);
 
     assertThat(first).isEqualTo(DEPLOYMENT_ID);
     assertThat(second).isEqualTo(DEPLOYMENT_ID);
-    // First call queries, second call hits the cache and only verifies via get.
     verify(deploymentApi, times(1))
         .query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any());
     verify(deploymentApi, times(1)).get(RG, DEPLOYMENT_ID);
@@ -194,47 +202,25 @@ class AICoreServiceImplDeploymentIdTest {
 
   @Test
   void resourceGroupForTenant_nullTenantId_returnsDefault() {
-    // Even with MT enabled, a null tenantId should fall back to the default resource group.
-    CdsRuntime rtMt = mock(CdsRuntime.class);
-    CdsEnvironment envMt = mock(CdsEnvironment.class);
-    when(rtMt.getEnvironment()).thenReturn(envMt);
-    when(envMt.getProperty(eq("cds.ai.core.maxRetries"), eq(Integer.class), any())).thenReturn(1);
-    when(envMt.getProperty(eq("cds.ai.core.initialDelayMs"), eq(Long.class), any())).thenReturn(1L);
-    when(envMt.getProperty(eq("cds.ai.core.resourceGroup"), eq(String.class), any()))
-        .thenReturn("my-default");
-    when(envMt.getProperty(eq("cds.ai.core.resourceGroupPrefix"), eq(String.class), any()))
-        .thenReturn("cds-");
+    RemoteService mtService = createService(true);
 
-    AICoreServiceImpl mtService =
-        new AICoreServiceImpl(
-            AICoreService.DEFAULT_NAME,
-            rtMt,
-            true, // multi-tenancy enabled
-            deploymentApi,
-            configurationApi,
-            resourceGroupApi,
-            mock(AiCoreService.class));
-
-    String result = mtService.resourceGroupForTenant(null);
-    assertThat(result).isEqualTo("my-default");
-  }
-
-  @Test
-  void resourceGroupForTenant_multiTenancyDisabled_returnsDefault() {
-    // Single-tenancy always returns default regardless of the tenantId passed.
-    String result = service.resourceGroupForTenant("any-tenant");
+    String result = emitResourceGroup(mtService, null);
     assertThat(result).isEqualTo("default");
   }
 
   @Test
-  void noCacheNoExistingDeployment_createsNewDeploymentWhenConfigExists() {
-    // Empty deployment list → falls through to create path.
+  void resourceGroupForTenant_multiTenancyDisabled_returnsDefault() {
+    String result = emitResourceGroup(service, "any-tenant");
+    assertThat(result).isEqualTo("default");
+  }
+
+  @Test
+  void noCacheNoExistingDeployment_createsNewDeploymentWhenConfigExists() throws Exception {
     AiDeploymentList emptyList = mock(AiDeploymentList.class);
     when(emptyList.getResources()).thenReturn(List.of());
     when(deploymentApi.query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any()))
         .thenReturn(emptyList);
 
-    // Existing config with the same name, so createConfiguration is skipped.
     AiConfigurationList configList = mock(AiConfigurationList.class);
     var existingConfig = mock(com.sap.ai.sdk.core.model.AiConfiguration.class);
     when(existingConfig.getId()).thenReturn("cfg-1");
@@ -251,11 +237,47 @@ class AICoreServiceImplDeploymentIdTest {
     when(runningPoll.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
     when(deploymentApi.get(RG, DEPLOYMENT_ID)).thenReturn(runningPoll);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
-    assertThat(service.getResourceGroupDeploymentCache()).containsEntry(cacheKey(), DEPLOYMENT_ID);
+    assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), DEPLOYMENT_ID);
     verify(configurationApi, never()).create(any(), any());
     verify(deploymentApi).create(eq(RG), any());
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  private static String emitDeploymentId(RemoteService svc, String rg, ModelDeploymentSpec spec) {
+    DeploymentIdContext ctx = DeploymentIdContext.create();
+    ctx.setResourceGroupId(rg);
+    ctx.setSpec(spec);
+    svc.emit(ctx);
+    return ctx.getResult();
+  }
+
+  private static String emitResourceGroup(RemoteService svc, String tenantId) {
+    ResourceGroupContext ctx = ResourceGroupContext.create();
+    ctx.setTenantId(tenantId);
+    svc.emit(ctx);
+    return ctx.getResult();
+  }
+
+  @SuppressWarnings("unchecked")
+  private static void putInDeploymentCache(DeploymentResolver resolver, String key, String value)
+      throws Exception {
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentCache");
+    field.setAccessible(true);
+    ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver))
+        .put(key, value);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, String> getDeploymentCache(DeploymentResolver resolver)
+      throws Exception {
+    Field field = DeploymentResolver.class.getDeclaredField("deploymentCache");
+    field.setAccessible(true);
+    return ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver)).asMap();
   }
 }

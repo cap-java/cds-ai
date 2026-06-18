@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.function.Predicate;
 
 /**
- * Describes a target AI Core deployment used by {@link AICoreService#deploymentId(String,
- * ModelDeploymentSpec)} to look up or create a deployment inside a resource group.
+ * Describes a target AI Core deployment used by the {@code deploymentId} event to look up or create
+ * a deployment inside a resource group.
  *
  * <p>The spec carries the AI Core scenario/executable identification, the human-readable
  * configuration name (used as a stable key for caching and idempotent reuse), the parameter

@@ -34,19 +34,6 @@
     </dependency>
   </dependencies>
 
-  <profiles>
-    <profile>
-      <id>mtx-integration-tests</id>
-      <dependencies>
-        <dependency>
-          <groupId>com.sap.cds</groupId>
-          <artifactId>cds-feature-ai-integration-tests-mtx-local</artifactId>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
-
   <build>
     <plugins>
       <!-- Do not deploy this module -->
@@ -214,5 +201,18 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>mtx-integration-tests</id>
+      <dependencies>
+        <dependency>
+          <groupId>com.sap.cds</groupId>
+          <artifactId>cds-feature-ai-integration-tests-mtx-local</artifactId>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 
 </project>
