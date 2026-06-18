@@ -29,8 +29,7 @@ class ActionTest extends BaseIntegrationTest {
 
   @BeforeAll
   void ensureResourceGroupReady() {
-    ensureResourceGroupProvisioned(
-        getAICoreService(), getAICoreConfig().defaultResourceGroup());
+    ensureResourceGroupProvisioned(getAICoreService(), getAICoreConfig().defaultResourceGroup());
   }
 
   @Test

@@ -210,7 +210,7 @@ class ResourceGroupHandlerTest {
       DeploymentApi deploymentApi = mock(DeploymentApi.class);
       ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-    var props = HandlerTestUtils.aicoreProperties();
+      var props = HandlerTestUtils.aicoreProperties();
 
       var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
       configurer.cdsModel("edmx/csn.json");
