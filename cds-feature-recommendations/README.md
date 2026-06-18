@@ -116,6 +116,18 @@ annotate Books with {
 }
 ```
 
+Fields annotated with `@UI.RecommendationState: 0` are excluded from predictions entirely.
+A value of `1` (or omitting the annotation) means the field is eligible for recommendations.
+
+> **Note:** Since `@UI.RecommendationState` is a UI annotation, you must enable UI annotation loading
+> in the Java runtime for it to take effect:
+>
+> ```yaml
+> cds:
+>   model:
+>     include-ui-annotations: true
+> ```
+
 ## Configuration
 
 ```yaml
