@@ -7,7 +7,6 @@ import com.sap.ai.sdk.core.model.AiConfiguration;
 import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.ai.sdk.core.model.AiParameterArgumentBinding;
-import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
