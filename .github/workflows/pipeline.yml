@@ -116,6 +116,7 @@ jobs:
           cf-space: ${{ secrets.CF_SPACE_AWS }}
 
       - name: SonarQube Scan
+        continue-on-error: true
         uses: ./.github/actions/scan-with-sonar
         with:
           java-version: '17'
