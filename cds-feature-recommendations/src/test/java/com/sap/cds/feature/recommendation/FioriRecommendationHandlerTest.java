@@ -17,6 +17,8 @@ import com.sap.cds.feature.recommendation.api.RecommendationClient;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.services.Service;
 import com.sap.cds.services.cds.CdsReadEventContext;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.impl.utils.CdsServiceUtils;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.RequestContext;
@@ -45,8 +47,10 @@ class FioriRecommendationHandlerTest {
   static void bootRuntime() {
     db = mock(PersistenceService.class);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
+    CdsProperties properties = new CdsProperties();
+    properties.getModel().setIncludeUiAnnotations(true);
     runtime =
-        CdsRuntimeConfigurer.create()
+        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(properties))
             .cdsModel("model/csn.json")
             .serviceConfigurations()
             .service(db)
@@ -240,6 +244,109 @@ class FioriRecommendationHandlerTest {
           Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
           assertThat(recs).containsKey("genre_ID");
           assertThat(recs).doesNotContainKey("suppressed_ID");
+        });
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void recommendationStateZero_fieldIsExcludedFromPredictions() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", null);
+          row.put("disabled_ID", null);
+          row.put("enabled_ID", null);
+          CdsReadEventContext ctx = readContext("test.BooksWithRecommendationState", List.of(row));
+          when(db.run(any(CqnSelect.class)))
+              .thenReturn(
+                  ResultBuilder.selectedRows(
+                          new ArrayList<>(
+                              List.of(
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x1",
+                                          "genre_ID",
+                                          1,
+                                          "disabled_ID",
+                                          10,
+                                          "enabled_ID",
+                                          100)),
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x2",
+                                          "genre_ID",
+                                          2,
+                                          "disabled_ID",
+                                          20,
+                                          "enabled_ID",
+                                          200)))))
+                      .result(),
+                  ResultBuilder.selectedRows(List.of()).result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          cut.afterRead(ctx, dataList(row));
+          // genre_ID has no @UI.RecommendationState → predicted
+          // disabled_ID has @UI.RecommendationState: 0 → excluded
+          // enabled_ID has @UI.RecommendationState: 1 → predicted
+          assertThat(row).containsKey("SAP_Recommendations");
+          Map<String, Object> recs = (Map<String, Object>) row.get("SAP_Recommendations");
+          assertThat(recs).containsKey("genre_ID");
+          assertThat(recs).doesNotContainKey("disabled_ID");
+          assertThat(recs).containsKey("enabled_ID");
+        });
+  }
+
+  @Test
+  void recommendationStateZero_fieldIsExcludedFromContextQuery() {
+    runIn(
+        () -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("ID", "a009c640-434a-4542-ac68-51b400c880ec");
+          row.put("IsActiveEntity", false);
+          row.put("genre_ID", null);
+          row.put("disabled_ID", null);
+          row.put("enabled_ID", null);
+          CdsReadEventContext ctx = readContext("test.BooksWithRecommendationState", List.of(row));
+          ArgumentCaptor<CqnSelect> selectCaptor = ArgumentCaptor.forClass(CqnSelect.class);
+          when(db.run(selectCaptor.capture()))
+              .thenReturn(
+                  ResultBuilder.selectedRows(
+                          new ArrayList<>(
+                              List.of(
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x1",
+                                          "genre_ID",
+                                          1,
+                                          "disabled_ID",
+                                          10,
+                                          "enabled_ID",
+                                          100)),
+                                  new HashMap<>(
+                                      Map.of(
+                                          "ID",
+                                          "x2",
+                                          "genre_ID",
+                                          2,
+                                          "disabled_ID",
+                                          20,
+                                          "enabled_ID",
+                                          200)))))
+                      .result(),
+                  ResultBuilder.selectedRows(List.of()).result(),
+                  ResultBuilder.selectedRows(List.of()).result());
+          cut.afterRead(ctx, dataList(row));
+          // The context query WHERE clause should NOT require disabled_ID to be non-null
+          // (it is still a valid context *column* for SELECT, but not a prediction target)
+          CqnSelect contextQuery = selectCaptor.getAllValues().get(0);
+          String whereSql = contextQuery.where().map(Object::toString).orElse("");
+          assertThat(whereSql).contains("genre_ID");
+          assertThat(whereSql).contains("enabled_ID");
+          assertThat(whereSql).doesNotContain("disabled_ID");
         });
   }
 
