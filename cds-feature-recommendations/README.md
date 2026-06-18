@@ -7,7 +7,7 @@ AI-powered field recommendations for SAP Fiori UIs in CAP Java applications, lev
 The plugin generically hooks into any draft-enabled entity that has properties with a value help. When a user edits a draft record, the plugin:
 
 1. Fetches historical records as training context
-2. Sends context + current row to the RPT-1 model
+2. Sends context + current row to the provided model (default: RPT-1 model)
 3. Returns predictions as `SAP_Recommendations` in the OData response
 4. Fiori Elements renders the recommendations as suggestions in form fields
 
@@ -171,11 +171,13 @@ A value of `1` (or omitting the annotation) means the field is eligible for reco
 
 ## Configuration
 
+The following configuration applies to the RPT-1 model implementation.
+
 ```yaml
 cds:
   requires:
     recommendations:
-      contextRowLimit: 2000 # Max historical rows used as training context
+      contextRowLimit: 2000 # Max historical rows used as training context (RPT-1)
 ```
 
 See [`cds-feature-ai-core`](../cds-feature-ai-core/README.md) for AI Core connection and multi-tenancy configuration.
@@ -202,6 +204,8 @@ The plugin adds a `SAP_Recommendations` map to OData read responses for draft en
 SAP Fiori Elements automatically renders these as suggestions in form fields when editing a draft.
 
 ## Supported Field Types
+
+The following field types are supported by the RPT-1 model implementation:
 
 | Category | Types                                                     |
 | -------- | --------------------------------------------------------- |
