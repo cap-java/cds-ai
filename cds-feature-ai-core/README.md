@@ -29,7 +29,7 @@ The plugin auto-registers via Java's `ServiceLoader` mechanism - no code changes
 
 In production, bind an SAP AI Core service instance to your application. Supported methods:
 
-- **Service binding** (Cloud Foundry / Kubernetes) - detected automatically via `ServiceBindingUtils`
+- **Service binding** (Cloud Foundry / Kubernetes)
 - **Environment variable** `AICORE_SERVICE_KEY` - for local hybrid testing (via `cds bind --exec`)
 
 Without a binding the plugin registers a mock implementation.
