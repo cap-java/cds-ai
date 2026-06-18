@@ -8,10 +8,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.ql.Delete;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -30,10 +31,10 @@ class ResourceGroupTest extends BaseIntegrationTest {
   void cleanup() {
     if (createdResourceGroupId != null) {
       try {
-        CqnService service = getAICoreCqnService();
+        RemoteService service = getAICoreService();
         waitForResourceGroupProvisioned(service, createdResourceGroupId);
         service.run(
-            Delete.from("AICore.resourceGroups")
+            Delete.from(ResourceGroups_.CDS_NAME)
                 .where(r -> r.get("resourceGroupId").eq(createdResourceGroupId)));
       } catch (Exception ignored) {
       }
@@ -44,15 +45,15 @@ class ResourceGroupTest extends BaseIntegrationTest {
   @Test
   void create_andRead_resourceGroup() {
     createdResourceGroupId = TEST_RG_PREFIX + System.currentTimeMillis();
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreService();
 
     service.run(
-        Insert.into("AICore.resourceGroups")
+        Insert.into(ResourceGroups_.CDS_NAME)
             .entry(Map.of("resourceGroupId", createdResourceGroupId)));
 
     Result result =
         service.run(
-            Select.from("AICore.resourceGroups")
+            Select.from(ResourceGroups_.CDS_NAME)
                 .where(r -> r.get("resourceGroupId").eq(createdResourceGroupId)));
 
     assertThat(result.list()).hasSize(1);
@@ -65,15 +66,15 @@ class ResourceGroupTest extends BaseIntegrationTest {
   void create_withTenantLabel_andFilterByTenant() {
     String tenantId = "itest-tenant-" + System.currentTimeMillis();
     createdResourceGroupId = TEST_RG_PREFIX + tenantId;
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreService();
 
     service.run(
-        Insert.into("AICore.resourceGroups")
+        Insert.into(ResourceGroups_.CDS_NAME)
             .entry(Map.of("resourceGroupId", createdResourceGroupId, "tenantId", tenantId)));
 
     Result result =
         service.run(
-            Select.from("AICore.resourceGroups").where(r -> r.get("tenantId").eq(tenantId)));
+            Select.from(ResourceGroups_.CDS_NAME).where(r -> r.get("tenantId").eq(tenantId)));
 
     assertThat(result.list()).isNotEmpty();
     Row row = result.first().orElseThrow();
@@ -82,18 +83,18 @@ class ResourceGroupTest extends BaseIntegrationTest {
 
   @Test
   void readAll_returnsResourceGroups() {
-    CqnService service = getAICoreCqnService();
-    Result result = service.run(Select.from("AICore.resourceGroups"));
+    RemoteService service = getAICoreService();
+    Result result = service.run(Select.from(ResourceGroups_.CDS_NAME));
     assertThat(result.list()).isNotNull();
   }
 
   @Test
   void create_withLabels() {
     createdResourceGroupId = TEST_RG_PREFIX + "labels-" + System.currentTimeMillis();
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreService();
 
     service.run(
-        Insert.into("AICore.resourceGroups")
+        Insert.into(ResourceGroups_.CDS_NAME)
             .entry(
                 Map.of(
                     "resourceGroupId",
@@ -106,7 +107,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
 
     Result result =
         service.run(
-            Select.from("AICore.resourceGroups")
+            Select.from(ResourceGroups_.CDS_NAME)
                 .where(r -> r.get("resourceGroupId").eq(createdResourceGroupId)));
 
     assertThat(result.list()).hasSize(1);
@@ -119,25 +120,28 @@ class ResourceGroupTest extends BaseIntegrationTest {
   @Test
   void delete_resourceGroup() throws InterruptedException {
     String rgId = TEST_RG_PREFIX + "del-" + System.currentTimeMillis();
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreService();
 
-    service.run(Insert.into("AICore.resourceGroups").entry(Map.of("resourceGroupId", rgId)));
+    service.run(Insert.into(ResourceGroups_.CDS_NAME).entry(Map.of("resourceGroupId", rgId)));
 
     waitForResourceGroupProvisioned(service, rgId);
 
-    assertThatCode(() ->
-        service.run(Delete.from("AICore.resourceGroups").where(r -> r.get("resourceGroupId").eq(rgId)))
-    ).doesNotThrowAnyException();
+    assertThatCode(
+            () ->
+                service.run(
+                    Delete.from(ResourceGroups_.CDS_NAME)
+                        .where(r -> r.get("resourceGroupId").eq(rgId))))
+        .doesNotThrowAnyException();
 
     createdResourceGroupId = null; // already deleted
   }
 
-  private void waitForResourceGroupProvisioned(CqnService service, String rgId)
+  private void waitForResourceGroupProvisioned(RemoteService service, String rgId)
       throws InterruptedException {
     for (int i = 0; i < 30; i++) {
       Result result =
           service.run(
-              Select.from("AICore.resourceGroups").where(r -> r.get("resourceGroupId").eq(rgId)));
+              Select.from(ResourceGroups_.CDS_NAME).where(r -> r.get("resourceGroupId").eq(rgId)));
       if (!result.list().isEmpty()) {
         String status = (String) result.single().get("status");
         if ("PROVISIONED".equals(status)) {

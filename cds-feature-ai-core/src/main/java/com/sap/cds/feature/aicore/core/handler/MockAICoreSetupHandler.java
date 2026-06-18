@@ -1,11 +1,12 @@
 /*
  * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
  */
-package com.sap.cds.feature.aicore.core;
+package com.sap.cds.feature.aicore.core.handler;
 
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
+import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.mt.DeploymentService;
 import com.sap.cds.services.mt.SubscribeEventContext;
@@ -18,24 +19,26 @@ public class MockAICoreSetupHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockAICoreSetupHandler.class);
 
-  private final MockAICoreServiceImpl service;
+  private final MockAICoreApiHandler mockHandler;
 
-  public MockAICoreSetupHandler(MockAICoreServiceImpl service) {
-    this.service = service;
+  public MockAICoreSetupHandler(MockAICoreApiHandler mockHandler) {
+    this.mockHandler = mockHandler;
   }
 
-  @After(event = DeploymentService.EVENT_SUBSCRIBE)
+  @After
+  @HandlerOrder(HandlerOrder.LATE)
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
-    String resourceGroupId = service.resourceGroupForTenant(tenantId);
-    logger.info(
-        "Mock created in-memory resource group {} for tenant {}", resourceGroupId, tenantId);
+    // Trigger resource group creation in mock cache
+    mockHandler.resolveResourceGroup(tenantId);
+    logger.info("Mock created in-memory resource group for tenant {}", tenantId);
   }
 
-  @Before(event = DeploymentService.EVENT_UNSUBSCRIBE)
+  @Before
+  @HandlerOrder(HandlerOrder.EARLY)
   public void beforeUnsubscribe(UnsubscribeEventContext context) {
     String tenantId = context.getTenant();
-    service.clearTenantCache(tenantId);
+    mockHandler.clearTenantCache(tenantId);
     logger.info("Mock cleared in-memory caches for tenant {}", tenantId);
   }
 }

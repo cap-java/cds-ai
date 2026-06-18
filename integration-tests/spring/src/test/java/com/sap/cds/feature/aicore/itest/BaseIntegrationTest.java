@@ -5,12 +5,15 @@ package com.sap.cds.feature.aicore.itest;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
+import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.util.List;
 import java.util.Map;
@@ -38,33 +41,37 @@ public abstract class BaseIntegrationTest {
 
   @Autowired protected CdsRuntime runtime;
 
-  protected AICoreService getAICoreService() {
-    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  protected RemoteService getAICoreService() {
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
-  protected AbstractAICoreService getAICoreServiceImpl() {
-    return (AbstractAICoreService) getAICoreService();
-  }
-
-  protected CqnService getAICoreCqnService() {
-    return (CqnService) getAICoreService();
+  protected AICoreConfig getAICoreConfig() {
+    CdsProperties props = runtime.getEnvironment().getCdsProperties();
+    String sidecarUrl = props.getMultiTenancy().getSidecar().getUrl();
+    boolean mt = sidecarUrl != null && !sidecarUrl.isBlank();
+    return AICoreConfig.from(runtime.getEnvironment(), mt);
   }
 
   protected String ensureRptDeploymentReady() {
-    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
     return CACHED_DEPLOYMENT_IDS.computeIfAbsent(
         resourceGroup,
         rg -> {
-          ensureResourceGroupProvisioned(getAICoreCqnService(), rg);
-          return getAICoreService().deploymentId(rg, RptModelSpec.rpt1());
+          ensureResourceGroupProvisioned(getAICoreService(), rg);
+          RemoteService service = getAICoreService();
+          DeploymentIdContext depCtx = DeploymentIdContext.create();
+          depCtx.setResourceGroupId(rg);
+          depCtx.setSpec(RptModelSpec.rpt1());
+          service.emit(depCtx);
+          return depCtx.getResult();
         });
   }
 
-  protected void ensureResourceGroupProvisioned(CqnService service, String resourceGroup) {
+  protected void ensureResourceGroupProvisioned(RemoteService service, String resourceGroup) {
     if (!resourceGroupExists(service, resourceGroup)) {
       logger.info("Creating resource group {} with itest owner label", resourceGroup);
       service.run(
-          Insert.into("AICore.resourceGroups")
+          Insert.into(ResourceGroups_.CDS_NAME)
               .entry(
                   Map.of(
                       "resourceGroupId",
@@ -75,8 +82,8 @@ public abstract class BaseIntegrationTest {
     waitForResourceGroupProvisioned(service, resourceGroup);
   }
 
-  private boolean resourceGroupExists(CqnService service, String resourceGroup) {
-    Result all = service.run(Select.from("AICore.resourceGroups"));
+  private boolean resourceGroupExists(RemoteService service, String resourceGroup) {
+    Result all = service.run(Select.from(ResourceGroups_.CDS_NAME));
     for (Row row : all) {
       if (resourceGroup.equals(row.get("resourceGroupId"))) {
         return true;
@@ -85,9 +92,9 @@ public abstract class BaseIntegrationTest {
     return false;
   }
 
-  private void waitForResourceGroupProvisioned(CqnService service, String resourceGroup) {
+  private void waitForResourceGroupProvisioned(RemoteService service, String resourceGroup) {
     for (int i = 0; i < 30; i++) {
-      Result all = service.run(Select.from("AICore.resourceGroups"));
+      Result all = service.run(Select.from(ResourceGroups_.CDS_NAME));
       for (Row row : all) {
         if (resourceGroup.equals(row.get("resourceGroupId"))) {
           String status = (String) row.get("status");

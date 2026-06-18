@@ -5,65 +5,160 @@ package com.sap.cds.feature.aicore.core.handler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sap.ai.sdk.core.AiCoreService;
 import com.sap.ai.sdk.core.client.ConfigurationApi;
+import com.sap.ai.sdk.core.client.DeploymentApi;
+import com.sap.ai.sdk.core.client.ResourceGroupApi;
+import com.sap.ai.sdk.core.model.AiConfiguration;
+import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
+import com.sap.ai.sdk.core.model.AiConfigurationCreationResponse;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
-import com.sap.cds.ql.cqn.AnalysisResult;
-import com.sap.cds.ql.cqn.CqnAnalyzer;
-import com.sap.cds.ql.cqn.CqnSelect;
-import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.services.cds.CdsReadEventContext;
-import java.util.HashMap;
+import com.sap.cds.Result;
+import com.sap.cds.feature.aicore.core.AICoreClients;
+import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
+import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Select;
+import com.sap.cds.services.cds.RemoteService;
+import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
+import com.sap.cds.services.request.RequestContext;
+import com.sap.cds.services.runtime.CdsRuntime;
+import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Integration-style tests for {@link ConfigurationHandler} using a real CDS runtime. Only the SDK
+ * API clients are mocked since they talk to a remote AI Core service.
+ */
 class ConfigurationHandlerTest {
 
-  @Mock private AICoreServiceImpl service;
-  @Mock private ConfigurationApi configurationApi;
-  @Mock private CdsReadEventContext context;
-  @Mock private CqnSelect select;
-  @Mock private CdsModel model;
-  @Mock private CqnAnalyzer analyzer;
-  @Mock private AnalysisResult analysisResult;
+  private static CdsRuntime runtime;
+  private static RemoteService service;
+  private static ConfigurationApi configurationApi;
+  private static ResourceGroupApi resourceGroupApi;
+
+  @BeforeAll
+  static void bootRuntime() {
+    configurationApi = mock(ConfigurationApi.class);
+    resourceGroupApi = mock(ResourceGroupApi.class);
+    DeploymentApi deploymentApi = mock(DeploymentApi.class);
+
+    var props = HandlerTestUtils.aicoreProperties();
+
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
+    configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
+    runtime = configurer.getCdsRuntime();
+
+    AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
+    AICoreClients clients =
+        new AICoreClients(
+            deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
+    DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
+
+    configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
+    configurer.eventHandler(new ConfigurationHandler(config, clients, resolver));
+    configurer.complete();
+
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
+  }
+
+  @BeforeEach
+  void clearMockInvocations() {
+    clearInvocations(configurationApi, resourceGroupApi);
+  }
 
   @Test
-  void onRead_nullResources_returnsEmptyListWithoutNpe() {
-    when(service.getConfigurationApi()).thenReturn(configurationApi);
-    when(context.getCqn()).thenReturn(select);
-    when(context.getModel()).thenReturn(model);
-    when(analyzer.analyze(select)).thenReturn(analysisResult);
-    when(analysisResult.targetKeys()).thenReturn(new HashMap<>());
-    when(analysisResult.targetValues()).thenReturn(new HashMap<>());
-    when(service.resolveResourceGroupFromKeys(any())).thenReturn("default");
+  void onRead_returnsConfigurationsForResourceGroup() {
+    AiConfiguration cfg = mock(AiConfiguration.class);
+    when(cfg.getId()).thenReturn("cfg-1");
+    when(cfg.getName()).thenReturn("my-config");
+    when(cfg.getExecutableId()).thenReturn("exec-1");
+    when(cfg.getScenarioId()).thenReturn("foundation-models");
 
+    AiConfigurationList list = mock(AiConfigurationList.class);
+    when(list.getResources()).thenReturn(List.of(cfg));
+    when(configurationApi.query(eq("default"), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(list);
+
+    Result result =
+        runtime
+            .requestContext()
+            .run(
+                (Function<RequestContext, Result>)
+                    ctx ->
+                        service.run(
+                            Select.from(Configurations_.CDS_NAME)
+                                .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
+
+    verify(configurationApi).query(eq("default"), any(), any(), any(), any(), any(), any(), any());
+    assertThat(result.list()).hasSize(1);
+    assertThat(result.single().get("id")).isEqualTo("cfg-1");
+    assertThat(result.single().get("name")).isEqualTo("my-config");
+  }
+
+  @Test
+  void onRead_nullResources_returnsEmptyList() {
     AiConfigurationList listWithNullResources = mock(AiConfigurationList.class);
     when(listWithNullResources.getResources()).thenReturn(null);
-    when(configurationApi.query(any(), any(), any(), any(), any(), any(), any(), any()))
+    when(configurationApi.query(eq("default"), any(), any(), any(), any(), any(), any(), any()))
         .thenReturn(listWithNullResources);
 
-    try (MockedStatic<CqnAnalyzer> staticAnalyzer = mockStatic(CqnAnalyzer.class)) {
-      staticAnalyzer.when(() -> CqnAnalyzer.create(model)).thenReturn(analyzer);
+    Result result =
+        runtime
+            .requestContext()
+            .run(
+                (Function<RequestContext, Result>)
+                    ctx ->
+                        service.run(
+                            Select.from(Configurations_.CDS_NAME)
+                                .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
-      ConfigurationHandler handler = new ConfigurationHandler(service);
-      handler.onRead(context);
-    }
+    assertThat(result.list()).isEmpty();
+  }
 
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.forClass(List.class);
-    verify(context).setResult(captor.capture());
-    assertThat(captor.getValue()).isEmpty();
+  @Test
+  void onCreate_createsConfiguration() {
+    AiConfigurationCreationResponse response = mock(AiConfigurationCreationResponse.class);
+    when(response.getId()).thenReturn("new-cfg-id");
+    when(configurationApi.create(eq("default"), any(AiConfigurationBaseData.class)))
+        .thenReturn(response);
+
+    Result result =
+        runtime
+            .requestContext()
+            .run(
+                (Function<RequestContext, Result>)
+                    ctx ->
+                        service.run(
+                            Insert.into(Configurations_.CDS_NAME)
+                                .entry(
+                                    Map.of(
+                                        "name", "test-config",
+                                        "executableId", "exec-1",
+                                        "scenarioId", "foundation-models",
+                                        "resourceGroup_resourceGroupId", "default"))));
+
+    ArgumentCaptor<AiConfigurationBaseData> captor =
+        ArgumentCaptor.forClass(AiConfigurationBaseData.class);
+    verify(configurationApi).create(eq("default"), captor.capture());
+    assertThat(captor.getValue().getName()).isEqualTo("test-config");
+    assertThat(captor.getValue().getExecutableId()).isEqualTo("exec-1");
+    assertThat(captor.getValue().getScenarioId()).isEqualTo("foundation-models");
+    assertThat(result.single().get("id")).isEqualTo("new-cfg-id");
   }
 }

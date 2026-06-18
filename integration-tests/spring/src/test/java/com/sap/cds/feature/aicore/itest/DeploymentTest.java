@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.core.AbstractAICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import java.util.Map;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -20,11 +20,11 @@ class DeploymentTest extends BaseIntegrationTest {
 
   @Test
   void readAll_returnsDeployments() {
-    CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
+    RemoteService service = getAICoreService();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assertThat(result.list()).isNotNull();
@@ -32,11 +32,11 @@ class DeploymentTest extends BaseIntegrationTest {
 
   @Test
   void readSingle_returnsDeploymentDetails() {
-    CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
+    RemoteService service = getAICoreService();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result all =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assumeFalse(all.list().isEmpty(), "No deployments available");
@@ -44,7 +44,7 @@ class DeploymentTest extends BaseIntegrationTest {
     String id = (String) all.list().get(0).get("id");
     Result single =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(
                     d ->
                         d.get("id")
@@ -58,16 +58,17 @@ class DeploymentTest extends BaseIntegrationTest {
     assertThat(row.get("status")).isNotNull();
   }
 
-  @Disabled("Stops the shared RPT deployment needed by subsequent Recommendation tests; "
-      + "re-enable once test creates its own isolated deployment")
+  @Disabled(
+      "Stops the shared RPT deployment needed by subsequent Recommendation tests; "
+          + "re-enable once test creates its own isolated deployment")
   @Test
   void update_targetStatus_stopsRunningDeployment() {
-    CqnService service = getAICoreCqnService();
-    String resourceGroup = getAICoreServiceImpl().getDefaultResourceGroup();
+    RemoteService service = getAICoreService();
+    String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     Result deployments =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     String deploymentId = null;
@@ -83,13 +84,14 @@ class DeploymentTest extends BaseIntegrationTest {
     final String targetId = deploymentId;
 
     service.run(
-        Update.entity("AICore.deployments")
+        Update.entity(Deployments_.CDS_NAME)
             .where(d -> d.get("id").eq(targetId))
-            .data(Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
+            .data(
+                Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(
                     d ->
                         d.get("id")
