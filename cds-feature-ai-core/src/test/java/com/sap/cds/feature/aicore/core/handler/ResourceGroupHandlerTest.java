@@ -229,8 +229,7 @@ class ResourceGroupHandlerTest {
       configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
       configurer.complete();
 
-      mtService =
-          mtRuntime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
+      mtService = mtRuntime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
     }
 
     @BeforeEach
