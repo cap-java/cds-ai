@@ -18,7 +18,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void readAll_returnsConfigurations() {
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
@@ -30,7 +30,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void readAll_filterByScenario() {
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
@@ -46,7 +46,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void create_andReadById() {
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     String configName = "itest-config-" + System.currentTimeMillis();
@@ -91,7 +91,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
   @Test
   void create_withParameterBindings_mapsCorrectly() {
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     String configName = "itest-params-" + System.currentTimeMillis();

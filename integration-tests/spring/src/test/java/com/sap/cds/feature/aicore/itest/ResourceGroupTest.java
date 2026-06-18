@@ -30,7 +30,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   void cleanup() {
     if (createdResourceGroupId != null) {
       try {
-        RemoteService service = getAICoreRemoteService();
+        RemoteService service = getAICoreService();
         waitForResourceGroupProvisioned(service, createdResourceGroupId);
         service.run(
             Delete.from("AICore.resourceGroups")
@@ -44,7 +44,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   @Test
   void create_andRead_resourceGroup() {
     createdResourceGroupId = TEST_RG_PREFIX + System.currentTimeMillis();
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
 
     service.run(
         Insert.into("AICore.resourceGroups")
@@ -65,7 +65,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   void create_withTenantLabel_andFilterByTenant() {
     String tenantId = "itest-tenant-" + System.currentTimeMillis();
     createdResourceGroupId = TEST_RG_PREFIX + tenantId;
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
 
     service.run(
         Insert.into("AICore.resourceGroups")
@@ -82,7 +82,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
 
   @Test
   void readAll_returnsResourceGroups() {
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
     Result result = service.run(Select.from("AICore.resourceGroups"));
     assertThat(result.list()).isNotNull();
   }
@@ -90,7 +90,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   @Test
   void create_withLabels() {
     createdResourceGroupId = TEST_RG_PREFIX + "labels-" + System.currentTimeMillis();
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
 
     service.run(
         Insert.into("AICore.resourceGroups")
@@ -119,7 +119,7 @@ class ResourceGroupTest extends BaseIntegrationTest {
   @Test
   void delete_resourceGroup() throws InterruptedException {
     String rgId = TEST_RG_PREFIX + "del-" + System.currentTimeMillis();
-    RemoteService service = getAICoreRemoteService();
+    RemoteService service = getAICoreService();
 
     service.run(Insert.into("AICore.resourceGroups").entry(Map.of("resourceGroupId", rgId)));
 
