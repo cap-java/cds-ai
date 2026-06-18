@@ -6,6 +6,8 @@ package com.sap.cds.service.documentai.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sap.cds.service.exceptions.DocumentAiConnectivityException;
+import com.sap.cds.service.exceptions.DocumentAiRequestException;
 import com.sap.cds.service.model.DocumentInput;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
 import java.io.ByteArrayInputStream;
@@ -26,7 +28,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultDocumentAiClient implements DocumentAiClient {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultDocumentAiClient.class);
-  private static final String DOCUMENT_AI_API_PATH = "/document-information-extraction/v1";
+  private static final String DOCUMENT_AI_API_PATH = "document-information-extraction/v1";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final HttpDestination destination;
   private final HttpClient httpClient;
@@ -45,13 +47,15 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
   }
 
   private URI buildSubmitUri() {
-    return destination.getUri().resolve(DOCUMENT_AI_API_PATH + "/document/jobs");
+    String base = destination.getUri().toString();
+    String path = base.endsWith("/") ? base : base + "/";
+    return URI.create(path).resolve(DOCUMENT_AI_API_PATH + "/document/jobs");
   }
 
   private HttpPost buildSubmitRequest(DocumentInput documentInput, URI submitUri) {
     InputStream content = documentInput.content();
     logger.info(
-        "[sap-document-ai] ----------Submitting document to DIE at url={} with content={}",
+        "[sap-document-ai] Submitting document to DIE at url={} with content={}",
         submitUri,
         content);
 
@@ -94,13 +98,13 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
       int statusCode = response.getStatusLine().getStatusCode();
 
       if (statusCode < 200 || statusCode >= 300) {
-        throw new RuntimeException("DIE request failed. Status=" + statusCode + ", body=" + body);
+        throw new DocumentAiRequestException(statusCode, body);
       }
 
       return body;
 
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to submit document to DIE at " + submitUri, e);
+    } catch (IOException e) {
+      throw new DocumentAiConnectivityException(submitUri.toString(), e);
     }
   }
 

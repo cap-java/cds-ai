@@ -130,29 +130,33 @@ public class AttachmentEventHandler implements EventHandler {
         contentId,
         attachmentEntity.getQualifiedName());
 
-    List<SelectionResult> selectionResults = selectData(attachmentEntity, contentId);
-
-    for (SelectionResult result : selectionResults) {
-      long rowCount = result.result().rowCount();
-
-      if (rowCount <= 0) {
-        logger.info(
-            "No attachment {} found in entity {}.", contentId, result.entity().getQualifiedName());
-        continue;
-      }
-
-      if (rowCount > 1) {
-        throw new IllegalStateException(
-            "More than one attachment with contentId %s.".formatted(contentId));
-      }
-
-      Attachments found = result.result().single(Attachments.class);
-      if (found != null) {
-        return Optional.of(found);
-      }
-    }
-
-    return Optional.empty();
+    return selectData(attachmentEntity, contentId).stream()
+        .filter(
+            result -> {
+              long rowCount = result.result().rowCount();
+              if (rowCount <= 0) {
+                logger.info(
+                    "No attachment {} found in entity {}.",
+                    contentId,
+                    result.entity().getQualifiedName());
+                return false;
+              }
+              if (rowCount > 1) {
+                throw new IllegalStateException(
+                    "More than one attachment with contentId %s.".formatted(contentId));
+              }
+              return true;
+            })
+        .findFirst()
+        .map(
+            result -> {
+              Attachments found = result.result().single(Attachments.class);
+              logger.debug(
+                  "Found attachment {} in entity {}.",
+                  found.getContentId(),
+                  result.entity().getQualifiedName());
+              return found;
+            });
   }
 
   private List<SelectionResult> selectData(CdsEntity attachmentEntity, String contentId) {
@@ -176,16 +180,7 @@ public class AttachmentEventHandler implements EventHandler {
             .columns(Attachments.CONTENT_ID, Attachments.CONTENT)
             .where(e -> e.get(Attachments.CONTENT_ID).eq(contentId));
 
-    Result result = persistenceService.run(select);
-    result
-        .streamOf(Attachments.class)
-        .forEach(
-            attachment ->
-                logger.debug(
-                    "Found attachment {} in entity {}.",
-                    attachment.getContentId(),
-                    entity.getQualifiedName()));
-    return result;
+    return persistenceService.run(select);
   }
 
   private record SelectionResult(CdsEntity entity, Result result) {}

@@ -46,8 +46,7 @@ public class ExtractionServiceImpl implements ExtractionService {
     String jobId = createExtractionJob(attachmentId, tenantId);
     try {
       String documentAiJobId = documentAiProcessingService.processDocument(jobId, documentInput);
-      updateStatus(jobId, SUBMITTED);
-      updateDocumentAiJobId(jobId, documentAiJobId);
+      updateStatusAndSetDocumentAiJobId(jobId, SUBMITTED, documentAiJobId);
 
       // TODO: transition to PROCESSING and COMPLETED via async polling callback, not here
       //      updateStatus(jobId, PROCESSING);
@@ -88,6 +87,17 @@ public class ExtractionServiceImpl implements ExtractionService {
   }
 
   private void updateStatus(String jobId, ExtractionStatus status) {
+    updateExtractionJob(jobId, status, null);
+  }
+
+  private void updateStatusAndSetDocumentAiJobId(
+      String jobId, ExtractionStatus status, String documentAiJobId) {
+
+    updateExtractionJob(jobId, status, documentAiJobId);
+  }
+
+  private void updateExtractionJob(String jobId, ExtractionStatus status, String documentAiJobId) {
+
     Result current = persistenceService.run(Select.from(ExtractionJob_.class).byId(jobId));
     ExtractionStatus currentStatus =
         ExtractionStatus.valueOf(current.single(ExtractionJob.class).getStatus());
@@ -107,22 +117,16 @@ public class ExtractionServiceImpl implements ExtractionService {
 
     ExtractionJob extractionJob = ExtractionJob.create();
     extractionJob.setStatus(status.name());
+    if (documentAiJobId != null) {
+      extractionJob.setDocumentAiJobId(documentAiJobId);
+    }
+
     persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
     logger.info(
-        "[sap-document-ai] ExtractionJob jobId={} status updated from {} to {}",
+        "[sap-document-ai] ExtractionJob jobId={} status updated from {} to {}{}",
         jobId,
         currentStatus,
-        status);
-  }
-
-  private void updateDocumentAiJobId(String jobId, String documentAiJobId) {
-    ExtractionJob extractionJob = ExtractionJob.create();
-    extractionJob.setDocumentAiJobId(documentAiJobId);
-
-    persistenceService.run(Update.entity(ExtractionJob_.class).byId(jobId).entry(extractionJob));
-    logger.info(
-        "[sap-document-ai] ExtractionJob jobId={} has been updated with documentAiJobId now={}",
-        jobId,
-        documentAiJobId);
+        status,
+        documentAiJobId != null ? " with documentAiJobId=" + documentAiJobId : "");
   }
 }

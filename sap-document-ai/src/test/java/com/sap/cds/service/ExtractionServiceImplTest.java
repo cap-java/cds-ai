@@ -18,7 +18,6 @@ import com.sap.cds.service.model.DocumentInput;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,16 +86,12 @@ class ExtractionServiceImplTest {
     extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
 
     ArgumentCaptor<CqnUpdate> captor = forClass(CqnUpdate.class);
-    verify(persistenceService, times(2)).run(captor.capture());
-    List<CqnUpdate> updates = captor.getAllValues();
+    verify(persistenceService, times(1)).run(captor.capture());
 
-    ExtractionJob statusUpdate =
-        Struct.access(updates.get(0).entries().get(0)).as(ExtractionJob.class);
-    assertThat(statusUpdate.getStatus()).isEqualTo(SUBMITTED.name());
-
-    ExtractionJob jobUpdate =
-        Struct.access(updates.get(1).entries().get(0)).as(ExtractionJob.class);
-    assertThat(jobUpdate.getDocumentAiJobId()).isEqualTo(DIE_JOB_ID);
+    ExtractionJob update =
+        Struct.access(captor.getValue().entries().get(0)).as(ExtractionJob.class);
+    assertThat(update.getStatus()).isEqualTo(SUBMITTED.name());
+    assertThat(update.getDocumentAiJobId()).isEqualTo(DIE_JOB_ID);
   }
 
   @Test
@@ -114,15 +109,14 @@ class ExtractionServiceImplTest {
 
   @Test
   void updateStatusWithSameStateDoesNotRunJobAgain() {
-    // SELECT returns SUBMITTED — updateStatus(SUBMITTED) is a same-state no-op, no status UPDATE.
-    // updateDocumentAiJobId still fires, so exactly 1 UPDATE total (for the job ID, not status).
+    // SELECT returns SUBMITTED — same-state check short-circuits before the UPDATE.
     mockInsertDatabaseCalls();
     mockSuccessfulProcessing();
     mockStatusResult(SUBMITTED);
 
     extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
 
-    verify(persistenceService, times(1)).run(any(CqnUpdate.class));
+    verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
 
   @Test

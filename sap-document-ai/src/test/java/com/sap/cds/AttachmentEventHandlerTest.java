@@ -173,7 +173,6 @@ class AttachmentEventHandlerTest {
     Result result = mock(Result.class);
     doReturn(1L).when(result).rowCount();
     doReturn(attachment).when(result).single(Attachments.class);
-    doReturn(java.util.stream.Stream.of(attachment)).when(result).streamOf(Attachments.class);
     return result;
   }
 
