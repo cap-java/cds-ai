@@ -142,28 +142,13 @@ public class AICoreShowcaseHandler implements EventHandler {
                     "ID", "ctx-5", "name", "Blender", "price", "89.99", "category", "Appliances")));
 
     RemoteService service = getAICoreService();
-
-    ResourceGroupContext rgCtx = ResourceGroupContext.create();
-    service.emit(rgCtx);
-    String rg = rgCtx.getResult();
-
-    DeploymentIdContext depCtx = DeploymentIdContext.create();
-    depCtx.setResourceGroupId(rg);
-    depCtx.setSpec(RptModelSpec.rpt1());
-    service.emit(depCtx);
-    String deploymentId = depCtx.getResult();
-
-    InferenceClientContext infCtx = InferenceClientContext.create();
-    infCtx.setResourceGroupId(rg);
-    infCtx.setDeploymentId(deploymentId);
-    service.emit(infCtx);
-    RptInferenceClient client = new RptInferenceClient(infCtx.getResult());
+    RptInferenceClient client = createRptClient(service, List.of("ID"));
 
     List<Map<String, Object>> results = new ArrayList<>();
     for (Map<String, Object> product : products) {
       CdsData predictionRow = CdsData.create(new HashMap<>(product));
       List<CdsData> predictions =
-          client.predict(predictionRow, contextRows, List.of("category"), List.of("ID"));
+          client.predict(predictionRow, contextRows, List.of("category"));
       for (CdsData prediction : predictions) {
         String id = (String) prediction.get("ID");
         Object categoryObj = prediction.get("category");
@@ -185,5 +170,25 @@ public class AICoreShowcaseHandler implements EventHandler {
       return prediction != null ? prediction.toString() : "";
     }
     return predictionList.get(0).toString();
+  }
+
+  /** Helper to resolve a ready-to-use RptInferenceClient from the AI Core RemoteService. */
+  private static RptInferenceClient createRptClient(
+      RemoteService service, List<String> keyNames) {
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    service.emit(rgCtx);
+    String rg = rgCtx.getResult();
+
+    DeploymentIdContext depCtx = DeploymentIdContext.create();
+    depCtx.setResourceGroupId(rg);
+    depCtx.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx);
+
+    InferenceClientContext infCtx = InferenceClientContext.create();
+    infCtx.setResourceGroupId(rg);
+    infCtx.setDeploymentId(depCtx.getResult());
+    service.emit(infCtx);
+
+    return new RptInferenceClient(infCtx.getResult(), keyNames);
   }
 }
