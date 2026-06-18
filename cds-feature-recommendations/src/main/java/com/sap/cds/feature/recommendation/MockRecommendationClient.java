@@ -18,14 +18,16 @@ class MockRecommendationClient implements RecommendationClient {
   // We use random here so you can see a difference in the UI. The actual value returned here is not
   // relevant for tests.
   private final Random random = new Random();
+  private final List<String> keyNames;
+
+  MockRecommendationClient(List<String> keyNames) {
+    this.keyNames = keyNames;
+  }
 
   @Override
   public List<CdsData> predict(
-      CdsData predictionRow,
-      List<CdsData> contextRows,
-      List<String> predictionColumns,
-      List<String> keyNames) {
-    String indexColumn = keyNames.size() == 1 ? keyNames.get(0) : "SAP_RECOMMENDATIONS_ID";
+      CdsData predictionRow, List<CdsData> contextRows, List<String> predictionColumns) {
+    String indexColumn = RptIndexColumns.resolveIndexColumn(keyNames, predictionRow);
     Map<String, Object> prediction = new HashMap<>();
     for (String col : predictionColumns) {
       if (predictionRow.get(col) == null) {

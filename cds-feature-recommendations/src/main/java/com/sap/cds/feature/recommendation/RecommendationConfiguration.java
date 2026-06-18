@@ -18,6 +18,7 @@ import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import com.sap.cds.services.utils.environment.ServiceBindingUtils;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,13 +49,15 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
     }
 
     boolean hasBind = hasAICoreBinding(runtime);
-    RecommendationClientResolver resolver =
+    // The real resolver is a lambda resolved at prediction time. That's necessary because
+    // resource group and deployment ID are tenant-specific and are only available at
+    // prediction time from the request context. The RemoteService is captured in the closure.
+    RecommendationClientResolver<List<String>> clientResolver =
         hasBind
-            ? RecommendationConfiguration::resolveRptClient
-            : service -> new MockRecommendationClient();
+            ? keyNames -> resolveRptClient(aiCoreService, keyNames)
+            : keyNames -> new MockRecommendationClient(keyNames);
 
-    FioriRecommendationHandler handler =
-        new FioriRecommendationHandler(aiCoreService, resolver, db);
+    FioriRecommendationHandler handler = new FioriRecommendationHandler(clientResolver, db);
     configurer.eventHandler(handler);
     configurer.eventHandler(new RecommendationModelChangedHandler(handler));
   }
@@ -64,26 +67,38 @@ public class RecommendationConfiguration implements CdsRuntimeConfiguration {
         .getEnvironment()
         .getServiceBindings()
         .filter(b -> ServiceBindingUtils.matches(b, "aicore"))
-        .findAny()
+        .findFirst()
         .isPresent();
   }
 
-  private static RecommendationClient resolveRptClient(RemoteService service) {
+  private static RecommendationClient resolveRptClient(
+      RemoteService service, List<String> keyNames) {
     ResourceGroupContext rgCtx = ResourceGroupContext.create();
     service.emit(rgCtx);
     String resourceGroup = rgCtx.getResult();
+    if (resourceGroup == null) {
+      throw new IllegalStateException("Failed to resolve resource group from AI Core service");
+    }
 
     DeploymentIdContext depCtx = DeploymentIdContext.create();
     depCtx.setResourceGroupId(resourceGroup);
     depCtx.setSpec(RptModelSpec.rpt1());
     service.emit(depCtx);
     String deploymentId = depCtx.getResult();
+    if (deploymentId == null) {
+      throw new IllegalStateException(
+          "Failed to resolve deployment ID for resource group: " + resourceGroup);
+    }
 
     InferenceClientContext infCtx = InferenceClientContext.create();
     infCtx.setResourceGroupId(resourceGroup);
     infCtx.setDeploymentId(deploymentId);
     service.emit(infCtx);
+    if (infCtx.getResult() == null) {
+      throw new IllegalStateException(
+          "Failed to create inference client for deployment: " + deploymentId);
+    }
 
-    return new RptInferenceClient(infCtx.getResult());
+    return new RptInferenceClient(infCtx.getResult(), keyNames);
   }
 }
