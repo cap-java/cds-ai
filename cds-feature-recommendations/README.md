@@ -35,15 +35,7 @@ Or use the starter that bundles this with `cds-feature-ai-core`:
 </dependency>
 ```
 
-### Prerequisites
-
-- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (see [`cds-feature-ai-core`](../cds-feature-ai-core/README.md))
-- Entity must be **draft-enabled** (`@odata.draft.enabled`)
-- At least one field annotated with a **value list**
-- The `SAP_Recommendations` navigation property must be added to the entities that should receive recommendations by
-  - either installing the `@cap-js/ai` CDS plugin (automatically provides the model enhancement that adds `SAP_Recommendations` as a navigation property)
-  - or adding the `SAP_Recommendations`property manually.
-  Without the `SAP_Recommendations` navigation property, the predictions will be computed but not serialized in OData responses.
+Requires an [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding — see [`cds-feature-ai-core`](../cds-feature-ai-core/README.md) for setup.
 
 #### CDS Plugin
 
@@ -71,6 +63,43 @@ Since the Java module `cds-feature-ai-core` already provides the `AICore` servic
   }
 }
 ```
+
+## Enabling Recommendations
+
+For recommendations to fire on an entity:
+
+- The entity must be **draft-enabled** (`@odata.draft.enabled`)
+- At least one field must be annotated with a **value list**
+- The `SAP_Recommendations` navigation property must be present — either via the CDS plugin (see above) or added manually (see below). Without it, predictions are computed but not serialized in OData responses.
+
+Recommendations are triggered for fields annotated with `@Common.ValueList`, `@Common.ValueListWithFixedValues`, or whose association target has `@cds.odata.valuelist`:
+
+```cds
+@odata.draft.enabled
+entity Books {
+  key ID : Integer;
+  title  : String(111);
+  descr  : String(1111);
+  genre  : Association to one Genres;
+  status : Association to one Status;
+}
+
+// Option 1: Annotate the association target
+annotate Genres with @cds.odata.valuelist;
+
+// Option 2: Annotate the field directly
+annotate Books with {
+  status @Common.ValueList: {
+    CollectionPath: 'Status',
+    Parameters: [{
+      $Type: 'Common.ValueListParameterInOut',
+      ValueListProperty: 'code',
+      LocalDataProperty: status_code
+    }]
+  }
+}
+```
+
 #### Adding the SAP_Recommendations navigation property manually
 
 If you cannot use the CDS plugin, add the `SAP_Recommendations` navigation property directly in your CDS model. You need to:
@@ -106,36 +135,6 @@ extend my.Books with {
 ```
 
 See also the [SAP Fiori Elements – Recommendations documentation](https://help.sap.com/docs/SAPUI5/b2f662dd9d7a4ec680056733050b4d34/1a6324d5ad7f4034a93f911b4e53e080.html).
-
-## Enabling Recommendations
-
-Recommendations are triggered for fields annotated with `@Common.ValueList`, `@Common.ValueListWithFixedValues`, or whose association target has `@cds.odata.valuelist`:
-
-```cds
-@odata.draft.enabled
-entity Books {
-  key ID : Integer;
-  title  : String(111);
-  descr  : String(1111);
-  genre  : Association to one Genres;
-  status : Association to one Status;
-}
-
-// Option 1: Annotate the association target
-annotate Genres with @cds.odata.valuelist;
-
-// Option 2: Annotate the field directly
-annotate Books with {
-  status @Common.ValueList: {
-    CollectionPath: 'Status',
-    Parameters: [{
-      $Type: 'Common.ValueListParameterInOut',
-      ValueListProperty: 'code',
-      LocalDataProperty: status_code
-    }]
-  }
-}
-```
 
 ### Adding Text Descriptions
 
