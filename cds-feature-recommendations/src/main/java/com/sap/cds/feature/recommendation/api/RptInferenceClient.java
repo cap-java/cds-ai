@@ -54,7 +54,7 @@ public class RptInferenceClient implements RecommendationClient {
   private static final Logger logger = LoggerFactory.getLogger(RptInferenceClient.class);
 
   // RPT-1 specific: the placeholder value that marks a column as a prediction target in the request
-  public static final String PREDICT = "[PREDICT]";
+  public static final String PREDICTION_PLACEHOLDER = "[PREDICT]";
 
   private static final Retry INFERENCE_RETRY = buildInferenceRetry();
 
@@ -111,7 +111,7 @@ public class RptInferenceClient implements RecommendationClient {
   private static CdsData preparePredictRow(CdsData predictRow, List<String> predictionColumns) {
     Map<String, Object> preparedPredictRowMap = new HashMap<>(predictRow);
     for (String col : predictionColumns) {
-      preparedPredictRowMap.putIfAbsent(col, PREDICT);
+      preparedPredictRowMap.putIfAbsent(col, PREDICTION_PLACEHOLDER);
     }
     return CdsData.create(preparedPredictRowMap);
   }
@@ -127,7 +127,7 @@ public class RptInferenceClient implements RecommendationClient {
                 col ->
                     TargetColumnConfig.create()
                         .name(col)
-                        .predictionPlaceholder(PredictionPlaceholder.create(PREDICT))
+                        .predictionPlaceholder(PredictionPlaceholder.create(PREDICTION_PLACEHOLDER))
                         .taskType(TargetColumnConfig.TaskTypeEnum.CLASSIFICATION))
             .toList();
 
