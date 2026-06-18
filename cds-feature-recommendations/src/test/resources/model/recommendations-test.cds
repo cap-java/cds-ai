@@ -6,13 +6,13 @@ namespace test;
 entity Books {
   key ID         : UUID;
   title          : String;
-  @Common.ValueListWithFixedValues
   genre_ID       : Integer;
   @Common.Text   : genre.name
-  genre          : Association to Genres;
   @Common.ValueListWithFixedValues
+  genre          : Association to Genres;
   currency_code  : String(3);
   @(Common.Text: { $value: ![currency.name] })
+  @Common.ValueListWithFixedValues
   currency       : Association to Currencies;
   image          : LargeBinary;
   embedding      : Vector(8);
