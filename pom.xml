@@ -57,7 +57,7 @@
 
   <properties>
     <!-- OUR VERSION -->
-    <revision>1.0.0-SNAPSHOT</revision>
+    <revision>0.0.1-alpha</revision>
 
     <!-- SONAR -->
     <sonar.coverage.exclusions>**/Mock*.java</sonar.coverage.exclusions>

@@ -21,7 +21,7 @@
     <java.version>17</java.version>
     <cds.services.version>4.9.0</cds.services.version>
     <spring.boot.version>3.5.6</spring.boot.version>
-    <cds-starter-ai.version>1.0.0-SNAPSHOT</cds-starter-ai.version>
+    <cds-starter-ai.version>0.0.1-alpha</cds-starter-ai.version>
 
   </properties>
 
