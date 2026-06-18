@@ -207,12 +207,12 @@ SAP Fiori Elements automatically renders these as suggestions in form fields whe
 
 The following field types are supported by the RPT-1 model implementation:
 
-| Category | Types                                                     |
-| -------- | --------------------------------------------------------- |
-| String   | `String`, `LargeString`, `UUID`                           |
-| Numeric  | `Integer`, `Int16`, `Int32`, `Int64`, `Decimal`, `Double` |
-| Temporal | `Date`, `Time`, `DateTime`, `Timestamp`                   |
-| Other    | `Boolean`                                                 |
+| Category | Types                                                                  |
+| -------- | ---------------------------------------------------------------------- |
+| String   | `String`, `LargeString`, `UUID` (treated as string)                    |
+| Numeric  | `Integer`, `Int16`, `Int32`, `Int64`, `Integer64`, `Decimal`, `Double` |
+| Temporal | `Date`, `Time`, `DateTime`, `Timestamp`                                |
+| Other    | `Boolean`                                                              |
 
 Binary, vector, and draft system fields are excluded automatically.
 
