@@ -5,8 +5,9 @@ package com.sap.cds.feature.recommendation;
 
 import static org.mockito.Mockito.*;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.services.ServiceCatalog;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -24,7 +25,7 @@ class RecommendationConfigurationTest {
   @Mock private CdsRuntime runtime;
   @Mock private ServiceCatalog serviceCatalog;
   @Mock private CdsEnvironment environment;
-  @Mock private AICoreService aiCoreService;
+  @Mock private RemoteService aiCoreService;
   @Mock private PersistenceService persistenceService;
 
   @Test
@@ -33,7 +34,7 @@ class RecommendationConfigurationTest {
     when(runtime.getServiceCatalog()).thenReturn(serviceCatalog);
     when(runtime.getEnvironment()).thenReturn(environment);
     when(environment.getServiceBindings()).thenReturn(Stream.empty());
-    when(serviceCatalog.getService(AICoreService.class, AICoreService.DEFAULT_NAME))
+    when(serviceCatalog.getService(RemoteService.class, AICore_.CDS_NAME))
         .thenReturn(aiCoreService);
     when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
         .thenReturn(persistenceService);
@@ -47,8 +48,7 @@ class RecommendationConfigurationTest {
   void aiCoreServiceNull_doesNotRegisterHandler() {
     when(configurer.getCdsRuntime()).thenReturn(runtime);
     when(runtime.getServiceCatalog()).thenReturn(serviceCatalog);
-    when(serviceCatalog.getService(AICoreService.class, AICoreService.DEFAULT_NAME))
-        .thenReturn(null);
+    when(serviceCatalog.getService(RemoteService.class, AICore_.CDS_NAME)).thenReturn(null);
 
     new RecommendationConfiguration().eventHandlers(configurer);
 

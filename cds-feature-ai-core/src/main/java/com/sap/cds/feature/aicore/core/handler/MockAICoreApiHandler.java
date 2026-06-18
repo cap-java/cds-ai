@@ -3,12 +3,12 @@
  */
 package com.sap.cds.feature.aicore.core.handler;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.InferenceClientContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
@@ -20,10 +20,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Mock ON handler for the {@link AICoreService} API events when no AI Core binding is available.
- * Uses in-memory maps instead of real API calls.
+ * Mock ON handler for the AI Core service API events when no AI Core binding is available. Uses
+ * in-memory maps instead of real API calls.
  */
-@ServiceName(AICoreService.DEFAULT_NAME)
+@ServiceName(AICore_.CDS_NAME)
 public class MockAICoreApiHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockAICoreApiHandler.class);

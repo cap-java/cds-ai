@@ -9,10 +9,10 @@ import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentTargetStatus;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups;
@@ -36,7 +36,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName(AICoreService.DEFAULT_NAME)
+@ServiceName(AICore_.CDS_NAME)
 public class DeploymentHandler extends AbstractCrudHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DeploymentHandler.class);

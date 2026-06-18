@@ -31,11 +31,8 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class FioriRecommendationHandlerTest {
 
   private static CdsRuntime runtime;
@@ -61,7 +58,7 @@ class FioriRecommendationHandlerTest {
     reset(db);
     when(db.getName()).thenReturn(PersistenceService.DEFAULT_NAME);
     predictionClient = randomPickClient();
-    cut = new FioriRecommendationHandler(keyNames -> predictionClient, db);
+    cut = new FioriRecommendationHandler((keyNames) -> predictionClient, db);
   }
 
   // ── tests ──────────────────────────────────────────────────────────────────

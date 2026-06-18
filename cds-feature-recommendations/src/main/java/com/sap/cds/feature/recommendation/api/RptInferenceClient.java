@@ -33,10 +33,19 @@ import org.slf4j.LoggerFactory;
  * <p>Example usage:
  *
  * <pre>{@code
- * AICoreService service = ...;
- * String rg = service.resourceGroup();
- * String deploymentId = service.deploymentId(rg, RptModelSpec.rpt1());
- * RptInferenceClient client = new RptInferenceClient(service.inferenceClient(rg, deploymentId), keyNames);
+ * RemoteService service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
+ * ResourceGroupContext rgCtx = ResourceGroupContext.create();
+ * service.emit(rgCtx);
+ * String rg = rgCtx.getResult();
+ * DeploymentIdContext depCtx = DeploymentIdContext.create();
+ * depCtx.setResourceGroupId(rg);
+ * depCtx.setSpec(RptModelSpec.rpt1());
+ * service.emit(depCtx);
+ * InferenceClientContext infCtx = InferenceClientContext.create();
+ * infCtx.setResourceGroupId(rg);
+ * infCtx.setDeploymentId(depCtx.getResult());
+ * service.emit(infCtx);
+ * RptInferenceClient client = new RptInferenceClient(infCtx.getResult(), keyNames);
  * List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("targetColumn"));
  * }</pre>
  */
@@ -124,7 +133,7 @@ public class RptInferenceClient implements RecommendationClient {
 
     // RPT-1 requires exactly one string-typed index column per row to identify predictions.
     // When the entity key is composite or non-string, then the index column is
-    // RptIndexColumns.SYNTHETIC_INDEX_COLUMN and we need to compute the sytheticKey for all rows
+    // RptIndexColumns.SYNTHETIC_INDEX_COLUMN and we need to compute the syntheticKey for all rows
     // before sending them to RPT-1.
     boolean syntheticKeyNeeded = RptIndexColumns.SYNTHETIC_INDEX_COLUMN.equals(indexColumn);
     var sdkRows =

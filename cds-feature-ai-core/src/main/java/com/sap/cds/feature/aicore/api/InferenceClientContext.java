@@ -10,8 +10,8 @@ import com.sap.cloud.sdk.services.openapi.apache.apiclient.ApiClient;
 /**
  * Typed {@link EventContext} for the {@code inferenceClient} event.
  *
- * <p>Emitted by {@link AICoreService#inferenceClient(String, String)} to build an {@link ApiClient}
- * preconfigured with the inference destination for the given deployment.
+ * <p>Emitted on the AI Core service to build an {@link ApiClient} preconfigured with the inference
+ * destination for the given deployment.
  */
 @EventName(InferenceClientContext.EVENT)
 public interface InferenceClientContext extends EventContext {

@@ -23,16 +23,19 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.handler.AICoreApiHandler;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.environment.CdsProperties.Remote.RemoteServiceConfig;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import com.sap.cloud.sdk.services.openapi.apache.core.OpenApiRequestException;
 import java.lang.reflect.Field;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +56,7 @@ class AICoreServiceImplDeploymentIdTest {
   private DeploymentApi deploymentApi;
   private ConfigurationApi configurationApi;
   private ResourceGroupApi resourceGroupApi;
-  private AICoreServiceImpl service;
+  private RemoteService service;
   private DeploymentResolver resolver;
 
   private final ModelDeploymentSpec spec =
@@ -64,16 +67,19 @@ class AICoreServiceImplDeploymentIdTest {
   }
 
   /**
-   * Creates an {@link AICoreServiceImpl} properly registered with a CDS runtime and the {@link
+   * Creates a {@link RemoteService} properly registered with a CDS runtime and the {@link
    * AICoreApiHandler} so that {@code emit()} dispatches to the handler.
    */
-  private AICoreServiceImpl createService(boolean multiTenancy) {
-    TestPropertiesProvider props = new TestPropertiesProvider();
-    props.setProperty("cds.ai.core.maxRetries", 1);
-    props.setProperty("cds.ai.core.initialDelayMs", 1L);
+  private RemoteService createService(boolean multiTenancy) {
+    CdsProperties props = new CdsProperties();
+    RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore_.CDS_NAME);
+    rsConfig.setModel(AICore_.CDS_NAME);
+    props.getRemote().getServices().put(AICore_.CDS_NAME, rsConfig);
 
-    CdsRuntimeConfigurer configurer = CdsRuntimeConfigurer.create(props);
+    CdsRuntimeConfigurer configurer =
+        CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
     configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
     CdsRuntime runtime = configurer.getCdsRuntime();
 
     AICoreConfig config = new AICoreConfig("default", "cds-", 1, 1L, multiTenancy);
@@ -82,11 +88,10 @@ class AICoreServiceImplDeploymentIdTest {
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
     resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
-    AICoreServiceImpl svc = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
-    configurer.service(svc);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
     configurer.complete();
-    return svc;
+
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -105,7 +110,7 @@ class AICoreServiceImplDeploymentIdTest {
     when(running.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
     when(deploymentApi.get(RG, DEPLOYMENT_ID)).thenReturn(running);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
     verify(deploymentApi).get(RG, DEPLOYMENT_ID);
@@ -130,7 +135,7 @@ class AICoreServiceImplDeploymentIdTest {
     when(deploymentApi.query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any()))
         .thenReturn(list);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(otherDeployment);
     assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), otherDeployment);
@@ -144,7 +149,7 @@ class AICoreServiceImplDeploymentIdTest {
     OpenApiRequestException serverError = new OpenApiRequestException("boom").statusCode(503);
     when(deploymentApi.get(RG, "still-valid-id")).thenThrow(serverError);
 
-    assertThatThrownBy(() -> service.deploymentId(RG, spec)).rootCause().isSameAs(serverError);
+    assertThatThrownBy(() -> emitDeploymentId(service, RG, spec)).rootCause().isSameAs(serverError);
 
     assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), "still-valid-id");
     verify(deploymentApi, never()).query(any(), any(), any(), any(), any(), any(), any(), any());
@@ -162,7 +167,7 @@ class AICoreServiceImplDeploymentIdTest {
     when(deploymentApi.query(eq(RG), any(), any(), eq(SCENARIO), any(), any(), any(), any()))
         .thenReturn(list);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
     assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), DEPLOYMENT_ID);
@@ -185,8 +190,8 @@ class AICoreServiceImplDeploymentIdTest {
     when(running.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
     when(deploymentApi.get(RG, DEPLOYMENT_ID)).thenReturn(running);
 
-    String first = service.deploymentId(RG, spec);
-    String second = service.deploymentId(RG, spec);
+    String first = emitDeploymentId(service, RG, spec);
+    String second = emitDeploymentId(service, RG, spec);
 
     assertThat(first).isEqualTo(DEPLOYMENT_ID);
     assertThat(second).isEqualTo(DEPLOYMENT_ID);
@@ -197,15 +202,15 @@ class AICoreServiceImplDeploymentIdTest {
 
   @Test
   void resourceGroupForTenant_nullTenantId_returnsDefault() {
-    AICoreServiceImpl mtService = createService(true);
+    RemoteService mtService = createService(true);
 
-    String result = mtService.resourceGroupForTenant(null);
+    String result = emitResourceGroup(mtService, null);
     assertThat(result).isEqualTo("default");
   }
 
   @Test
   void resourceGroupForTenant_multiTenancyDisabled_returnsDefault() {
-    String result = service.resourceGroupForTenant("any-tenant");
+    String result = emitResourceGroup(service, "any-tenant");
     assertThat(result).isEqualTo("default");
   }
 
@@ -232,7 +237,7 @@ class AICoreServiceImplDeploymentIdTest {
     when(runningPoll.getStatus()).thenReturn(AiDeploymentStatus.RUNNING);
     when(deploymentApi.get(RG, DEPLOYMENT_ID)).thenReturn(runningPoll);
 
-    String result = service.deploymentId(RG, spec);
+    String result = emitDeploymentId(service, RG, spec);
 
     assertThat(result).isEqualTo(DEPLOYMENT_ID);
     assertThat(getDeploymentCache(resolver)).containsEntry(cacheKey(), DEPLOYMENT_ID);
@@ -243,6 +248,21 @@ class AICoreServiceImplDeploymentIdTest {
   // ──────────────────────────────────────────────────────────────────────────
   // Helpers
   // ──────────────────────────────────────────────────────────────────────────
+
+  private static String emitDeploymentId(RemoteService svc, String rg, ModelDeploymentSpec spec) {
+    DeploymentIdContext ctx = DeploymentIdContext.create();
+    ctx.setResourceGroupId(rg);
+    ctx.setSpec(spec);
+    svc.emit(ctx);
+    return ctx.getResult();
+  }
+
+  private static String emitResourceGroup(RemoteService svc, String tenantId) {
+    ResourceGroupContext ctx = ResourceGroupContext.create();
+    ctx.setTenantId(tenantId);
+    svc.emit(ctx);
+    return ctx.getResult();
+  }
 
   @SuppressWarnings("unchecked")
   private static void putInDeploymentCache(DeploymentResolver resolver, String key, String value)
@@ -259,28 +279,5 @@ class AICoreServiceImplDeploymentIdTest {
     Field field = DeploymentResolver.class.getDeclaredField("deploymentCache");
     field.setAccessible(true);
     return ((com.github.benmanes.caffeine.cache.Cache<String, String>) field.get(resolver)).asMap();
-  }
-
-  /** Properties provider that allows overriding specific keys for test configuration. */
-  private static class TestPropertiesProvider extends SimplePropertiesProvider {
-    private final Map<String, Object> properties = new HashMap<>();
-
-    TestPropertiesProvider() {
-      super(new CdsProperties());
-    }
-
-    void setProperty(String key, Object value) {
-      properties.put(key, value);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T getProperty(String key, Class<T> asClazz, T defaultValue) {
-      Object value = properties.get(key);
-      if (value != null && asClazz.isInstance(value)) {
-        return (T) value;
-      }
-      return defaultValue;
-    }
   }
 }

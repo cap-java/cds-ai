@@ -22,15 +22,15 @@ import com.sap.ai.sdk.core.model.BckndResourceGroupList;
 import com.sap.ai.sdk.core.model.BckndResourceGroupPatchRequest;
 import com.sap.ai.sdk.core.model.BckndResourceGroupsPostRequest;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
-import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -51,7 +51,7 @@ import org.mockito.ArgumentCaptor;
 class ResourceGroupHandlerTest {
 
   private static CdsRuntime runtime;
-  private static AICoreServiceImpl service;
+  private static RemoteService service;
   private static ResourceGroupApi resourceGroupApi;
 
   @BeforeAll
@@ -60,8 +60,11 @@ class ResourceGroupHandlerTest {
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
     ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var props = HandlerTestUtils.aicoreProperties();
+
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
     configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
     runtime = configurer.getCdsRuntime();
 
     AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
@@ -70,11 +73,11 @@ class ResourceGroupHandlerTest {
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
     DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
-    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
-    configurer.service(service);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
     configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
     configurer.complete();
+
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -97,7 +100,7 @@ class ResourceGroupHandlerTest {
             .requestContext()
             .run(
                 (Function<RequestContext, Result>)
-                    ctx -> service.run(Select.from("AICore.resourceGroups")));
+                    ctx -> service.run(Select.from(ResourceGroups_.CDS_NAME)));
 
     verify(resourceGroupApi).getAll(any(), any(), any(), any(), any(), any(), any());
     assertThat(result.list()).hasSize(1);
@@ -112,7 +115,7 @@ class ResourceGroupHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Insert.into("AICore.resourceGroups")
+                        Insert.into(ResourceGroups_.CDS_NAME)
                             .entry(Map.of("resourceGroupId", "rg-new"))));
 
     ArgumentCaptor<BckndResourceGroupsPostRequest> captor =
@@ -129,7 +132,7 @@ class ResourceGroupHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Insert.into("AICore.resourceGroups")
+                        Insert.into(ResourceGroups_.CDS_NAME)
                             .entry(
                                 Map.of(
                                     "resourceGroupId", "rg-tenant",
@@ -156,7 +159,7 @@ class ResourceGroupHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Update.entity("AICore.resourceGroups")
+                        Update.entity(ResourceGroups_.CDS_NAME)
                             .where(d -> d.get("resourceGroupId").eq("rg-upd"))
                             .data("labels", List.of(Map.of("key", "env", "value", "staging")))));
 
@@ -181,7 +184,7 @@ class ResourceGroupHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Update.entity("AICore.resourceGroups")
+                        Update.entity(ResourceGroups_.CDS_NAME)
                             .where(d -> d.get("resourceGroupId").eq("rg-nolabel"))
                             .data("statusMessage", "updated")));
 
@@ -199,7 +202,7 @@ class ResourceGroupHandlerTest {
   class MultiTenancyTests {
 
     private static CdsRuntime mtRuntime;
-    private static AICoreServiceImpl mtService;
+    private static RemoteService mtService;
     private static ResourceGroupApi mtResourceGroupApi;
 
     @BeforeAll
@@ -208,9 +211,11 @@ class ResourceGroupHandlerTest {
       DeploymentApi deploymentApi = mock(DeploymentApi.class);
       ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-      var configurer =
-          CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+      var props = HandlerTestUtils.aicoreProperties();
+
+      var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
       configurer.cdsModel("edmx/csn.json");
+      configurer.serviceConfigurations();
       mtRuntime = configurer.getCdsRuntime();
 
       AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, true);
@@ -220,11 +225,11 @@ class ResourceGroupHandlerTest {
       DeploymentResolver resolver =
           new DeploymentResolver(config, deploymentApi, mtResourceGroupApi);
 
-      mtService = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, mtRuntime);
-      configurer.service(mtService);
       configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
       configurer.eventHandler(new ResourceGroupHandler(config, clients, resolver));
       configurer.complete();
+
+      mtService = mtRuntime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
     }
 
     @BeforeEach
@@ -251,7 +256,7 @@ class ResourceGroupHandlerTest {
                       .setIsAuthenticated(true))
           .run(
               (Function<RequestContext, Result>)
-                  ctx -> mtService.run(Select.from("AICore.resourceGroups")));
+                  ctx -> mtService.run(Select.from(ResourceGroups_.CDS_NAME)));
 
       ArgumentCaptor<List<String>> selectorCaptor = ArgumentCaptor.forClass(List.class);
       verify(mtResourceGroupApi)

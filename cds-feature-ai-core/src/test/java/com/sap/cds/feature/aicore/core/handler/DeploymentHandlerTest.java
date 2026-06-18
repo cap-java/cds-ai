@@ -21,16 +21,16 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationResponse;
 import com.sap.ai.sdk.core.model.AiDeploymentModificationRequest;
 import com.sap.ai.sdk.core.model.AiExecutionStatus;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -50,7 +50,7 @@ import org.mockito.ArgumentCaptor;
 class DeploymentHandlerTest {
 
   private static CdsRuntime runtime;
-  private static AICoreServiceImpl service;
+  private static RemoteService service;
   private static DeploymentApi deploymentApi;
   private static ResourceGroupApi resourceGroupApi;
   private static ConfigurationApi configurationApi;
@@ -61,8 +61,11 @@ class DeploymentHandlerTest {
     resourceGroupApi = mock(ResourceGroupApi.class);
     configurationApi = mock(ConfigurationApi.class);
 
-    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var props = HandlerTestUtils.aicoreProperties();
+
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
     configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
     runtime = configurer.getCdsRuntime();
 
     AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
@@ -71,11 +74,11 @@ class DeploymentHandlerTest {
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
     DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
-    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
-    configurer.service(service);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
     configurer.eventHandler(new DeploymentHandler(config, clients, resolver));
     configurer.complete();
+
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -98,7 +101,7 @@ class DeploymentHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Insert.into("AICore.deployments")
+                            Insert.into(Deployments_.CDS_NAME)
                                 .entry(
                                     Map.of(
                                         "configurationId", "cfg-1",
@@ -125,7 +128,7 @@ class DeploymentHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Insert.into("AICore.deployments")
+                        Insert.into(Deployments_.CDS_NAME)
                             .entry(
                                 Map.of(
                                     "configurationId", "cfg-2",
@@ -146,7 +149,7 @@ class DeploymentHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Update.entity("AICore.deployments")
+                        Update.entity(Deployments_.CDS_NAME)
                             .where(d -> d.get("id").eq("dep-123"))
                             .data("targetStatus", "STOPPED")));
 
@@ -164,7 +167,7 @@ class DeploymentHandlerTest {
             (Function<RequestContext, Result>)
                 ctx ->
                     service.run(
-                        Update.entity("AICore.deployments")
+                        Update.entity(Deployments_.CDS_NAME)
                             .where(d -> d.get("id").eq("dep-789"))
                             .data("configurationId", "config-456")));
 
@@ -184,7 +187,7 @@ class DeploymentHandlerTest {
                         (Function<RequestContext, Result>)
                             ctx ->
                                 service.run(
-                                    Update.entity("AICore.deployments")
+                                    Update.entity(Deployments_.CDS_NAME)
                                         .where(d -> d.get("id").eq("dep-x"))
                                         .data("ttl", "1d"))))
         .isInstanceOfSatisfying(

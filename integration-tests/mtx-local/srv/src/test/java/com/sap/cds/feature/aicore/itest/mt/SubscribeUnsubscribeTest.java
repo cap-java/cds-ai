@@ -9,8 +9,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,12 +52,15 @@ class SubscribeUnsubscribeTest {
 
   @Test
   void subscribeTenant_createsResourceGroup() throws Exception {
-    AICoreService service = getService();
+    RemoteService service = getService();
 
     subscriptionEndpointClient.subscribeTenant("tenant-3");
 
     // After subscription, the service should be able to resolve a resource group for the tenant
-    String resourceGroup = service.resourceGroupForTenant("tenant-3");
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    rgCtx.setTenantId("tenant-3");
+    service.emit(rgCtx);
+    String resourceGroup = rgCtx.getResult();
     assertThat(resourceGroup).isNotNull().isNotBlank();
   }
 
@@ -82,7 +87,7 @@ class SubscribeUnsubscribeTest {
     }
   }
 
-  private AICoreService getService() {
-    return runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+  private RemoteService getService() {
+    return runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 }

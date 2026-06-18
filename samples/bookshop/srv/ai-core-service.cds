@@ -1,4 +1,4 @@
-using { AICore } from 'com.sap.cds/ai';
+using { AICore } from '@cap-js/ai/srv/AICoreService';
 
 service AICoreShowcaseService @(requires: 'any') {
 

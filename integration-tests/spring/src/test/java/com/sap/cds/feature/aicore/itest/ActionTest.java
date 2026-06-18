@@ -9,12 +9,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
-import com.sap.cds.services.cds.CqnService;
+import com.sap.cds.services.cds.RemoteService;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -28,45 +30,64 @@ class ActionTest extends BaseIntegrationTest {
 
   @BeforeAll
   void ensureResourceGroupReady() {
-    ensureResourceGroupProvisioned(getAICoreCqnService(), getAICoreConfig().defaultResourceGroup());
+    ensureResourceGroupProvisioned(getAICoreService(), getAICoreConfig().defaultResourceGroup());
   }
 
   @Test
   void resourceGroupForTenant_singleTenancy_returnsDefault() {
     AICoreConfig config = getAICoreConfig();
-    AICoreService service = getAICoreService();
+    RemoteService service = getAICoreService();
     assumeFalse(config.multiTenancyEnabled(), "Multi-tenancy is enabled");
-    String result = service.resourceGroupForTenant("any-tenant-id");
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    rgCtx.setTenantId("any-tenant-id");
+    service.emit(rgCtx);
+    String result = rgCtx.getResult();
     assertThat(result).isEqualTo(config.defaultResourceGroup());
   }
 
   @Test
   void resourceGroupForTenant_multiTenancy_createsGroup() {
     AICoreConfig config = getAICoreConfig();
-    AICoreService service = getAICoreService();
+    RemoteService service = getAICoreService();
     assumeTrue(config.multiTenancyEnabled(), "Multi-tenancy is not enabled");
     String tenantId = "itest-action-tenant-" + System.currentTimeMillis();
-    String resourceGroupId = service.resourceGroupForTenant(tenantId);
+    ResourceGroupContext rgCtx = ResourceGroupContext.create();
+    rgCtx.setTenantId(tenantId);
+    service.emit(rgCtx);
+    String resourceGroupId = rgCtx.getResult();
     assertThat(resourceGroupId).startsWith(config.resourceGroupPrefix());
     assertThat(resourceGroupId).contains(tenantId);
   }
 
   @Test
   void deploymentId_returnsValidDeployment() {
-    AICoreService service = getAICoreService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
-    String deploymentId = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
+    DeploymentIdContext depCtx = DeploymentIdContext.create();
+    depCtx.setResourceGroupId(resourceGroup);
+    depCtx.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx);
+    String deploymentId = depCtx.getResult();
     assertThat(deploymentId).isNotNull().isNotBlank();
   }
 
   @Test
   void deploymentId_cachedOnSecondCall() {
-    AICoreService service = getAICoreService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
-    String first = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
-    String second = service.deploymentId(resourceGroup, RptModelSpec.rpt1());
+    DeploymentIdContext depCtx1 = DeploymentIdContext.create();
+    depCtx1.setResourceGroupId(resourceGroup);
+    depCtx1.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx1);
+    String first = depCtx1.getResult();
+
+    DeploymentIdContext depCtx2 = DeploymentIdContext.create();
+    depCtx2.setResourceGroupId(resourceGroup);
+    depCtx2.setSpec(RptModelSpec.rpt1());
+    service.emit(depCtx2);
+    String second = depCtx2.getResult();
     assertThat(second).isEqualTo(first);
   }
 
@@ -75,12 +96,12 @@ class ActionTest extends BaseIntegrationTest {
           + "re-enable once test creates its own isolated deployment")
   @Test
   void stop_deployment_changesTargetStatus() {
-    CqnService service = getAICoreCqnService();
+    RemoteService service = getAICoreService();
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
 
     Result deployments =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     String deploymentId = null;
@@ -96,14 +117,14 @@ class ActionTest extends BaseIntegrationTest {
     final String targetId = deploymentId;
 
     service.run(
-        Update.entity("AICore.deployments")
+        Update.entity(Deployments_.CDS_NAME)
             .where(d -> d.get("id").eq(targetId))
             .data(
                 Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(
                     d ->
                         d.get("id")

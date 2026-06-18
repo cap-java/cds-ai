@@ -10,7 +10,6 @@ import com.sap.ai.sdk.core.model.AiDeploymentCreationRequest;
 import com.sap.ai.sdk.core.model.AiDeploymentList;
 import com.sap.ai.sdk.core.model.AiDeploymentResponseWithDetails;
 import com.sap.ai.sdk.core.model.AiDeploymentStatus;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.InferenceClientContext;
 import com.sap.cds.feature.aicore.api.ModelDeploymentSpec;
@@ -18,6 +17,7 @@ import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.services.ErrorStatuses;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
@@ -32,13 +32,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ON handler for the {@link AICoreService} API events ({@code resourceGroup}, {@code deploymentId},
+ * ON handler for the AI Core service API events ({@code resourceGroup}, {@code deploymentId},
  * {@code inferenceClient}).
  *
  * <p>Contains the business logic for deployment discovery/creation and inference client
  * construction. Resource-group resolution is delegated to {@link DeploymentResolver}.
  */
-@ServiceName(AICoreService.DEFAULT_NAME)
+@ServiceName(AICore_.CDS_NAME)
 public class AICoreApiHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(AICoreApiHandler.class);

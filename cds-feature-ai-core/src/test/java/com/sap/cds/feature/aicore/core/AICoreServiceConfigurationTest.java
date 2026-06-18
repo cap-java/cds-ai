@@ -5,7 +5,8 @@ package com.sap.cds.feature.aicore.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.sap.cds.feature.aicore.api.AICoreService;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -17,8 +18,8 @@ import org.junit.jupiter.api.Test;
  * CDS model. This verifies the full service registration and handler wiring lifecycle without heavy
  * Mockito mocks.
  *
- * <p>Since the test runtime has no service bindings, the configuration always registers an {@link
- * AICoreServiceImpl} with mock handlers regardless of environment variables.
+ * <p>Since the test runtime has no service bindings, the configuration always registers mock
+ * handlers regardless of environment variables.
  */
 class AICoreServiceConfigurationTest {
 
@@ -26,15 +27,16 @@ class AICoreServiceConfigurationTest {
   void noBinding_noMultiTenancy_registersService() {
     CdsRuntime runtime =
         CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()))
+            .environmentConfigurations()
             .cdsModel("edmx/csn.json")
             .serviceConfigurations()
             .eventHandlerConfigurations()
             .complete();
 
-    AICoreService service =
-        runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    RemoteService service =
+        runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
 
-    assertThat(service).isNotNull().isInstanceOf(AICoreServiceImpl.class);
+    assertThat(service).isNotNull();
   }
 
   @Test
@@ -48,15 +50,16 @@ class AICoreServiceConfigurationTest {
 
     CdsRuntime runtime =
         CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props))
+            .environmentConfigurations()
             .cdsModel("edmx/csn.json")
             .serviceConfigurations()
             .eventHandlerConfigurations()
             .complete();
 
-    AICoreService service =
-        runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    RemoteService service =
+        runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
 
-    assertThat(service).isNotNull().isInstanceOf(AICoreServiceImpl.class);
+    assertThat(service).isNotNull();
   }
 
   @Test
@@ -67,8 +70,8 @@ class AICoreServiceConfigurationTest {
             .eventHandlerConfigurations()
             .complete();
 
-    AICoreService service =
-        runtime.getServiceCatalog().getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+    RemoteService service =
+        runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
 
     assertThat(service).isNull();
   }

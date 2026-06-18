@@ -20,14 +20,14 @@ import com.sap.ai.sdk.core.model.AiConfigurationBaseData;
 import com.sap.ai.sdk.core.model.AiConfigurationCreationResponse;
 import com.sap.ai.sdk.core.model.AiConfigurationList;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.api.AICoreService;
 import com.sap.cds.feature.aicore.core.AICoreClients;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
-import com.sap.cds.feature.aicore.core.AICoreServiceImpl;
 import com.sap.cds.feature.aicore.core.DeploymentResolver;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
-import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.cds.RemoteService;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -47,7 +47,7 @@ import org.mockito.ArgumentCaptor;
 class ConfigurationHandlerTest {
 
   private static CdsRuntime runtime;
-  private static AICoreServiceImpl service;
+  private static RemoteService service;
   private static ConfigurationApi configurationApi;
   private static ResourceGroupApi resourceGroupApi;
 
@@ -57,8 +57,11 @@ class ConfigurationHandlerTest {
     resourceGroupApi = mock(ResourceGroupApi.class);
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
 
-    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(new CdsProperties()));
+    var props = HandlerTestUtils.aicoreProperties();
+
+    var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
     configurer.cdsModel("edmx/csn.json");
+    configurer.serviceConfigurations();
     runtime = configurer.getCdsRuntime();
 
     AICoreConfig config = new AICoreConfig("default", "cds-", 10, 300, false);
@@ -67,11 +70,11 @@ class ConfigurationHandlerTest {
             deploymentApi, configurationApi, resourceGroupApi, mock(AiCoreService.class));
     DeploymentResolver resolver = new DeploymentResolver(config, deploymentApi, resourceGroupApi);
 
-    service = new AICoreServiceImpl(AICoreService.DEFAULT_NAME, runtime);
-    configurer.service(service);
     configurer.eventHandler(new AICoreApiHandler(config, clients, resolver));
     configurer.eventHandler(new ConfigurationHandler(config, clients, resolver));
     configurer.complete();
+
+    service = runtime.getServiceCatalog().getService(RemoteService.class, AICore_.CDS_NAME);
   }
 
   @BeforeEach
@@ -99,7 +102,7 @@ class ConfigurationHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Select.from("AICore.configurations")
+                            Select.from(Configurations_.CDS_NAME)
                                 .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
     verify(configurationApi).query(eq("default"), any(), any(), any(), any(), any(), any(), any());
@@ -122,7 +125,7 @@ class ConfigurationHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Select.from("AICore.configurations")
+                            Select.from(Configurations_.CDS_NAME)
                                 .where(c -> c.get("resourceGroup_resourceGroupId").eq("default"))));
 
     assertThat(result.list()).isEmpty();
@@ -142,7 +145,7 @@ class ConfigurationHandlerTest {
                 (Function<RequestContext, Result>)
                     ctx ->
                         service.run(
-                            Insert.into("AICore.configurations")
+                            Insert.into(Configurations_.CDS_NAME)
                                 .entry(
                                     Map.of(
                                         "name", "test-config",
