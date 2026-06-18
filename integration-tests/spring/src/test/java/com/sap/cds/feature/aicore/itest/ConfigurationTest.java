@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.services.cds.RemoteService;
@@ -22,7 +23,7 @@ class ConfigurationTest extends BaseIntegrationTest {
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
-            Select.from("AICore.configurations")
+            Select.from(Configurations_.CDS_NAME)
                 .where(c -> c.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assertThat(result.list()).isNotNull();
@@ -34,7 +35,7 @@ class ConfigurationTest extends BaseIntegrationTest {
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
-            Select.from("AICore.configurations")
+            Select.from(Configurations_.CDS_NAME)
                 .where(
                     c ->
                         c.get("scenarioId")
@@ -52,7 +53,7 @@ class ConfigurationTest extends BaseIntegrationTest {
     String configName = "itest-config-" + System.currentTimeMillis();
     Result created =
         service.run(
-            Insert.into("AICore.configurations")
+            Insert.into(Configurations_.CDS_NAME)
                 .entry(
                     Map.of(
                         "name",
@@ -75,7 +76,7 @@ class ConfigurationTest extends BaseIntegrationTest {
     // Read back by ID
     Result readResult =
         service.run(
-            Select.from("AICore.configurations")
+            Select.from(Configurations_.CDS_NAME)
                 .where(
                     c ->
                         c.get("id")
@@ -97,7 +98,7 @@ class ConfigurationTest extends BaseIntegrationTest {
     String configName = "itest-params-" + System.currentTimeMillis();
     Result created =
         service.run(
-            Insert.into("AICore.configurations")
+            Insert.into(Configurations_.CDS_NAME)
                 .entry(
                     Map.of(
                         "name",
@@ -117,7 +118,7 @@ class ConfigurationTest extends BaseIntegrationTest {
 
     Result readResult =
         service.run(
-            Select.from("AICore.configurations")
+            Select.from(Configurations_.CDS_NAME)
                 .where(
                     c ->
                         c.get("id")

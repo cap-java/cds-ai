@@ -6,6 +6,7 @@ package com.sap.cds.feature.aicore.itest;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.ResourceGroups_;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
@@ -70,7 +71,7 @@ public abstract class BaseIntegrationTest {
     if (!resourceGroupExists(service, resourceGroup)) {
       logger.info("Creating resource group {} with itest owner label", resourceGroup);
       service.run(
-          Insert.into("AICore.resourceGroups")
+          Insert.into(ResourceGroups_.CDS_NAME)
               .entry(
                   Map.of(
                       "resourceGroupId",
@@ -82,7 +83,7 @@ public abstract class BaseIntegrationTest {
   }
 
   private boolean resourceGroupExists(RemoteService service, String resourceGroup) {
-    Result all = service.run(Select.from("AICore.resourceGroups"));
+    Result all = service.run(Select.from(ResourceGroups_.CDS_NAME));
     for (Row row : all) {
       if (resourceGroup.equals(row.get("resourceGroupId"))) {
         return true;
@@ -93,7 +94,7 @@ public abstract class BaseIntegrationTest {
 
   private void waitForResourceGroupProvisioned(RemoteService service, String resourceGroup) {
     for (int i = 0; i < 30; i++) {
-      Result all = service.run(Select.from("AICore.resourceGroups"));
+      Result all = service.run(Select.from(ResourceGroups_.CDS_NAME));
       for (Row row : all) {
         if (resourceGroup.equals(row.get("resourceGroupId"))) {
           String status = (String) row.get("status");

@@ -12,6 +12,7 @@ import com.sap.cds.Row;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -100,7 +101,7 @@ class ActionTest extends BaseIntegrationTest {
 
     Result deployments =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     String deploymentId = null;
@@ -116,14 +117,14 @@ class ActionTest extends BaseIntegrationTest {
     final String targetId = deploymentId;
 
     service.run(
-        Update.entity("AICore.deployments")
+        Update.entity(Deployments_.CDS_NAME)
             .where(d -> d.get("id").eq(targetId))
             .data(
                 Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(
                     d ->
                         d.get("id")

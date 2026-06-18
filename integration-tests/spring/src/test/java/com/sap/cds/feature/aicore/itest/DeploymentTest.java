@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.RemoteService;
@@ -23,7 +24,7 @@ class DeploymentTest extends BaseIntegrationTest {
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result result =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assertThat(result.list()).isNotNull();
@@ -35,7 +36,7 @@ class DeploymentTest extends BaseIntegrationTest {
     String resourceGroup = getAICoreConfig().defaultResourceGroup();
     Result all =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     assumeFalse(all.list().isEmpty(), "No deployments available");
@@ -43,7 +44,7 @@ class DeploymentTest extends BaseIntegrationTest {
     String id = (String) all.list().get(0).get("id");
     Result single =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(
                     d ->
                         d.get("id")
@@ -67,7 +68,7 @@ class DeploymentTest extends BaseIntegrationTest {
 
     Result deployments =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(d -> d.get("resourceGroup_resourceGroupId").eq(resourceGroup)));
 
     String deploymentId = null;
@@ -83,14 +84,14 @@ class DeploymentTest extends BaseIntegrationTest {
     final String targetId = deploymentId;
 
     service.run(
-        Update.entity("AICore.deployments")
+        Update.entity(Deployments_.CDS_NAME)
             .where(d -> d.get("id").eq(targetId))
             .data(
                 Map.of("targetStatus", "STOPPED", "resourceGroup_resourceGroupId", resourceGroup)));
 
     Result readResult =
         service.run(
-            Select.from("AICore.deployments")
+            Select.from(Deployments_.CDS_NAME)
                 .where(
                     d ->
                         d.get("id")
