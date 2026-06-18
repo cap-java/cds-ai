@@ -30,8 +30,6 @@ import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.RemoteService;
-import com.sap.cds.services.environment.CdsProperties;
-import com.sap.cds.services.environment.CdsProperties.Remote.RemoteServiceConfig;
 import com.sap.cds.services.impl.environment.SimplePropertiesProvider;
 import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -61,10 +59,7 @@ class ResourceGroupHandlerTest {
     DeploymentApi deploymentApi = mock(DeploymentApi.class);
     ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-    CdsProperties props = new CdsProperties();
-    RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore.SERVICE_NAME);
-    rsConfig.setModel(AICore.SERVICE_NAME);
-    props.getRemote().getServices().put(AICore.SERVICE_NAME, rsConfig);
+    var props = HandlerTestUtils.aicoreProperties();
 
     var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
     configurer.cdsModel("edmx/csn.json");
@@ -215,10 +210,7 @@ class ResourceGroupHandlerTest {
       DeploymentApi deploymentApi = mock(DeploymentApi.class);
       ConfigurationApi configurationApi = mock(ConfigurationApi.class);
 
-      CdsProperties props = new CdsProperties();
-      RemoteServiceConfig rsConfig = new RemoteServiceConfig(AICore.SERVICE_NAME);
-      rsConfig.setModel(AICore.SERVICE_NAME);
-      props.getRemote().getServices().put(AICore.SERVICE_NAME, rsConfig);
+    var props = HandlerTestUtils.aicoreProperties();
 
       var configurer = CdsRuntimeConfigurer.create(new SimplePropertiesProvider(props));
       configurer.cdsModel("edmx/csn.json");
