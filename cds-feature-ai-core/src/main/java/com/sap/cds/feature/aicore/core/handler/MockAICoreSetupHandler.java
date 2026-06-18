@@ -30,7 +30,7 @@ public class MockAICoreSetupHandler implements EventHandler {
   public void afterSubscribe(SubscribeEventContext context) {
     String tenantId = context.getTenant();
     // Trigger resource group creation in mock cache
-    mockHandler.getTenantResourceGroupCache().computeIfAbsent(tenantId, id -> "cds-" + id);
+    mockHandler.resolveResourceGroup(tenantId);
     logger.info("Mock created in-memory resource group for tenant {}", tenantId);
   }
 
