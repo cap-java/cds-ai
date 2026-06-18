@@ -112,6 +112,7 @@ See also the [SAP Fiori Elements – Recommendations documentation](https://help
 Recommendations are triggered for fields annotated with `@Common.ValueList`, `@Common.ValueListWithFixedValues`, or whose association target has `@cds.odata.valuelist`:
 
 ```cds
+@odata.draft.enabled
 entity Books {
   key ID : Integer;
   title  : String(111);
