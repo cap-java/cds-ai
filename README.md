@@ -20,11 +20,13 @@ See [`cds-starter-ai`](cds-starter-ai/README.md) for the quickest setup.
 ## Prerequisites
 
 - Java 17+
+- Maven 3.6.3+
 - CAP Java 5.0+
-- Node.js 20+ with `@sap/cds-dk` 9+ (for CDS build tooling)
-- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for `cds-feature-ai-core` and `cds-feature-recommendations`)
+- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for production use)
 
-Without the respective service binding, each plugin falls back to a mock or degraded mode for local development.
+The build is hermetic: `cds-maven-plugin` downloads its own Node runtime and `cds-feature-ai-core/package.json` pins `@sap/cds-dk`. A globally installed `@sap/cds-dk` is **not** required.
+
+Without an AI Core binding the plugins fall back to mock implementations for local development.
 
 ## Samples
 
@@ -37,7 +39,14 @@ mvn clean install     # build all modules
 mvn test              # run unit tests
 ```
 
-For per-plugin details (configuration, programmatic API, multi-tenancy behaviour) see the individual module READMEs. For integration tests against a real AI Core instance see [`integration-tests/`](integration-tests/README.md).
+For integration tests against a real AI Core instance:
+
+```bash
+cds bind ai-core -2 <your-ai-core-service-instance>
+cds bind --exec mvn verify
+```
+
+See [`integration-tests/README.md`](integration-tests/README.md) for the full integration-test layout, including the multi-tenancy profile.
 
 ## Support, Feedback, Contributing
 
