@@ -52,17 +52,6 @@
         <version>${cds-starter-ai.version}</version>
       </dependency>
 
-      <dependency>
-        <groupId>com.sap.cds</groupId>
-        <artifactId>cds-feature-recommendations</artifactId>
-        <version>${cds-starter-ai.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.sap.cds</groupId>
-        <artifactId>cds-feature-attachments</artifactId>
-        <version>${cds-feature-attachments.version}</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
