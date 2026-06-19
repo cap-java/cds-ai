@@ -25,17 +25,18 @@ mvn verify -Pmtx-integration-tests
 
 **Skipping all integration tests (source modules only):**
 
+The `with-integration-tests` profile is active by default at the root. Deactivate it to skip both `integration-tests/` and `coverage-report/`:
+
 ```bash
-mvn verify -Pskip-integration-tests
+mvn install -P-with-integration-tests
 ```
 
 ## Profiles
 
 | Profile | Scope | Effect |
 |---------|-------|--------|
-| _(default)_ | Root | Builds all modules; runs spring integration tests |
+| `with-integration-tests` | Root | **Active by default**; includes `integration-tests/` and `coverage-report/`. Deactivate with `-P-with-integration-tests`. |
 | `mtx-integration-tests` | `integration-tests/` | Also includes the `mtx-local/srv` module |
-| `skip-integration-tests` | Root | Excludes `integration-tests/` and `coverage-report/` entirely |
 
 ## Coverage
 
@@ -66,7 +67,9 @@ Per-module thresholds are defined in `coverage-report/pom.xml`:
 | Module | Instruction | Branch | Complexity |
 |--------|-------------|--------|------------|
 | `cds-feature-ai-core` | 0% | 0% | 0% |
-| `cds-feature-recommendations` | 80% | 80% | 80% |
+| `cds-feature-recommendations` | 0% | 0% | 0% |
+
+Thresholds are intentionally permissive while the modules are under active development; tighten them in `coverage-report/pom.xml` once the API surfaces stabilise.
 
 ### Coverage data sources
 
