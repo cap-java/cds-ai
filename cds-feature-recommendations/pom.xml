@@ -4,7 +4,7 @@
 
   <parent>
     <groupId>com.sap.cds</groupId>
-    <artifactId>cds-starter-ai-root</artifactId>
+    <artifactId>cds-ai-root</artifactId>
     <version>${revision}</version>
   </parent>
 

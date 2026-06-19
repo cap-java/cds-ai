@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.sap.cds</groupId>
-  <artifactId>cds-starter-ai-root</artifactId>
+  <artifactId>cds-ai-root</artifactId>
   <version>${revision}</version>
   <packaging>pom</packaging>
 
-  <name>CDS Starter AI - Root</name>
+  <name>CDS AI - Root</name>
   <description>Aggregator for CAP Java AI plugins (recommendations, AI Core client)</description>
   <url>https://github.com/cap-java/cds-ai</url>
 
