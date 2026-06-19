@@ -73,7 +73,7 @@
     <!-- https://central.sonatype.com/artifact/org.springframework.boot/spring-boot-dependencies/versions -->
     <spring.boot.version>3.4.5</spring.boot.version>
     <!-- https://central.sonatype.com/artifact/org.jacoco/jacoco-maven-plugin/versions -->
-    <jacoco.version>0.8.14</jacoco.version>
+    <jacoco.version>0.8.15</jacoco.version>
     <!-- https://central.sonatype.com/artifact/org.junit/junit-bom/versions -->
     <junit.version>6.1.0</junit.version>
     <!-- https://central.sonatype.com/artifact/org.mockito/mockito-bom/versions -->
@@ -89,9 +89,9 @@
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-javadoc-plugin/versions -->
     <maven.javadoc.plugin.version>3.12.0</maven.javadoc.plugin.version>
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-surefire-plugin/versions -->
-    <maven.surefire.plugin.version>3.5.5</maven.surefire.plugin.version>
+    <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-failsafe-plugin/versions -->
-    <maven.failsafe.plugin.version>3.5.5</maven.failsafe.plugin.version>
+    <maven.failsafe.plugin.version>3.5.6</maven.failsafe.plugin.version>
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-pmd-plugin/versions -->
     <maven.pmd.plugin.version>3.28.0</maven.pmd.plugin.version>
     <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-enforcer-plugin/versions -->
@@ -103,11 +103,11 @@
     <!-- https://central.sonatype.com/artifact/org.sonatype.central/central-publishing-maven-plugin/versions -->
     <central.publishing.plugin.version>0.11.0</central.publishing.plugin.version>
     <!-- https://central.sonatype.com/artifact/com.sap.cloud.sdk/sdk-bom/versions -->
-    <sap.cloud.sdk.version>5.30.0</sap.cloud.sdk.version>
+    <sap.cloud.sdk.version>5.31.0</sap.cloud.sdk.version>
     <!-- https://central.sonatype.com/artifact/com.github.ben-manes.caffeine/caffeine/versions -->
     <caffeine.version>3.2.4</caffeine.version>
     <!-- https://central.sonatype.com/artifact/com.github.spotbugs/spotbugs-maven-plugin/versions -->
-    <spotbugs.maven.plugin.version>4.9.8.3</spotbugs.maven.plugin.version>
+    <spotbugs.maven.plugin.version>4.10.2.0</spotbugs.maven.plugin.version>
 
     <!-- skip spotless check when not setting this to true sepecifically-->
     <spotless.check.skip>true</spotless.check.skip>
@@ -394,7 +394,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.5.1</version>
+        <version>3.6.0</version>
         <configuration>
           <java>
             <googleJavaFormat>
