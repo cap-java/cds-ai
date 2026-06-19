@@ -1,0 +1,14 @@
+{
+  "requires": {
+    "db": "hana",
+    "AICore": {
+      "model": "@cap-js/ai/srv/AICoreService"
+    },
+    "[production]": {
+      "auth": "xsuaa"
+    }
+  },
+  "cdsc": {
+    "moduleLookupDirectories": ["node_modules/"]
+  }
+}

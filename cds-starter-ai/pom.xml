@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sap.cds</groupId>
+    <artifactId>cds-ai-root</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>cds-starter-ai</artifactId>
+  <!--
+    Empty-jar starter, following the Spring Boot starter convention. This module ships no Java
+    code; it exists solely to aggregate the cds-feature-ai-core and cds-feature-recommendations
+    runtime dependencies under a single coordinate so applications can opt-in to all AI features
+    with one Maven dependency. Keeping packaging=jar (instead of pom) lets consumers declare
+    `<dependency>cds-starter-ai</dependency>` without needing `<type>pom</type>`.
+  -->
+  <packaging>jar</packaging>
+
+  <name>CDS Starter AI</name>
+  <description>Starter package for AI features in CAP Java applications. Aggregates the cds-feature-ai-core and cds-feature-recommendations modules so applications can pull both with a single dependency.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-feature-ai-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-feature-recommendations</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+
+</project>

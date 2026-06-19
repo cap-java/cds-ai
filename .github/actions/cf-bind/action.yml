@@ -1,0 +1,56 @@
+name: Bind Cloud Foundry Services
+description: Login to CF and bind the AI Core service for hybrid testing via cds bind.
+
+inputs:
+  cf-api:
+    description: Cloud Foundry API endpoint
+    required: true
+  cf-username:
+    description: Cloud Foundry username
+    required: true
+  cf-password:
+    description: Cloud Foundry password
+    required: true
+  cf-org:
+    description: Cloud Foundry organization
+    required: true
+  cf-space:
+    description: Cloud Foundry space
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: CF Login
+      uses: cap-java/.github/actions/cf-login@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
+      with:
+        cf-api: ${{ inputs.cf-api }}
+        cf-username: ${{ inputs.cf-username }}
+        cf-password: ${{ inputs.cf-password }}
+        cf-org: ${{ inputs.cf-org }}
+        cf-space: ${{ inputs.cf-space }}
+
+    - name: Install @sap/cds-dk
+      shell: bash
+      run: |
+        npm i -g @sap/cds-dk@9.9.1
+        echo "$(npm config get prefix)/bin" >> "${GITHUB_PATH}"
+
+    - name: Install CDS dependencies
+      shell: bash
+      run: npm ci || npm install
+      working-directory: integration-tests
+
+    - name: Bind ai-core
+      shell: bash
+      working-directory: integration-tests
+      run: |
+        for i in {1..5}; do
+          cds bind ai-core -2 ai-core:ai-core-key && break
+          if [ "$i" -eq 5 ]; then
+            echo "cds bind ai-core failed after 5 attempts."
+            exit 1
+          fi
+          echo "cds bind ai-core failed, retrying ($i/5)..."
+          sleep 30
+        done
