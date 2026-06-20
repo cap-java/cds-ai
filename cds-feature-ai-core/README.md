@@ -4,7 +4,7 @@ Bridges CAP Java applications to [SAP AI Core](https://help.sap.com/docs/sap-ai-
 
 ## Features
 
-- **`AICore` CDS Service** - Exposes resource groups, deployments, and configurations as CDS entities with full CRUD support
+- **`AICore` CDS Service** - Internal CDS service (annotated `@protocol: 'none'`) modelling resource groups, deployments, and configurations as CDS entities. The plugin does **not** expose this service via OData; it is consumed in-process via `RemoteService`. To expose it externally, project it from your own service or use the `@cap-js/ai` model.
 - **Multi-Tenancy** - Automatic per-tenant resource group creation/deletion on subscribe/unsubscribe
 - **Deployment Management** - Auto-creates configurations and deployments for AI Core models with retry and backoff
 - **Inference Client Factory** - Provides ready-to-use `ApiClient` instances scoped to a deployment for downstream foundation-model SDKs
@@ -27,12 +27,14 @@ The plugin auto-registers via Java's `ServiceLoader` mechanism - no code changes
 
 ### AI Core Binding
 
-In production, bind an SAP AI Core service instance to your application. Supported methods:
+In production, bind an SAP AI Core service instance to your application via a standard service binding (Cloud Foundry / Kubernetes). For local hybrid testing against a real AI Core instance, use the CAP CLI:
 
-- **Service binding** (Cloud Foundry / Kubernetes)
-- **Environment variable** `AICORE_SERVICE_KEY` - for local hybrid testing (via `cds bind --exec`)
+```bash
+cds bind ai-core -2 <your-ai-core-service-instance>
+cds bind --exec mvn spring-boot:run
+```
 
-Without a binding the plugin registers a mock implementation.
+Without a binding the plugin registers a mock implementation suitable for local development.
 
 ## Configuration
 
@@ -53,25 +55,76 @@ and the presence of a `DeploymentService`. No additional configuration flag is r
 
 ## CDS Service: `AICore`
 
-The plugin registers a CAP service named `AICore` that proxies AI Core REST APIs as CDS entities:
+The plugin registers a CAP service named `AICore` that proxies AI Core REST APIs as CDS entities.
+The service is internal (`@protocol: 'none'`); use a `RemoteService` lookup to interact with it.
 
 ### Entities
 
-| Entity                  | Operations           | Description                                                      |
-| ----------------------- | -------------------- | ---------------------------------------------------------------- |
-| `AICore.resourceGroups` | READ, CREATE, DELETE | Resource group lifecycle, supports label filtering by `tenantId` |
-| `AICore.deployments`    | READ, CREATE, DELETE | Deployment management with status tracking                       |
-| `AICore.configurations` | READ, CREATE         | Configuration management for scenarios and executables           |
+| Entity                  | Operations                   | Description                                                      |
+| ----------------------- | ---------------------------- | ---------------------------------------------------------------- |
+| `AICore.resourceGroups` | READ, CREATE, UPDATE, DELETE | Resource group lifecycle, supports label filtering by `tenantId` |
+| `AICore.deployments`    | READ, CREATE, UPDATE, DELETE | Deployment management with status tracking; bound action `stop`  |
+| `AICore.configurations` | READ, CREATE                 | Configuration management for scenarios and executables           |
 
-### Programmatic API
+## Programmatic API
+
+The plugin exposes its functionality through three event contexts emitted on the `AICore` `RemoteService`. This pattern decouples callers from the implementation and makes it easy to override individual steps in tests.
 
 ```java
-// Get the resource group for the current tenant
-String rgId = aiCoreService.resourceGroup();
+import com.sap.cds.feature.aicore.api.DeploymentIdContext;
+import com.sap.cds.feature.aicore.api.InferenceClientContext;
+import com.sap.cds.feature.aicore.api.ResourceGroupContext;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.services.cds.RemoteService;
+import com.sap.cds.feature.recommendation.api.RptModelSpec;
 
-// Get (or auto-create) a deployment ID for a model spec in the given resource group
-String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
+// 1. Obtain the AICore service as a RemoteService
+RemoteService aiCore = runtime.getServiceCatalog()
+    .getService(RemoteService.class, AICore_.CDS_NAME);
+
+// 2. Resolve the resource group for the current tenant
+//    (auto-creates the group on first use in multi-tenant mode)
+ResourceGroupContext rgCtx = ResourceGroupContext.create();
+aiCore.emit(rgCtx);
+String resourceGroupId = rgCtx.getResult();
+
+// 3. Resolve (or create) a deployment for a given model spec
+DeploymentIdContext depCtx = DeploymentIdContext.create();
+depCtx.setResourceGroupId(resourceGroupId);
+depCtx.setSpec(RptModelSpec.rpt1()); // or your own ModelDeploymentSpec
+aiCore.emit(depCtx);
+String deploymentId = depCtx.getResult();
+
+// 4. Obtain a configured ApiClient for the deployment
+InferenceClientContext infCtx = InferenceClientContext.create();
+infCtx.setResourceGroupId(resourceGroupId);
+infCtx.setDeploymentId(deploymentId);
+aiCore.emit(infCtx);
+ApiClient client = infCtx.getResult();
 ```
+
+The `ApiClient` returned by `InferenceClientContext` is preconfigured with the AI Core
+destination and the deployment URL; use it to construct foundation-model SDK
+clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
+
+Because `RemoteService` extends `CqnService`, you can also run CDS queries against
+the entities directly:
+
+```java
+Result rgs = aiCore.run(Select.from(AICore_.CDS_NAME + ".resourceGroups"));
+```
+
+### Public API
+
+The stable public API of this plugin lives in the `com.sap.cds.feature.aicore.api` package.
+Implementation classes in sibling packages may change without notice.
+
+| Type                                                   | Purpose                                                                                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [`ResourceGroupContext`](src/main/java/com/sap/cds/feature/aicore/api/ResourceGroupContext.java)   | Event context for `resourceGroup` - resolves (and auto-creates in MTX mode) the AI Core resource group for the current/explicit tenant |
+| [`DeploymentIdContext`](src/main/java/com/sap/cds/feature/aicore/api/DeploymentIdContext.java)     | Event context for `deploymentId` - resolves or creates a deployment matching a `ModelDeploymentSpec` inside a resource group           |
+| [`InferenceClientContext`](src/main/java/com/sap/cds/feature/aicore/api/InferenceClientContext.java) | Event context for `inferenceClient` - returns an `ApiClient` preconfigured with the inference destination for a given deployment      |
+| [`ModelDeploymentSpec`](src/main/java/com/sap/cds/feature/aicore/api/ModelDeploymentSpec.java)     | Record describing a target deployment (scenario, executable, configuration name, parameter bindings, match predicate)                  |
 
 ## Multi-Tenancy
 
@@ -82,26 +135,6 @@ When multi-tenancy is active (detected via `cds.multiTenancy.sidecar.url`):
 3. **Isolation** - Each tenant's predictions use their own resource group and deployment
 
 The lifecycle hooks are registered automatically when multi-tenancy is enabled.
-
-## Programmatic Usage
-
-```java
-// Obtain the service
-AICoreService aiCore = runtime.getServiceCatalog()
-    .getService(AICoreService.class, AICoreService.DEFAULT_NAME);
-
-// Use for entity operations (AICoreService extends CqnService)
-Result rgs = aiCore.run(Select.from("AICore.resourceGroups"));
-
-// Resolve a deployment and obtain a configured ApiClient for it
-String resourceGroupId = aiCore.resourceGroup();
-String deploymentId = aiCore.deploymentId(resourceGroupId, RptModelSpec.rpt1());
-ApiClient client = aiCore.inferenceClient(resourceGroupId, deploymentId);
-```
-
-The `ApiClient` returned by `inferenceClient` is preconfigured with the AI Core
-destination and the deployment URL; use it to construct foundation-model SDK
-clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
 
 ## Related
 

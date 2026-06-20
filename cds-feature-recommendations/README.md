@@ -50,15 +50,29 @@ Add `@cap-js/ai` to your project's `package.json`:
 }
 ```
 
-Then run `npm install`. The plugin hooks into the CDS compiler and automatically adds the `SAP_Recommendations` navigation property to draft-enabled entities that have value-list fields. 
+Then run `npm install`. The plugin hooks into the CDS compiler and automatically adds the `SAP_Recommendations` navigation property to draft-enabled entities that have value-list fields.
 
-Since the Java module `cds-feature-ai-core` already provides the `AICore` service CDS model, disable the duplicate model from `@cap-js/ai` in your `.cdsrc.json`:
+Both the Java module `cds-feature-ai-core` and the `@cap-js/ai` package ship a CDS model for the `AICore` service. Pick **one** of the following patterns in your `.cdsrc.json`, depending on whether you need to expose AICore via OData:
+
+**Option A — Java-internal use only (recommended for most apps):** the Java plugin's CDS model is sufficient because the recommendation handler consumes it in-process. Disable the duplicate model from `@cap-js/ai`:
 
 ```json
 {
   "requires": {
     "AICore": {
       "model": false
+    }
+  }
+}
+```
+
+**Option B — Expose AICore via OData:** keep the `@cap-js/ai` model and project from it in your own service (see `samples/bookshop/srv/ai-core-service.cds` for an example):
+
+```json
+{
+  "requires": {
+    "AICore": {
+      "model": "@cap-js/ai/srv/AICoreService"
     }
   }
 }
@@ -72,7 +86,7 @@ For recommendations to fire on an entity:
 - At least one field must be annotated with a **value list**
 - The `SAP_Recommendations` navigation property must be present — either via the CDS plugin (see above) or added manually (see below). Without it, predictions are computed but not serialized in OData responses.
 
-Recommendations are triggered for fields annotated with `@Common.ValueList`, `@Common.ValueListWithFixedValues`, or whose association target has `@cds.odata.valuelist`:
+Recommendations are triggered for fields annotated with `@Common.ValueList` or `@Common.ValueListWithFixedValues`. The CDS compiler also derives `@Common.ValueList` from `@cds.odata.valuelist` on association targets, so annotating the target entity has the same effect:
 
 ```cds
 @odata.draft.enabled
@@ -174,7 +188,7 @@ The following configuration applies to the RPT-1 model implementation.
 
 ```yaml
 cds:
-  requires:
+  ai:
     recommendations:
       contextRowLimit: 2000 # Max historical rows used as training context (RPT-1)
 ```
@@ -213,11 +227,13 @@ The following field types are supported by the RPT-1 model implementation:
 | Temporal | `Date`, `Time`, `DateTime`, `Timestamp`                                |
 | Other    | `Boolean`                                                              |
 
+Equivalent CDS HANA types (e.g. `hana.SMALLINT`, `hana.TINYINT`, `hana.SMALLDECIMAL`, `hana.REAL`, `hana.CHAR`, `hana.NCHAR`, `hana.VARCHAR`, `hana.CLOB`) are also supported.
+
 Binary, vector, and draft system fields are excluded automatically.
 
 ## Local Development
 
-Without an AI Core binding, the plugin uses a `MockAIClient` that returns random predictions from existing context rows - useful for UI development without AI Core access. The `@cap-js/ai` CDS plugin is still required for the model enhancement.
+Without an AI Core binding, the plugin uses a `MockRecommendationClient` that returns random predictions from existing context rows - useful for UI development without AI Core access. The `@cap-js/ai` CDS plugin is still required for the model enhancement.
 
 ## Related
 
