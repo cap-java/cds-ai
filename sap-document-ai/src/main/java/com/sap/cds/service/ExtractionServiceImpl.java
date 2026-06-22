@@ -6,42 +6,92 @@ package com.sap.cds.service;
 import static com.sap.cds.service.ExtractionStatus.*;
 
 import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.Attachments;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob_;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.ql.cqn.CqnSelect;
+import com.sap.cds.reflect.CdsElementNotFoundException;
+import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
 import com.sap.cds.service.model.DocumentInput;
+import com.sap.cds.services.ServiceDelegator;
+import com.sap.cds.services.draft.Drafts;
+import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ExtractionServiceImpl implements ExtractionService {
+public class ExtractionServiceImpl extends ServiceDelegator implements ExtractionService {
 
   private static final Logger logger = LoggerFactory.getLogger(ExtractionServiceImpl.class);
 
-  private final PersistenceService persistenceService;
-  private final DocumentAiProcessingService documentAiProcessingService;
+  private PersistenceService persistenceService;
+  private DocumentAiProcessingService documentAiProcessingService;
 
-  public ExtractionServiceImpl(
+  public ExtractionServiceImpl() {
+    super(NAME);
+  }
+
+  public void init(
       PersistenceService persistenceService,
       DocumentAiProcessingService documentAiProcessingService) {
     this.persistenceService = persistenceService;
     this.documentAiProcessingService = documentAiProcessingService;
   }
 
-  @Override
-  public void startExtraction(String attachmentId, DocumentInput documentInput, String tenantId) {
-    logger.info(
-        "[sap-document-ai] Orchestrator triggered for attachmentId={}, tenantId={}",
-        attachmentId,
-        tenantId);
+  @On(event = EVENT_START_EXTRACTION)
+  public void onStartExtraction(StartExtractionEventContext context) {
+    context.setCompleted();
 
     if (!documentAiProcessingService.isAvailable()) {
       logger.warn("[sap-document-ai] Document AI client is not available, skipping submission");
       return;
     }
+
+    String attachmentId = context.getAttachmentId();
+    String tenantId = context.getTenantId();
+    String fileName = context.getFileName();
+    String contentId = context.getContentId();
+    String mimeType = context.getMimeType();
+
+    logger.info(
+        "[sap-document-ai] Orchestrator triggered for attachmentId={}, tenantId={}",
+        attachmentId,
+        tenantId);
+
+    CdsEntity attachmentEntity =
+        context.getCdsRuntime().getCdsModel().getEntity(context.getAttachmentEntityName());
+
+    Optional<Attachments> row = getAttachment(attachmentEntity, contentId);
+
+    if (row.isEmpty()) {
+      logger.warn("[sap-document-ai] No attachment found for contentId={}, skipping", contentId);
+      return;
+    }
+
+    Attachments attachment = row.get();
+
+    InputStream attachmentContent = attachment.getContent();
+
+    if (attachmentContent == null) {
+      logger.warn("[sap-document-ai] Content is null for contentId={}, skipping", contentId);
+      return;
+    }
+
+    DocumentInput documentInput =
+        new DocumentInput(fileName, contentId, mimeType, attachmentContent);
+
+    logger.info(
+        "[sap-document-ai] Triggering extraction for attachmentId={}, contentId={}",
+        attachmentId,
+        contentId);
 
     String jobId = createExtractionJob(attachmentId, tenantId);
     try {
@@ -129,4 +179,61 @@ public class ExtractionServiceImpl implements ExtractionService {
         status,
         documentAiJobId != null ? " with documentAiJobId=" + documentAiJobId : "");
   }
+
+  private Optional<Attachments> getAttachment(CdsEntity attachmentEntity, String contentId) {
+    logger.info(
+        "Started finding attachment {} of entity {}.",
+        contentId,
+        attachmentEntity.getQualifiedName());
+
+    return selectData(attachmentEntity, contentId).stream()
+        .filter(
+            result -> {
+              long rowCount = result.result().rowCount();
+              if (rowCount <= 0) {
+                logger.info(
+                    "No attachment {} found in entity {}.",
+                    contentId,
+                    result.entity().getQualifiedName());
+                return false;
+              }
+              if (rowCount > 1) {
+                throw new IllegalStateException(
+                    "More than one attachment with contentId %s.".formatted(contentId));
+              }
+              return true;
+            })
+        .findFirst()
+        .map(
+            r -> {
+              Attachments found = r.result().single(Attachments.class);
+              logger.debug(
+                  "Found attachment {} in entity {}.",
+                  found.getContentId(),
+                  r.entity().getQualifiedName());
+              return found;
+            });
+  }
+
+  private List<SelectionResult> selectData(CdsEntity attachmentEntity, String contentId) {
+    List<SelectionResult> result = new ArrayList<>();
+    try {
+      CdsEntity sibling = attachmentEntity.getTargetOf(Drafts.SIBLING_ENTITY);
+      result.add(new SelectionResult(sibling, readData(contentId, sibling)));
+    } catch (CdsElementNotFoundException ignored) {
+      // no draft sibling — nothing to select
+    }
+    result.add(new SelectionResult(attachmentEntity, readData(contentId, attachmentEntity)));
+    return result;
+  }
+
+  private Result readData(String contentId, CdsEntity entity) {
+    CqnSelect select =
+        Select.from(entity)
+            .columns(Attachments.CONTENT_ID, Attachments.CONTENT)
+            .where(e -> e.get(Attachments.CONTENT_ID).eq(contentId));
+    return persistenceService.run(select);
+  }
+
+  private record SelectionResult(CdsEntity entity, Result result) {}
 }

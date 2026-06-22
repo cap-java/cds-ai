@@ -12,6 +12,7 @@ import com.sap.cds.service.documentai.client.DefaultDocumentAiClient;
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -29,6 +30,8 @@ public class AttachmentEventHandlerRegistration implements CdsRuntimeConfigurati
   private static final Logger logger =
       LoggerFactory.getLogger(AttachmentEventHandlerRegistration.class);
 
+  private ExtractionServiceImpl extractionService;
+
   static {
     OAuth2ServiceBindingDestinationLoader.registerPropertySupplier(
         options ->
@@ -36,6 +39,12 @@ public class AttachmentEventHandlerRegistration implements CdsRuntimeConfigurati
                 options.getServiceBinding(),
                 DefaultDocumentAiProcessingService.SAP_DOCUMENT_AI_SERVICE_LABEL),
         DefaultOAuth2PropertySupplier::new);
+  }
+
+  @Override
+  public void services(CdsRuntimeConfigurer configurer) {
+    extractionService = new ExtractionServiceImpl();
+    configurer.service(extractionService);
   }
 
   @Override
@@ -52,11 +61,15 @@ public class AttachmentEventHandlerRegistration implements CdsRuntimeConfigurati
     DocumentAiProcessingService documentAiProcessingService =
         new DefaultDocumentAiProcessingService(documentAiClient);
 
-    ExtractionService extractionService =
-        new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
+    extractionService.init(persistenceService, documentAiProcessingService);
+
+    OutboxService outboxService =
+        serviceCatalog.getService(OutboxService.class, OutboxService.INMEMORY_NAME);
+
+    ExtractionService outboxedExtractionService = outboxService.outboxed(extractionService);
 
     // register event handler with CAP runtime
-    configurer.eventHandler(new AttachmentEventHandler(extractionService, persistenceService));
+    configurer.eventHandler(new AttachmentEventHandler(outboxedExtractionService));
   }
 
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {

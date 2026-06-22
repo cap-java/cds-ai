@@ -3,9 +3,11 @@
 */
 package com.sap.cds.service;
 
-import com.sap.cds.service.model.DocumentInput;
+import com.sap.cds.services.Service;
 
-public interface ExtractionService {
+public interface ExtractionService extends Service {
 
-  void startExtraction(String attachmentId, DocumentInput documentInput, String tenantId);
+  String NAME = "ExtractionService";
+
+  String EVENT_START_EXTRACTION = "startExtraction";
 }

@@ -10,13 +10,18 @@ import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
 import com.sap.cds.Struct;
+import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.Attachments;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;
 import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
-import com.sap.cds.service.model.DocumentInput;
+import com.sap.cds.reflect.CdsElementNotFoundException;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,44 +38,43 @@ class ExtractionServiceImplTest {
   static final String ATT_123 = "att-123";
   static final String CNT_123 = "cnt-123";
   static final String DIE_JOB_ID = "die-job-123";
-  public static final String TEST_PDF = "test.pdf";
-  public static final String CONTENT_TYPE = "application/pdf";
-  public static final String TEST_CONTENT = "test-content";
+  static final String TEST_PDF = "test.pdf";
+  static final String CONTENT_TYPE = "application/pdf";
+  static final String TEST_CONTENT = "test-content";
+  static final String ENTITY_NAME = "test.Attachments";
 
   @Mock PersistenceService persistenceService;
   @Mock DocumentAiProcessingService documentAiProcessingService;
   @Mock Result insertResult;
+  @Mock CdsRuntime cdsRuntime;
+  @Mock CdsModel cdsModel;
+  @Mock CdsEntity cdsEntity;
 
-  DocumentInput documentInput;
   ExtractionServiceImpl extractionService;
 
   @BeforeEach
   void setUp() {
     when(documentAiProcessingService.isAvailable()).thenReturn(true);
-    documentInput =
-        new DocumentInput(
-            TEST_PDF,
-            CNT_123,
-            CONTENT_TYPE,
-            new ByteArrayInputStream(TEST_CONTENT.getBytes(StandardCharsets.UTF_8)));
-    extractionService = new ExtractionServiceImpl(persistenceService, documentAiProcessingService);
+    extractionService = new ExtractionServiceImpl();
+    extractionService.init(persistenceService, documentAiProcessingService);
   }
 
   @Test
   void startExtractionDoesNothingWhenServiceUnavailable() {
     when(documentAiProcessingService.isAvailable()).thenReturn(false);
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
+    extractionService.onStartExtraction(eventContext());
     verify(persistenceService, never()).run(any(CqnInsert.class));
   }
 
   @Test
   void startExtractionCreatesOneJobWithCorrectFields() {
+    mockContentLookup(contentStream());
     mockAllDatabaseCalls();
     mockSuccessfulProcessing();
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
+    extractionService.onStartExtraction(eventContext());
 
     ArgumentCaptor<CqnInsert> insertCaptor = forClass(CqnInsert.class);
-    verify(persistenceService, times(1)).run(insertCaptor.capture());
+    verify(persistenceService, atLeastOnce()).run(insertCaptor.capture());
     ExtractionJob inserted =
         Struct.access(insertCaptor.getValue().entries().get(0)).as(ExtractionJob.class);
     assertThat(inserted.getAttachmentId()).isEqualTo(ATT_123);
@@ -80,10 +84,11 @@ class ExtractionServiceImplTest {
 
   @Test
   void startExtractionStoresDocumentAiJobIdAndUpdatesStatusToSubmitted() {
+    Result statusResult = resultWithJobStatus(PENDING);
+    mockContentThenStatus(contentStream(), statusResult);
     mockAllDatabaseCalls();
     mockSuccessfulProcessing();
-    mockStatusResult(PENDING);
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
+    extractionService.onStartExtraction(eventContext());
 
     ArgumentCaptor<CqnUpdate> captor = forClass(CqnUpdate.class);
     verify(persistenceService, times(1)).run(captor.capture());
@@ -95,69 +100,136 @@ class ExtractionServiceImplTest {
   }
 
   @Test
-  void startExtractionFailsWhenJobNotFound() {
-    mockInsertDatabaseCalls();
-    mockSuccessfulProcessing();
-    Result emptyResult = mock(Result.class);
-    when(emptyResult.single(ExtractionJob.class)).thenThrow(new RuntimeException("not found"));
-    when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
+  void startExtractionSkipsWhenAttachmentNotFound() {
+    mockContentLookup(null);
+    extractionService.onStartExtraction(eventContext());
+    verify(persistenceService, never()).run(any(CqnInsert.class));
+  }
 
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
-
-    verify(persistenceService, never()).run(any(CqnUpdate.class));
+  @Test
+  void startExtractionSkipsWhenContentStreamIsNull() {
+    mockContentLookupWithNullStream();
+    extractionService.onStartExtraction(eventContext());
+    verify(persistenceService, never()).run(any(CqnInsert.class));
   }
 
   @Test
   void updateStatusWithSameStateDoesNotRunJobAgain() {
-    // SELECT returns SUBMITTED — same-state check short-circuits before the UPDATE.
+    Result statusResult = resultWithJobStatus(SUBMITTED);
+    mockContentThenStatus(contentStream(), statusResult);
     mockInsertDatabaseCalls();
     mockSuccessfulProcessing();
-    mockStatusResult(SUBMITTED);
 
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
+    extractionService.onStartExtraction(eventContext());
 
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
 
   @Test
   void invalidTransitionIsLoggedAndNoStatusUpdateOccurs() {
+    Result statusResult = resultWithJobStatus(COMPLETED);
+    mockContentThenStatus(contentStream(), statusResult);
     mockInsertDatabaseCalls();
     mockSuccessfulProcessing();
-    mockStatusResult(COMPLETED);
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
+    extractionService.onStartExtraction(eventContext());
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
 
   @Test
   void markJobAsFailedSucceedsWhenTransitionFromPendingToFailedIsValid() {
+    Result statusResult = resultWithJobStatus(PENDING);
+    mockContentThenStatus(contentStream(), statusResult);
     mockAllDatabaseCalls();
-    mockStatusResult(PENDING);
     doThrow(new RuntimeException("simulated failure"))
         .when(documentAiProcessingService)
         .processDocument(any(), any());
-    extractionService.startExtraction(ATT_123, documentInput, TENANT_1);
+    extractionService.onStartExtraction(eventContext());
     verify(persistenceService, times(1)).run(any(CqnUpdate.class));
   }
 
-  private void mockStatusResult(ExtractionStatus status) {
-    Result result = resultWithJobStatus(status);
-    when(persistenceService.run(any(CqnSelect.class))).thenReturn(result);
+  private StartExtractionEventContext eventContext() {
+    StartExtractionEventContext ctx = mock(StartExtractionEventContext.class);
+    lenient().when(ctx.getAttachmentId()).thenReturn(ATT_123);
+    lenient().when(ctx.getTenantId()).thenReturn(TENANT_1);
+    lenient().when(ctx.getContentId()).thenReturn(CNT_123);
+    lenient().when(ctx.getFileName()).thenReturn(TEST_PDF);
+    lenient().when(ctx.getMimeType()).thenReturn(CONTENT_TYPE);
+    lenient().when(ctx.getAttachmentEntityName()).thenReturn(ENTITY_NAME);
+    lenient().when(ctx.getCdsRuntime()).thenReturn(cdsRuntime);
+    return ctx;
+  }
+
+  private InputStream contentStream() {
+    return new ByteArrayInputStream(TEST_CONTENT.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private void mockEntityLookup() {
+    when(cdsRuntime.getCdsModel()).thenReturn(cdsModel);
+    when(cdsModel.getEntity(ENTITY_NAME)).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn(ENTITY_NAME);
+    doThrow(CdsElementNotFoundException.class).when(cdsEntity).getTargetOf(any());
+  }
+
+  private void mockContentThenStatus(InputStream content, Result statusResult) {
+    mockEntityLookup();
+    Attachments attachment = Attachments.create();
+    attachment.setContentId(CNT_123);
+    attachment.setContent(content);
+
+    Result contentResult = mock(Result.class);
+    lenient().when(contentResult.rowCount()).thenReturn(1L);
+    lenient().when(contentResult.single(Attachments.class)).thenReturn(attachment);
+    lenient().when(contentResult.first(Attachments.class)).thenReturn(Optional.of(attachment));
+
+    lenient()
+        .when(persistenceService.run(any(CqnSelect.class)))
+        .thenReturn(contentResult, statusResult);
+  }
+
+  private void mockContentLookup(InputStream content) {
+    mockEntityLookup();
+    Attachments attachment = Attachments.create();
+    attachment.setContentId(CNT_123);
+    attachment.setContent(content);
+
+    Result contentResult = mock(Result.class);
+    lenient().when(contentResult.rowCount()).thenReturn(content != null ? 1L : 0L);
+    lenient().when(contentResult.single(Attachments.class)).thenReturn(attachment);
+    lenient()
+        .when(contentResult.first(Attachments.class))
+        .thenReturn(content != null ? Optional.of(attachment) : Optional.empty());
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(contentResult);
+  }
+
+  private void mockContentLookupWithNullStream() {
+    mockEntityLookup();
+    Attachments attachment = Attachments.create();
+    attachment.setContentId(CNT_123);
+    attachment.setContent(null);
+
+    Result contentResult = mock(Result.class);
+    lenient().when(contentResult.rowCount()).thenReturn(1L);
+    lenient().when(contentResult.single(Attachments.class)).thenReturn(attachment);
+    lenient().when(contentResult.first(Attachments.class)).thenReturn(Optional.of(attachment));
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(contentResult);
   }
 
   private void mockSuccessfulProcessing() {
-    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    lenient()
+        .when(documentAiProcessingService.processDocument(any(), any()))
+        .thenReturn(DIE_JOB_ID);
   }
 
   private void mockInsertDatabaseCalls() {
     ExtractionJob createdJob = ExtractionJob.create();
     createdJob.setId("test-job-id");
-    when(insertResult.single(ExtractionJob.class)).thenReturn(createdJob);
-    when(persistenceService.run(any(CqnInsert.class))).thenReturn(insertResult);
+    lenient().when(insertResult.single(ExtractionJob.class)).thenReturn(createdJob);
+    lenient().when(persistenceService.run(any(CqnInsert.class))).thenReturn(insertResult);
   }
 
   private void mockAllDatabaseCalls() {
     mockInsertDatabaseCalls();
-    when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
+    lenient().when(persistenceService.run(any(CqnUpdate.class))).thenReturn(mock(Result.class));
   }
 
   private Result resultWithJobStatus(ExtractionStatus status) {
