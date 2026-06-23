@@ -71,9 +71,9 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
     when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
 
-    extractionService.triggerExtraction(SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+    extractionService.triggerExtraction(
+        SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
 
-    com.sap.cds.Struct struct = null;
     var insertCaptor = org.mockito.ArgumentCaptor.forClass(CqnInsert.class);
     verify(persistenceService, atLeastOnce()).run(insertCaptor.capture());
     ExtractionJob inserted =
@@ -92,7 +92,8 @@ class ExtractionServiceImplTest {
     when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
 
     ExtractionResult result =
-        extractionService.triggerExtraction(SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+        extractionService.triggerExtraction(
+            SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
 
     assertThat(result.status()).isEqualTo(ExtractionResult.Status.SUCCESS);
     assertThat(result.documentAiJobId()).isEqualTo(DIE_JOB_ID);
@@ -110,7 +111,8 @@ class ExtractionServiceImplTest {
         .processDocument(any(), any());
 
     ExtractionResult result =
-        extractionService.triggerExtraction(SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+        extractionService.triggerExtraction(
+            SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
 
     assertThat(result.status()).isEqualTo(ExtractionResult.Status.FAILED);
     verify(persistenceService, times(1)).run(any(CqnUpdate.class));
@@ -142,7 +144,8 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
     when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
 
-    extractionService.triggerExtraction(SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+    extractionService.triggerExtraction(
+        SRC_DOC_ID, TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
 
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }

@@ -25,10 +25,10 @@ import org.apache.http.client.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AttachmentEventHandlerRegistration implements CdsRuntimeConfiguration {
+public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger =
-      LoggerFactory.getLogger(AttachmentEventHandlerRegistration.class);
+      LoggerFactory.getLogger(DocumentAiServiceConfiguration.class);
 
   private ExtractionServiceImpl extractionService;
 
