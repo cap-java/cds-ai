@@ -8,7 +8,6 @@ service DocumentAiService {
   @readonly
   entity ExtractionJob as projection on ai.ExtractionJob
     excluding {
-      attachmentId,
       tenantId,
       documentAiJobId
     };

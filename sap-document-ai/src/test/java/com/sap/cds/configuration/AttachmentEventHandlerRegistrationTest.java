@@ -10,7 +10,6 @@ import static org.mockito.Mockito.*;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService_;
-import com.sap.cds.handlers.AttachmentEventHandler;
 import com.sap.cds.handlers.DocumentSubmissionHandler;
 import com.sap.cds.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.service.ExtractionService;
@@ -64,7 +63,7 @@ class AttachmentEventHandlerRegistrationTest {
   }
 
   @Test
-  void eventHandlersRegistersAttachmentAndDocumentSubmissionHandlers() {
+  void eventHandlersRegistersDocumentSubmissionHandler() {
     when(configurer.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getServiceCatalog()).thenReturn(serviceCatalog);
     when(cdsRuntime.getEnvironment()).thenReturn(environment);
@@ -85,8 +84,6 @@ class AttachmentEventHandlerRegistrationTest {
     verify(configurer, atLeast(2)).eventHandler(captor.capture());
 
     List<EventHandler> handlers = captor.getAllValues();
-    assertThat(handlers.stream().anyMatch(h -> h.getClass() == AttachmentEventHandler.class))
-        .isTrue();
     assertThat(handlers.stream().anyMatch(h -> h.getClass() == DocumentSubmissionHandler.class))
         .isTrue();
   }

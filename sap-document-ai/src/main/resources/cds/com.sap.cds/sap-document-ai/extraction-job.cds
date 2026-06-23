@@ -13,7 +13,6 @@ entity SourceDocument : cuid {
 
 entity ExtractionJob : cuid, managed {
     sourceDocument  : Association to SourceDocument;
-    attachmentId    : String;
     status          : String;
     tenantId        : String;
     documentAiJobId : String;

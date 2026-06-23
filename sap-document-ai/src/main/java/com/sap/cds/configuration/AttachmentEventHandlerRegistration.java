@@ -5,17 +5,14 @@ package com.sap.cds.configuration;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService_;
-import com.sap.cds.handlers.AttachmentEventHandler;
 import com.sap.cds.handlers.DocumentSubmissionHandler;
 import com.sap.cds.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.service.DocumentAiProcessingService;
-import com.sap.cds.service.ExtractionService;
 import com.sap.cds.service.ExtractionServiceImpl;
 import com.sap.cds.service.documentai.client.DefaultDocumentAiClient;
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
-import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -68,40 +65,7 @@ public class AttachmentEventHandlerRegistration implements CdsRuntimeConfigurati
 
     extractionService.init(persistenceService, documentAiProcessingService);
 
-    OutboxService outboxService =
-        serviceCatalog.getService(OutboxService.class, OutboxService.PERSISTENT_UNORDERED_NAME);
-
-    ExtractionService outboxedExtractionService;
-
-    if (outboxService != null) {
-      outboxedExtractionService = outboxService.outboxed(extractionService);
-    } else {
-      outboxedExtractionService = extractionService;
-      logger.warn(
-          "OutboxService '{}' is not available. AttachmentService will not be outboxed.",
-          OutboxService.PERSISTENT_UNORDERED_NAME);
-    }
-
-    // register event handler with CAP runtime
-    if (isAttachmentsPluginPresent()) {
-      configurer.eventHandler(new AttachmentEventHandler(outboxedExtractionService));
-      logger.info(
-          "[sap-document-ai] cds-feature-attachments detected, attachment handler registered");
-    } else {
-      logger.info(
-          "[sap-document-ai] cds-feature-attachments not found, attachment handler skipped");
-    }
-
     configurer.eventHandler(new DocumentSubmissionHandler(extractionService, documentAiService));
-  }
-
-  private static boolean isAttachmentsPluginPresent() {
-    try {
-      Class.forName("com.sap.cds.feature.attachments.service.AttachmentService");
-      return true;
-    } catch (ClassNotFoundException e) {
-      return false;
-    }
   }
 
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {
