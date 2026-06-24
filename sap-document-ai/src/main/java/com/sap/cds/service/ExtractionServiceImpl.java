@@ -11,6 +11,7 @@ import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.Extraction
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.service.exceptions.ConcurrentJobUpdateException;
 import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
 import com.sap.cds.service.model.DocumentInput;
 import com.sap.cds.service.model.ExtractionResult;
@@ -42,7 +43,8 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
 
   @Override
   public ExtractionResult triggerExtraction(
-      String fileName, String mimeType, InputStream content, String tenantId) {
+      String fileName, String mimeType, InputStream content, String tenantId)
+      throws IllegalStatusTransitionException {
     logger.info(
         "[sap-document-ai] Direct extraction triggered for fileName={}, tenantId={}",
         fileName,
@@ -70,6 +72,12 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
       //      updateExtractionJob(jobId, PROCESSING, null); // or replace w/ documentAiJobId
       //      updateExtractionJob(jobId, COMPLETED, null); // or replace w/ documentAiJobId
       return new ExtractionResult(jobId, Status.SUCCESS, documentAiJobId);
+    } catch (ConcurrentJobUpdateException e) {
+      // another thread already updated this job - treat as idempotent success
+      logger.warn(
+          "[sap-document-ai] Concurrent update on jobId={}, skipping status write — job already advanced",
+          jobId);
+      return new ExtractionResult(jobId, Status.SUCCESS, null);
     } catch (IllegalStatusTransitionException e) { // example: COMPLETED -> FAILED
       logger.error("[sap-document-ai] Invalid state transition for jobId={}", jobId, e);
       throw e;
@@ -134,15 +142,10 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
                 .entry(extractionJob));
 
     if (updateResult.rowCount() == 0) {
-      logger.error(
-          "[sap-document-ai] Status update skipped for jobId={} — concurrent modification detected (expected status={}, update affected 0 rows)",
-          jobId,
-          currentStatus);
-      throw new IllegalStatusTransitionException(
-          "Concurrent modification detected for jobId="
-              + jobId
-              + ", expected status="
-              + currentStatus);
+      String message =
+          "Concurrent update detected for jobId=" + jobId + ", expected status=" + currentStatus;
+      logger.warn("[sap-document-ai] {}", message);
+      throw new ConcurrentJobUpdateException(message);
     }
 
     logger.info(

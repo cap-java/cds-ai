@@ -35,8 +35,8 @@ class ExceptionsTest {
     String BAD_REQUEST = "Bad Request";
     DocumentAiException.Request ex = new DocumentAiException.Request(400, BAD_REQUEST);
 
-    assertThat(ex.statusCode).isEqualTo(400);
-    assertThat(ex.responseBody).isEqualTo(BAD_REQUEST);
+    assertThat(ex.getStatusCode()).isEqualTo(400);
+    assertThat(ex.getResponseBody()).isEqualTo(BAD_REQUEST);
     assertThat(ex.getMessage()).contains("400").contains(BAD_REQUEST);
   }
 
@@ -44,6 +44,14 @@ class ExceptionsTest {
   void illegalStatusTransitionExceptionContainsMessage() {
     String message = "Invalid transition from PENDING to COMPLETED";
     IllegalStatusTransitionException ex = new IllegalStatusTransitionException(message);
+
+    assertThat(ex.getMessage()).isEqualTo(message);
+  }
+
+  @Test
+  void concurrentJobUpdateExceptionContainsMessage() {
+    String message = "Concurrent update detected for jobId=abc";
+    ConcurrentJobUpdateException ex = new ConcurrentJobUpdateException(message);
 
     assertThat(ex.getMessage()).isEqualTo(message);
   }

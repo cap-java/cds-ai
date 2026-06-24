@@ -113,6 +113,23 @@ class ExtractionServiceImplTest {
   }
 
   @Test
+  void triggerExtractionReturnSuccessOnConcurrentUpdate() {
+    mockInsertDatabaseCalls();
+    mockAllDatabaseCalls();
+    Result statusResult = resultWithJobStatus(PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
+    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    Result zeroRowResult = mock(Result.class);
+    when(zeroRowResult.rowCount()).thenReturn(0L);
+    when(persistenceService.run(any(CqnUpdate.class))).thenReturn(zeroRowResult);
+
+    ExtractionResult result =
+        extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+
+    assertThat(result.status()).isEqualTo(ExtractionResult.Status.SUCCESS);
+  }
+
+  @Test
   void triggerExtractionThrowsOnInvalidStatusTransition() {
     mockInsertDatabaseCalls();
     mockAllDatabaseCalls();

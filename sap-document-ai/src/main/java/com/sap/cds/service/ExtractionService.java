@@ -3,6 +3,7 @@
 */
 package com.sap.cds.service;
 
+import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
 import com.sap.cds.service.model.ExtractionResult;
 import com.sap.cds.services.Service;
 import java.io.InputStream;
@@ -12,5 +13,6 @@ public interface ExtractionService extends Service {
   String NAME = "ExtractionService";
 
   ExtractionResult triggerExtraction(
-      String fileName, String mimeType, InputStream content, String tenantId);
+      String fileName, String mimeType, InputStream content, String tenantId)
+      throws IllegalStatusTransitionException;
 }

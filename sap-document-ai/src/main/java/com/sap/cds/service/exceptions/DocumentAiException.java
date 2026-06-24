@@ -22,13 +22,21 @@ public class DocumentAiException extends RuntimeException {
   }
 
   public static class Request extends DocumentAiException {
-    public final int statusCode;
-    public final String responseBody;
+    private final int statusCode;
+    private final String responseBody;
 
     public Request(int statusCode, String responseBody) {
       super("DIE request failed. Status=" + statusCode + ", body=" + responseBody);
       this.statusCode = statusCode;
       this.responseBody = responseBody;
+    }
+
+    public int getStatusCode() {
+      return statusCode;
+    }
+
+    public String getResponseBody() {
+      return responseBody;
     }
   }
 
