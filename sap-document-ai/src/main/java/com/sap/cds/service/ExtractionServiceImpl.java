@@ -42,17 +42,13 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
 
   @Override
   public ExtractionResult triggerExtraction(
-      String sourceDocumentId,
-      String fileName,
-      String mimeType,
-      InputStream content,
-      String tenantId) {
+      String fileName, String mimeType, InputStream content, String tenantId) {
     logger.info(
-        "[sap-document-ai] Direct extraction triggered for sourceDocumentId={}, tenantId={}",
-        sourceDocumentId,
+        "[sap-document-ai] Direct extraction triggered for fileName={}, tenantId={}",
+        fileName,
         tenantId);
     // create pending job
-    String jobId = createExtractionJob(sourceDocumentId, tenantId);
+    String jobId = createExtractionJob(tenantId);
 
     // check for availability of the service.
     if (!documentAiProcessingService.isAvailable()) {
@@ -62,13 +58,11 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     }
 
     DocumentInput documentInput = new DocumentInput(fileName, mimeType, content);
-    ExtractionResult extractionResult =
-        performExtraction(jobId, sourceDocumentId, documentInput, tenantId);
-    return extractionResult;
+    return performExtraction(jobId, fileName, documentInput, tenantId);
   }
 
   private ExtractionResult performExtraction(
-      String jobId, String sourceId, DocumentInput documentInput, String tenantId) {
+      String jobId, String fileName, DocumentInput documentInput, String tenantId) {
     try {
       String documentAiJobId = documentAiProcessingService.processDocument(jobId, documentInput);
       updateExtractionJob(jobId, SUBMITTED, documentAiJobId);
@@ -81,8 +75,8 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
       throw e;
     } catch (Exception e) { // example : PROCESSING -> FAILED
       logger.error(
-          "[sap-document-ai] Processing failed for sourceId={}, tenantId={}",
-          sourceId,
+          "[sap-document-ai] Processing failed for fileName={}, tenantId={}",
+          fileName,
           tenantId,
           e);
       markJobAsFailed(jobId);
@@ -98,18 +92,14 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     }
   }
 
-  private String createExtractionJob(String sourceDocumentId, String tenantId) {
+  private String createExtractionJob(String tenantId) {
     ExtractionJob job = ExtractionJob.create();
-    job.setSourceDocumentId(sourceDocumentId);
     job.setTenantId(tenantId);
     job.setStatus(PENDING.name());
 
     Result result = persistenceService.run(Insert.into(ExtractionJob_.class).entry(job));
     String jobId = result.single(ExtractionJob.class).getId();
-    logger.info(
-        "[sap-document-ai] ExtractionJob created with status=PENDING,  sourceId={}, jobId={}",
-        sourceDocumentId,
-        jobId);
+    logger.info("[sap-document-ai] ExtractionJob created with status=PENDING, jobId={}", jobId);
     return jobId;
   }
 

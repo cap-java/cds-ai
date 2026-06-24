@@ -3,8 +3,6 @@
 */
 package com.sap.cds.configuration;
 
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService;
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService_;
 import com.sap.cds.handlers.DocumentSubmissionHandler;
 import com.sap.cds.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.service.DocumentAiProcessingService;
@@ -55,8 +53,6 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
     // framework-managed dependency
     PersistenceService persistenceService =
         serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
-    DocumentAiService documentAiService =
-        serviceCatalog.getService(DocumentAiService.class, DocumentAiService_.CDS_NAME);
 
     // internal
     DocumentAiClient documentAiClient = buildDocumentAi(runtime.getEnvironment());
@@ -65,7 +61,7 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
 
     extractionService.init(persistenceService, documentAiProcessingService);
 
-    configurer.eventHandler(new DocumentSubmissionHandler(extractionService, documentAiService));
+    configurer.eventHandler(new DocumentSubmissionHandler(extractionService));
   }
 
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {

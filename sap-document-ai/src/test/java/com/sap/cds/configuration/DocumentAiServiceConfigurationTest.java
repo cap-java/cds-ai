@@ -8,8 +8,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService;
-import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService_;
 import com.sap.cds.handlers.DocumentSubmissionHandler;
 import com.sap.cds.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.service.ExtractionServiceImpl;
@@ -39,7 +37,6 @@ class DocumentAiServiceConfigurationTest {
   @Mock CdsRuntime cdsRuntime;
   @Mock ServiceCatalog serviceCatalog;
   @Mock PersistenceService persistenceService;
-  @Mock DocumentAiService documentAiService;
   @Mock CdsEnvironment environment;
 
   DocumentAiServiceConfiguration registration;
@@ -66,8 +63,6 @@ class DocumentAiServiceConfigurationTest {
     when(environment.getServiceBindings()).thenReturn(Stream.empty());
     when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
         .thenReturn(persistenceService);
-    when(serviceCatalog.getService(DocumentAiService.class, DocumentAiService_.CDS_NAME))
-        .thenReturn(documentAiService);
 
     registration.services(configurer);
     registration.eventHandlers(configurer);

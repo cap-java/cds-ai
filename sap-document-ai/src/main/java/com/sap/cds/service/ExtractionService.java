@@ -11,12 +11,6 @@ public interface ExtractionService extends Service {
 
   String NAME = "ExtractionService";
 
-  String EVENT_START_EXTRACTION = "startExtraction";
-
   ExtractionResult triggerExtraction(
-      String sourceDocumentId,
-      String fileName,
-      String mimeType,
-      InputStream content,
-      String tenantId);
+      String fileName, String mimeType, InputStream content, String tenantId);
 }

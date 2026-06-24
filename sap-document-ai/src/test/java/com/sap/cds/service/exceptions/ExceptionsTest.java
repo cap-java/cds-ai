@@ -47,19 +47,4 @@ class ExceptionsTest {
 
     assertThat(ex.getMessage()).isEqualTo(message);
   }
-
-  @Test
-  void sourceDocumentNotFoundExceptionContainsSourceDocumentId() {
-    SourceDocumentException.NotFound ex = new SourceDocumentException.NotFound("src-123");
-
-    assertThat(ex.getMessage()).contains("src-123");
-  }
-
-  @Test
-  void sourceDocumentContentMissingExceptionContainsSourceDocumentId() {
-    SourceDocumentException.ContentMissing ex =
-        new SourceDocumentException.ContentMissing("src-123");
-
-    assertThat(ex.getMessage()).contains("src-123");
-  }
 }

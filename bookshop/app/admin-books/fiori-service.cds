@@ -111,3 +111,18 @@ annotate AdminService.Books with {
 annotate AdminService.Books with {
   genre @Common.ValueListWithFixedValues;
 }
+
+////////////////////////////////////////////////////////////////////////////
+//
+//  Document AI - Upload Section
+//
+
+annotate AdminService.Books with @(
+  UI.Identification : [
+    {
+      $Type  : 'UI.DataFieldForAction',
+      Action : 'AdminService.extractDocumentData',
+      Label  : 'Extract Document Data'
+    }
+  ]
+);
