@@ -16,8 +16,8 @@ public class StatusTransitionValidator {
 
     return switch (current) {
       case PENDING -> SUBMITTED.equals(next) || FAILED.equals(next);
-      case SUBMITTED -> PROCESSING.equals(next) || FAILED.equals(next);
-      case PROCESSING -> COMPLETED.equals(next) || FAILED.equals(next);
+      case SUBMITTED -> RUNNING.equals(next) || DONE.equals(next) || FAILED.equals(next);
+      case RUNNING -> DONE.equals(next) || FAILED.equals(next);
       default -> false;
     };
   }

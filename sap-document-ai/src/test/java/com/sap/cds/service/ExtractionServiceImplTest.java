@@ -15,6 +15,8 @@ import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.service.exceptions.IllegalStatusTransitionException;
 import com.sap.cds.service.model.ExtractionResult;
+import com.sap.cds.services.outbox.OutboxService;
+import com.sap.cds.services.outbox.Schedule;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -37,6 +39,7 @@ class ExtractionServiceImplTest {
 
   @Mock PersistenceService persistenceService;
   @Mock DocumentAiProcessingService documentAiProcessingService;
+  @Mock OutboxService outboxService;
   @Mock Result insertResult;
 
   ExtractionServiceImpl extractionService;
@@ -45,7 +48,7 @@ class ExtractionServiceImplTest {
   void setUp() {
     when(documentAiProcessingService.isAvailable()).thenReturn(true);
     extractionService = new ExtractionServiceImpl();
-    extractionService.init(persistenceService, documentAiProcessingService);
+    extractionService.init(persistenceService, documentAiProcessingService, outboxService);
   }
 
   @Test
@@ -54,7 +57,8 @@ class ExtractionServiceImplTest {
     when(documentAiProcessingService.isAvailable()).thenReturn(false);
 
     ExtractionResult result =
-        extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+        extractionService.triggerExtraction(
+            TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
     assertThat(result.status()).isEqualTo(ExtractionResult.Status.PENDING);
     assertThat(result.internalJobId()).isNotNull();
@@ -69,7 +73,7 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
     when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
 
-    extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+    extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
     var insertCaptor = org.mockito.ArgumentCaptor.forClass(CqnInsert.class);
     verify(persistenceService, atLeastOnce()).run(insertCaptor.capture());
@@ -88,11 +92,29 @@ class ExtractionServiceImplTest {
     when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
 
     ExtractionResult result =
-        extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+        extractionService.triggerExtraction(
+            TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
     assertThat(result.status()).isEqualTo(ExtractionResult.Status.SUCCESS);
     assertThat(result.documentAiJobId()).isEqualTo(DIE_JOB_ID);
     verify(persistenceService, times(1)).run(any(CqnUpdate.class));
+    verify(outboxService).submit(any(), any(), any(Schedule.class));
+  }
+
+  @Test
+  void triggerExtractionDoesNotThrowWhenOutboxIsNull() {
+    extractionService.init(persistenceService, documentAiProcessingService, null);
+    mockInsertDatabaseCalls();
+    mockAllDatabaseCalls();
+    Result statusResult = resultWithJobStatus(PENDING);
+    lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
+    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+
+    ExtractionResult result =
+        extractionService.triggerExtraction(
+            TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
+
+    assertThat(result.status()).isEqualTo(ExtractionResult.Status.SUCCESS);
   }
 
   @Test
@@ -106,7 +128,8 @@ class ExtractionServiceImplTest {
         .processDocument(any(), any());
 
     ExtractionResult result =
-        extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+        extractionService.triggerExtraction(
+            TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
     assertThat(result.status()).isEqualTo(ExtractionResult.Status.FAILED);
     verify(persistenceService, times(1)).run(any(CqnUpdate.class));
@@ -124,7 +147,8 @@ class ExtractionServiceImplTest {
     when(persistenceService.run(any(CqnUpdate.class))).thenReturn(zeroRowResult);
 
     ExtractionResult result =
-        extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+        extractionService.triggerExtraction(
+            TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
     assertThat(result.status()).isEqualTo(ExtractionResult.Status.SUCCESS);
   }
@@ -142,7 +166,8 @@ class ExtractionServiceImplTest {
     assertThrows(
         IllegalStatusTransitionException.class,
         () ->
-            extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1));
+            extractionService.triggerExtraction(
+                TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1));
 
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }
@@ -154,7 +179,7 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
     when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
 
-    extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), TENANT_1);
+    extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
     verify(persistenceService, never()).run(any(CqnUpdate.class));
   }

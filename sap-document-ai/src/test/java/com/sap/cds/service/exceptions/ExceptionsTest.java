@@ -32,12 +32,12 @@ class ExceptionsTest {
 
   @Test
   void documentAiRequestExceptionContainsStatusCodeAndBody() {
-    String BAD_REQUEST = "Bad Request";
-    DocumentAiException.Request ex = new DocumentAiException.Request(400, BAD_REQUEST);
+    String badRequest = "Bad Request";
+    DocumentAiException.Request ex = new DocumentAiException.Request(400, badRequest);
 
     assertThat(ex.getStatusCode()).isEqualTo(400);
-    assertThat(ex.getResponseBody()).isEqualTo(BAD_REQUEST);
-    assertThat(ex.getMessage()).contains("400").contains(BAD_REQUEST);
+    assertThat(ex.getResponseBody()).isEqualTo(badRequest);
+    assertThat(ex.getMessage()).contains("400").contains(badRequest);
   }
 
   @Test

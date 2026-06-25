@@ -4,7 +4,6 @@ import static cds.gen.catalogservice.CatalogService_.BOOKS;
 
 import java.util.stream.Stream;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.sap.cds.ql.Select;
@@ -27,8 +26,11 @@ import cds.gen.catalogservice.SubmitOrderContext.ReturnType;
 @ServiceName(CatalogService_.CDS_NAME)
 public class CatalogServiceHandler implements EventHandler {
 
-	@Autowired
-	private PersistenceService db;
+	private final PersistenceService db;
+
+	public CatalogServiceHandler(PersistenceService db) {
+		this.db = db;
+	}
 
 	@On
 	public ReturnType submitOrder(SubmitOrderContext context) {

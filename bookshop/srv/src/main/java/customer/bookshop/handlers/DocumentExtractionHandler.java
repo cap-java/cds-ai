@@ -6,14 +6,15 @@ import cds.gen.adminservice.BooksAttachments;
 import cds.gen.adminservice.BooksAttachments_;
 import cds.gen.adminservice.BooksDraftActivateContext;
 import cds.gen.adminservice.BooksExtractDocumentDataContext;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentAiService_;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtraction;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionContext;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.services.ErrorStatuses;
-import com.sap.cds.services.Service;
+import com.sap.cds.services.ErrorStatuses;import com.sap.cds.services.Service;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
@@ -32,6 +33,7 @@ public class DocumentExtractionHandler implements EventHandler {
 
   private static final Logger logger =
       LoggerFactory.getLogger(DocumentExtractionHandler.class);
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   private final DraftService adminService;
   private final CdsModel cdsModel;
@@ -106,6 +108,18 @@ public class DocumentExtractionHandler implements EventHandler {
     event.setFileName(attachment.getFileName());
     event.setMimeType(attachment.getMimeType());
     event.setContent(attachment.getContent());
+    try {
+      event.setOptions(objectMapper.writeValueAsString(java.util.Map.of(
+          "clientId", "default",
+          "documentType", "invoice",
+          "receivedDate", "2020-02-17",
+          "schemaId", "cf8cc8a9-1eee-42d9-9a3e-507a61baac23",
+          "templateId", "detect",
+          "candidateTemplateIds", java.util.List.of(),
+          "enrichment", java.util.Map.of())));
+    } catch (JsonProcessingException e) {
+      throw new ServiceException(ErrorStatuses.SERVER_ERROR, "Failed to build extraction options", e);
+    }
 
     DocumentExtractionContext eventContext = DocumentExtractionContext.create();
     eventContext.setData(event);
