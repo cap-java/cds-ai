@@ -3,9 +3,11 @@
 */
 package com.sap.cds.service;
 
-import java.io.InputStream;
+import com.sap.cds.services.Service;
 
-public interface ExtractionService {
+public interface ExtractionService extends Service {
 
-  void startExtraction(String attachmentId, String contentId, String tenantId, InputStream content);
+  String NAME = "ExtractionService";
+
+  String EVENT_START_EXTRACTION = "startExtraction";
 }

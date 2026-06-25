@@ -10,4 +10,5 @@ entity ExtractionJob : cuid, managed {
     attachmentId : String;
     status       : String;
     tenantId:String;
+    documentAiJobId : String;
 }

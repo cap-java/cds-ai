@@ -11,8 +11,23 @@ import org.junit.jupiter.api.Test;
 class StatusTransitionValidatorTest {
 
   @Test
-  void pendingToProcessingIsValid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, PROCESSING)).isTrue();
+  void pendingToSubmittedIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, SUBMITTED)).isTrue();
+  }
+
+  @Test
+  void pendingToFailedIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, FAILED)).isTrue();
+  }
+
+  @Test
+  void submittedToProcessingIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(SUBMITTED, PROCESSING)).isTrue();
+  }
+
+  @Test
+  void submittedToFailedIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(SUBMITTED, FAILED)).isTrue();
   }
 
   @Test
