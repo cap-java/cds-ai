@@ -71,7 +71,7 @@
     <!-- https://central.sonatype.com/artifact/com.sap.ai.sdk/sdk-core/versions -->
     <ai-sdk.version>1.19.0</ai-sdk.version>
     <!-- https://central.sonatype.com/artifact/org.springframework.boot/spring-boot-dependencies/versions -->
-    <spring.boot.version>3.4.5</spring.boot.version>
+    <spring.boot.version>4.1.0</spring.boot.version>
     <!-- https://central.sonatype.com/artifact/org.jacoco/jacoco-maven-plugin/versions -->
     <jacoco.version>0.8.15</jacoco.version>
     <!-- https://central.sonatype.com/artifact/org.junit/junit-bom/versions -->
