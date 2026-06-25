@@ -5,10 +5,8 @@ using {
     managed
 } from '@sap/cds/common';
 
-@assert.unique: { attachmentId: [attachmentId] }
 entity ExtractionJob : cuid, managed {
-    attachmentId : String;
-    status       : String;
-    tenantId:String;
+    status          : String;
+    tenantId        : String;
     documentAiJobId : String;
 }

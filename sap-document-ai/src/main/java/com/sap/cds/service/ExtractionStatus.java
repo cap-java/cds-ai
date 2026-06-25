@@ -9,4 +9,13 @@ public enum ExtractionStatus {
   PROCESSING,
   COMPLETED,
   FAILED;
+
+  public static ExtractionStatus fromString(String value) {
+    try {
+      return ExtractionStatus.valueOf(value);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Unknown ExtractionStatus value in database: '" + value + "'", e);
+    }
+  }
 }

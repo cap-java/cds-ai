@@ -6,13 +6,10 @@ package com.sap.cds.service.documentai.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sap.cds.service.exceptions.DocumentAiConnectivityException;
-import com.sap.cds.service.exceptions.DocumentAiRequestException;
+import com.sap.cds.service.exceptions.DocumentAiException;
 import com.sap.cds.service.model.DocumentInput;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -53,23 +50,11 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
   }
 
   private HttpPost buildSubmitRequest(DocumentInput documentInput, URI submitUri) {
-    InputStream content = documentInput.content();
     logger.info(
-        "[sap-document-ai] Submitting document to DIE at url={} with content={}",
+        "[sap-document-ai] Submitting document to DIE at url={}, fileName={}, mimeType={}",
         submitUri,
-        content);
-
-    byte[] bytes;
-    try {
-      bytes = content.readAllBytes();
-      logger.info(
-          "[sap-document-ai] fileName={}, mimeType={}, size={} bytes",
-          documentInput.fileName(),
-          documentInput.mimeType(),
-          bytes.length);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to read document content", e);
-    }
+        documentInput.fileName(),
+        documentInput.mimeType());
 
     String optionsJson = buildOptionsJson();
 
@@ -80,8 +65,7 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
     HttpPost request = new HttpPost(submitUri);
     request.setEntity(
         MultipartEntityBuilder.create()
-            .addBinaryBody(
-                "file", new ByteArrayInputStream(bytes), contentType, documentInput.fileName())
+            .addBinaryBody("file", documentInput.content(), contentType, documentInput.fileName())
             .addTextBody("options", optionsJson, ContentType.APPLICATION_JSON)
             .build());
 
@@ -98,13 +82,13 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
       int statusCode = response.getStatusLine().getStatusCode();
 
       if (statusCode < 200 || statusCode >= 300) {
-        throw new DocumentAiRequestException(statusCode, body);
+        throw new DocumentAiException.Request(statusCode, body);
       }
 
       return body;
 
     } catch (IOException e) {
-      throw new DocumentAiConnectivityException(submitUri.toString(), e);
+      throw new DocumentAiException.Connectivity(submitUri.toString(), e);
     }
   }
 
@@ -136,10 +120,6 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
             "templateId", "detect",
             "candidateTemplateIds", List.of(),
             "enrichment", Map.of());
-    try {
-      return objectMapper.writeValueAsString(options);
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to serialize options", e);
-    }
+    return objectMapper.valueToTree(options).toString();
   }
 }

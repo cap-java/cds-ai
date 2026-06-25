@@ -3,16 +3,14 @@
 */
 package com.sap.cds.configuration;
 
-import com.sap.cds.handlers.AttachmentEventHandler;
+import com.sap.cds.handlers.DocumentSubmissionHandler;
 import com.sap.cds.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.service.DocumentAiProcessingService;
-import com.sap.cds.service.ExtractionService;
 import com.sap.cds.service.ExtractionServiceImpl;
 import com.sap.cds.service.documentai.client.DefaultDocumentAiClient;
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
-import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -25,10 +23,10 @@ import org.apache.http.client.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AttachmentEventHandlerRegistration implements CdsRuntimeConfiguration {
+public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger =
-      LoggerFactory.getLogger(AttachmentEventHandlerRegistration.class);
+      LoggerFactory.getLogger(DocumentAiServiceConfiguration.class);
 
   private ExtractionServiceImpl extractionService;
 
@@ -63,13 +61,7 @@ public class AttachmentEventHandlerRegistration implements CdsRuntimeConfigurati
 
     extractionService.init(persistenceService, documentAiProcessingService);
 
-    OutboxService outboxService =
-        serviceCatalog.getService(OutboxService.class, OutboxService.INMEMORY_NAME);
-
-    ExtractionService outboxedExtractionService = outboxService.outboxed(extractionService);
-
-    // register event handler with CAP runtime
-    configurer.eventHandler(new AttachmentEventHandler(outboxedExtractionService));
+    configurer.eventHandler(new DocumentSubmissionHandler(extractionService));
   }
 
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {
