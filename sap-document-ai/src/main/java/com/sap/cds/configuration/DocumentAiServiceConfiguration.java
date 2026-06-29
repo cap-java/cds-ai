@@ -119,7 +119,7 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
    * null} is returned and extraction is effectively disabled until a binding becomes available.
    *
    * @param environment the CDS runtime environment used to look up service bindings
-   * @return a configured {@link DefaultDocumentAiClient}, or {@code null} if unavailable
+   * @return a configured {@link DocumentAiClient}, or {@code null} if unavailable
    */
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {
     Optional<ServiceBinding> optionalBinding =
