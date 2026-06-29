@@ -45,6 +45,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This self-rescheduling pattern means polling stops automatically once all jobs reach a
  * terminal status ({@code DONE} or {@code FAILED}), avoiding unnecessary cycles.
+ *
+ * <p>The poll interval defaults to 3 seconds and can be overridden via the application property
+ * {@code cds.document-ai.polling.interval-seconds}.
  */
 @ServiceName(value = ExtractionPollingHandler.OUTBOX_NAME, type = OutboxService.class)
 public class ExtractionPollingHandler implements EventHandler {
@@ -52,7 +55,7 @@ public class ExtractionPollingHandler implements EventHandler {
   static final String OUTBOX_NAME = OutboxService.PERSISTENT_UNORDERED_NAME;
   public static final String POLL_EVENT = "document-ai/poll-extraction-jobs";
   public static final String POLL_TASK_NAME = "document-ai-poll-extraction-jobs";
-  public static final Duration POLL_DELAY = Duration.ofSeconds(10);
+  public static final int DEFAULT_POLL_INTERVAL_SECONDS = 3;
 
   private static final Logger logger = LoggerFactory.getLogger(ExtractionPollingHandler.class);
 
@@ -61,18 +64,29 @@ public class ExtractionPollingHandler implements EventHandler {
   private final DocumentAiClient documentAiClient;
   private final OutboxService outboxService;
   private final CdsRuntime runtime;
+  private final Duration pollDelay;
 
+  /**
+   * @param persistenceService the CDS persistence service for querying active jobs
+   * @param extractionService the extraction service for updating job status
+   * @param documentAiClient the DIE HTTP client
+   * @param outboxService the persistent outbox used to reschedule polling cycles
+   * @param runtime the CDS runtime for service catalog lookups
+   * @param pollDelay the delay between successive poll cycles
+   */
   public ExtractionPollingHandler(
       PersistenceService persistenceService,
       ExtractionService extractionService,
       DocumentAiClient documentAiClient,
       OutboxService outboxService,
-      CdsRuntime runtime) {
+      CdsRuntime runtime,
+      Duration pollDelay) {
     this.persistenceService = persistenceService;
     this.extractionService = extractionService;
     this.documentAiClient = documentAiClient;
     this.outboxService = outboxService;
     this.runtime = runtime;
+    this.pollDelay = pollDelay;
   }
 
   /**
@@ -110,7 +124,7 @@ public class ExtractionPollingHandler implements EventHandler {
       outboxService.submit(
           POLL_EVENT,
           OutboxMessage.create(),
-          Schedule.create().taskName(POLL_TASK_NAME).after(POLL_DELAY));
+          Schedule.create().taskName(POLL_TASK_NAME).after(pollDelay));
     } else {
       logger.warn("[sap-document-ai] Outbox not available, next poll cycle will not be scheduled");
     }

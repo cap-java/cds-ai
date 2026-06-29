@@ -24,6 +24,7 @@ import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.outbox.Schedule;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.InputStream;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +52,7 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
   private PersistenceService persistenceService;
   private DocumentAiProcessingService documentAiProcessingService;
   private OutboxService outboxService;
+  private Duration pollDelay;
 
   public ExtractionServiceImpl() {
     super(NAME);
@@ -66,14 +68,18 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
    * @param documentAiProcessingService the processing service wrapping the DIE HTTP client
    * @param outboxService the persistent outbox used to schedule polling; may be {@code null} if the
    *     outbox is not configured
+   * @param pollDelay the delay before the first poll cycle, read from {@code
+   *     cds.document-ai.polling.interval-seconds}
    */
   public void init(
       PersistenceService persistenceService,
       DocumentAiProcessingService documentAiProcessingService,
-      OutboxService outboxService) {
+      OutboxService outboxService,
+      Duration pollDelay) {
     this.persistenceService = persistenceService;
     this.documentAiProcessingService = documentAiProcessingService;
     this.outboxService = outboxService;
+    this.pollDelay = pollDelay;
   }
 
   @Override
@@ -138,7 +144,7 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     outboxService.submit(
         POLL_EVENT,
         OutboxMessage.create(),
-        Schedule.create().taskName(POLL_TASK_NAME).after(POLL_DELAY));
+        Schedule.create().taskName(POLL_TASK_NAME).after(pollDelay));
     logger.debug("[sap-document-ai] Poll schedule submitted");
   }
 

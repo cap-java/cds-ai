@@ -22,6 +22,7 @@ import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.outbox.Schedule;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,12 @@ class ExtractionPollingHandlerTest {
   void setUp() {
     handler =
         new ExtractionPollingHandler(
-            persistenceService, extractionService, documentAiClient, outboxService, runtime);
+            persistenceService,
+            extractionService,
+            documentAiClient,
+            outboxService,
+            runtime,
+            Duration.ofSeconds(ExtractionPollingHandler.DEFAULT_POLL_INTERVAL_SECONDS));
   }
 
   private void mockEmit() {

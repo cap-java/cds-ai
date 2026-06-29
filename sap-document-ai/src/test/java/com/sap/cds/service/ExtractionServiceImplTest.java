@@ -21,6 +21,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,8 @@ class ExtractionServiceImplTest {
   void setUp() {
     when(documentAiProcessingService.isAvailable()).thenReturn(true);
     extractionService = new ExtractionServiceImpl();
-    extractionService.init(persistenceService, documentAiProcessingService, outboxService);
+    extractionService.init(
+        persistenceService, documentAiProcessingService, outboxService, Duration.ofSeconds(3));
   }
 
   @Test
@@ -103,7 +105,8 @@ class ExtractionServiceImplTest {
 
   @Test
   void triggerExtractionDoesNotThrowWhenOutboxIsNull() {
-    extractionService.init(persistenceService, documentAiProcessingService, null);
+    extractionService.init(
+        persistenceService, documentAiProcessingService, null, Duration.ofSeconds(3));
     mockInsertDatabaseCalls();
     mockAllDatabaseCalls();
     Result statusResult = resultWithJobStatus(PENDING);

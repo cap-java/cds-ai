@@ -61,6 +61,9 @@ class DocumentAiServiceConfigurationTest {
     when(cdsRuntime.getServiceCatalog()).thenReturn(serviceCatalog);
     when(cdsRuntime.getEnvironment()).thenReturn(environment);
     when(environment.getServiceBindings()).thenReturn(Stream.empty());
+    when(environment.getProperty(
+            eq("cds.document-ai.polling.interval-seconds"), eq(Integer.class), any()))
+        .thenReturn(3);
     when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
         .thenReturn(persistenceService);
 

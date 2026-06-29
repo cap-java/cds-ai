@@ -30,3 +30,6 @@ cds:
     persistent:
       scheduler:
         enabled: true
+  document-ai:
+    polling:
+      interval-seconds: 5

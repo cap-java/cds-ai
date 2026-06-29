@@ -20,6 +20,7 @@ import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import com.sap.cds.services.utils.environment.ServiceBindingUtils;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import com.sap.cloud.sdk.cloudplatform.connectivity.*;
+import java.time.Duration;
 import java.util.Optional;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.slf4j.Logger;
@@ -99,7 +100,17 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
           "[sap-document-ai] Persistent outbox not available — polling scheduler disabled. Ensure cds.outbox.persistent is configured.");
     }
 
-    extractionService.init(persistenceService, documentAiProcessingService, outboxService);
+    int intervalSeconds =
+        runtime
+            .getEnvironment()
+            .getProperty(
+                "cds.document-ai.polling.interval-seconds",
+                Integer.class,
+                ExtractionPollingHandler.DEFAULT_POLL_INTERVAL_SECONDS);
+    Duration pollDelay = Duration.ofSeconds(intervalSeconds);
+
+    extractionService.init(
+        persistenceService, documentAiProcessingService, outboxService, pollDelay);
 
     configurer.eventHandler(new DocumentSubmissionHandler(extractionService));
 
@@ -107,7 +118,12 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
     if (documentAiClient != null) {
       configurer.eventHandler(
           new ExtractionPollingHandler(
-              persistenceService, extractionService, documentAiClient, outboxService, runtime));
+              persistenceService,
+              extractionService,
+              documentAiClient,
+              outboxService,
+              runtime,
+              pollDelay));
     }
   }
 
