@@ -4,6 +4,7 @@
 package com.sap.cds.configuration;
 
 import com.sap.cds.handlers.DocumentSubmissionHandler;
+import com.sap.cds.handlers.ExtractionPollingHandler;
 import com.sap.cds.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.service.DocumentAiProcessingService;
 import com.sap.cds.service.ExtractionServiceImpl;
@@ -11,6 +12,7 @@ import com.sap.cds.service.documentai.client.DefaultDocumentAiClient;
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -19,7 +21,7 @@ import com.sap.cds.services.utils.environment.ServiceBindingUtils;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import java.util.Optional;
-import org.apache.http.client.HttpClient;
+import org.apache.hc.client5.http.classic.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,9 +61,24 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
     DocumentAiProcessingService documentAiProcessingService =
         new DefaultDocumentAiProcessingService(documentAiClient);
 
-    extractionService.init(persistenceService, documentAiProcessingService);
+    OutboxService outboxService =
+        serviceCatalog.getService(OutboxService.class, OutboxService.PERSISTENT_UNORDERED_NAME);
+
+    if (outboxService == null) {
+      logger.warn(
+          "[sap-document-ai] Persistent outbox not available — polling scheduler disabled. Ensure cds.outbox.persistent is configured.");
+    }
+
+    extractionService.init(persistenceService, documentAiProcessingService, outboxService);
 
     configurer.eventHandler(new DocumentSubmissionHandler(extractionService));
+
+    // polling handler — only registered when a DIE binding is present
+    if (documentAiClient != null) {
+      configurer.eventHandler(
+          new ExtractionPollingHandler(
+              persistenceService, extractionService, documentAiClient, outboxService, runtime));
+    }
   }
 
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {
@@ -92,7 +109,7 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
                   ServiceBindingDestinationOptions.forService(binding)
                       .onBehalfOf(OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT)
                       .build());
-      HttpClient httpClient = HttpClientAccessor.getHttpClient(httpDestination);
+      HttpClient httpClient = ApacheHttpClient5Accessor.getHttpClient(httpDestination);
       logger.info(
           "[sap-document-ai] Document AI destination created successfully, url={}",
           httpDestination.getUri());

@@ -21,8 +21,8 @@ class StatusTransitionValidatorTest {
   }
 
   @Test
-  void submittedToProcessingIsValid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(SUBMITTED, PROCESSING)).isTrue();
+  void submittedToRunningIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(SUBMITTED, RUNNING)).isTrue();
   }
 
   @Test
@@ -31,32 +31,37 @@ class StatusTransitionValidatorTest {
   }
 
   @Test
-  void processingToCompletedIsValid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, COMPLETED)).isTrue();
+  void submittedToDoneIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(SUBMITTED, DONE)).isTrue();
   }
 
   @Test
-  void processingToFailedIsValid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, FAILED)).isTrue();
+  void runningToDoneIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(RUNNING, DONE)).isTrue();
   }
 
   @Test
-  void pendingToCompletedIsInvalid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, COMPLETED)).isFalse();
+  void runningToFailedIsValid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(RUNNING, FAILED)).isTrue();
   }
 
   @Test
-  void processingToPendingIsInvalid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, PENDING)).isFalse();
+  void pendingToDoneIsInvalid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(PENDING, DONE)).isFalse();
   }
 
   @Test
-  void completedToProcessingIsInvalid() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(COMPLETED, PROCESSING)).isFalse();
+  void runningToPendingIsInvalid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(RUNNING, PENDING)).isFalse();
+  }
+
+  @Test
+  void doneToRunningIsInvalid() {
+    Assertions.assertThat(StatusTransitionValidator.isValid(DONE, RUNNING)).isFalse();
   }
 
   @Test
   void sameTransitionIsIdempotent() {
-    Assertions.assertThat(StatusTransitionValidator.isValid(PROCESSING, PROCESSING)).isTrue();
+    Assertions.assertThat(StatusTransitionValidator.isValid(RUNNING, RUNNING)).isTrue();
   }
 }

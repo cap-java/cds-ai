@@ -3,8 +3,6 @@
 */
 package com.sap.cds.service.exceptions;
 
-import java.io.IOException;
-
 public class DocumentAiException extends RuntimeException {
 
   protected DocumentAiException(String message, Throwable cause) {
@@ -16,7 +14,7 @@ public class DocumentAiException extends RuntimeException {
   }
 
   public static class Connectivity extends DocumentAiException {
-    public Connectivity(String url, IOException cause) {
+    public Connectivity(String url, Exception cause) {
       super("Failed to connect to DIE at " + url, cause);
     }
   }

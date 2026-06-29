@@ -3,6 +3,7 @@
 */
 package com.sap.cds.service;
 
+import static com.sap.cds.handlers.ExtractionPollingHandler.*;
 import static com.sap.cds.service.ExtractionStatus.*;
 
 import com.sap.cds.Result;
@@ -18,6 +19,9 @@ import com.sap.cds.service.model.ExtractionResult;
 import com.sap.cds.service.model.ExtractionResult.Status;
 import com.sap.cds.service.utils.StatusTransitionValidator;
 import com.sap.cds.services.ServiceDelegator;
+import com.sap.cds.services.outbox.OutboxMessage;
+import com.sap.cds.services.outbox.OutboxService;
+import com.sap.cds.services.outbox.Schedule;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.InputStream;
 import org.slf4j.Logger;
@@ -29,6 +33,7 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
 
   private PersistenceService persistenceService;
   private DocumentAiProcessingService documentAiProcessingService;
+  private OutboxService outboxService;
 
   public ExtractionServiceImpl() {
     super(NAME);
@@ -36,14 +41,16 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
 
   public void init(
       PersistenceService persistenceService,
-      DocumentAiProcessingService documentAiProcessingService) {
+      DocumentAiProcessingService documentAiProcessingService,
+      OutboxService outboxService) {
     this.persistenceService = persistenceService;
     this.documentAiProcessingService = documentAiProcessingService;
+    this.outboxService = outboxService;
   }
 
   @Override
   public ExtractionResult triggerExtraction(
-      String fileName, String mimeType, InputStream content, String tenantId)
+      String fileName, String mimeType, InputStream content, String options, String tenantId)
       throws IllegalStatusTransitionException {
     logger.info(
         "[sap-document-ai] Direct extraction triggered for fileName={}, tenantId={}",
@@ -59,29 +66,33 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
       return new ExtractionResult(jobId, Status.PENDING, null);
     }
 
-    DocumentInput documentInput = new DocumentInput(fileName, mimeType, content);
+    DocumentInput documentInput = new DocumentInput(fileName, mimeType, content, options);
     return performExtraction(jobId, fileName, documentInput, tenantId);
+  }
+
+  @Override
+  public void updateExtractionResult(
+      String jobId, ExtractionStatus status, String dieJobId, String extractionResult)
+      throws IllegalStatusTransitionException {
+    updateExtractionJob(jobId, status, dieJobId, extractionResult);
   }
 
   private ExtractionResult performExtraction(
       String jobId, String fileName, DocumentInput documentInput, String tenantId) {
     try {
       String documentAiJobId = documentAiProcessingService.processDocument(jobId, documentInput);
-      updateExtractionJob(jobId, SUBMITTED, documentAiJobId);
-      // TODO: transition to PROCESSING and COMPLETED via async polling callback, not here
-      //      updateExtractionJob(jobId, PROCESSING, null); // or replace w/ documentAiJobId
-      //      updateExtractionJob(jobId, COMPLETED, null); // or replace w/ documentAiJobId
+      updateExtractionJob(jobId, SUBMITTED, documentAiJobId, null);
+      schedulePolling();
       return new ExtractionResult(jobId, Status.SUCCESS, documentAiJobId);
     } catch (ConcurrentJobUpdateException e) {
-      // another thread already updated this job - treat as idempotent success
       logger.warn(
           "[sap-document-ai] Concurrent update on jobId={}, skipping status write — job already advanced",
           jobId);
       return new ExtractionResult(jobId, Status.SUCCESS, null);
-    } catch (IllegalStatusTransitionException e) { // example: COMPLETED -> FAILED
+    } catch (IllegalStatusTransitionException e) {
       logger.error("[sap-document-ai] Invalid state transition for jobId={}", jobId, e);
       throw e;
-    } catch (Exception e) { // example : PROCESSING -> FAILED
+    } catch (Exception e) {
       logger.error(
           "[sap-document-ai] Processing failed for fileName={}, tenantId={}",
           fileName,
@@ -92,9 +103,21 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     }
   }
 
+  private void schedulePolling() {
+    if (outboxService == null) {
+      logger.warn("[sap-document-ai] Outbox not available, polling will not be scheduled");
+      return;
+    }
+    outboxService.submit(
+        POLL_EVENT,
+        OutboxMessage.create(),
+        Schedule.create().taskName(POLL_TASK_NAME).after(POLL_DELAY));
+    logger.info("[sap-document-ai] Poll schedule submitted");
+  }
+
   private void markJobAsFailed(String jobId) {
     try {
-      updateExtractionJob(jobId, FAILED, null);
+      updateExtractionJob(jobId, FAILED, null, null);
     } catch (Exception e) {
       logger.error("[sap-document-ai] Failed to update status to FAILED for jobId={}", jobId, e);
     }
@@ -111,7 +134,8 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     return jobId;
   }
 
-  private void updateExtractionJob(String jobId, ExtractionStatus status, String documentAiJobId) {
+  private void updateExtractionJob(
+      String jobId, ExtractionStatus status, String documentAiJobId, String extractionResult) {
     Result current = persistenceService.run(Select.from(ExtractionJob_.class).byId(jobId));
     ExtractionStatus currentStatus = fromString(current.single(ExtractionJob.class).getStatus());
 
@@ -132,6 +156,9 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     extractionJob.setStatus(status.name());
     if (documentAiJobId != null) {
       extractionJob.setDocumentAiJobId(documentAiJobId);
+    }
+    if (extractionResult != null) {
+      extractionJob.setExtractionResult(extractionResult);
     }
 
     Result updateResult =

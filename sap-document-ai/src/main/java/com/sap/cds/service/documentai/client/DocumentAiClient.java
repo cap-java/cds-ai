@@ -4,7 +4,10 @@
 package com.sap.cds.service.documentai.client;
 
 import com.sap.cds.service.model.DocumentInput;
+import com.sap.cds.service.model.ExtractionData;
 
 public interface DocumentAiClient {
   String submitDocument(DocumentInput documentInput);
+
+  ExtractionData getJobResult(String dieJobId);
 }

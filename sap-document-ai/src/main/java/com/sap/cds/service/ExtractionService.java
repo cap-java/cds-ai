@@ -13,6 +13,10 @@ public interface ExtractionService extends Service {
   String NAME = "ExtractionService";
 
   ExtractionResult triggerExtraction(
-      String fileName, String mimeType, InputStream content, String tenantId)
+      String fileName, String mimeType, InputStream content, String options, String tenantId)
+      throws IllegalStatusTransitionException;
+
+  void updateExtractionResult(
+      String jobId, ExtractionStatus status, String dieJobId, String extractionResult)
       throws IllegalStatusTransitionException;
 }

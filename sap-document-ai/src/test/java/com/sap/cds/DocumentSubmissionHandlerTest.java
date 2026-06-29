@@ -52,14 +52,15 @@ class DocumentSubmissionHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn(TENANT_ID);
     when(eventContext.getData()).thenReturn(createEvent());
-    when(extractionService.triggerExtraction(any(), any(), any(), any()))
+    when(extractionService.triggerExtraction(any(), any(), any(), any(), any()))
         .thenReturn(
             new ExtractionResult("job-123", ExtractionResult.Status.SUCCESS, "dai-job-456"));
 
     handler.onDocumentExtraction(eventContext);
 
     verify(extractionService)
-        .triggerExtraction(eq(FILE_NAME), eq(MIME_TYPE), any(InputStream.class), eq(TENANT_ID));
+        .triggerExtraction(
+            eq(FILE_NAME), eq(MIME_TYPE), any(InputStream.class), any(), eq(TENANT_ID));
   }
 
   @Test
@@ -67,12 +68,12 @@ class DocumentSubmissionHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn(TENANT_ID);
     when(eventContext.getData()).thenReturn(createEvent());
-    when(extractionService.triggerExtraction(any(), any(), any(), any()))
+    when(extractionService.triggerExtraction(any(), any(), any(), any(), any()))
         .thenReturn(new ExtractionResult(null, ExtractionResult.Status.PENDING, null));
 
     handler.onDocumentExtraction(eventContext);
 
-    verify(extractionService).triggerExtraction(any(), any(), any(), any());
+    verify(extractionService).triggerExtraction(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -80,11 +81,11 @@ class DocumentSubmissionHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn(TENANT_ID);
     when(eventContext.getData()).thenReturn(createEvent());
-    when(extractionService.triggerExtraction(any(), any(), any(), any()))
+    when(extractionService.triggerExtraction(any(), any(), any(), any(), any()))
         .thenReturn(new ExtractionResult("job-123", ExtractionResult.Status.FAILED, null));
 
     handler.onDocumentExtraction(eventContext);
 
-    verify(extractionService).triggerExtraction(any(), any(), any(), any());
+    verify(extractionService).triggerExtraction(any(), any(), any(), any(), any());
   }
 }

@@ -35,12 +35,16 @@ public class DocumentSubmissionHandler implements EventHandler {
 
     ExtractionResult result =
         extractionService.triggerExtraction(
-            event.getFileName(), event.getMimeType(), event.getContent(), tenantId);
+            event.getFileName(),
+            event.getMimeType(),
+            event.getContent(),
+            event.getOptions(),
+            tenantId);
 
-    switch (result.status()) {
-      case FAILED ->
-          logger.error("[sap-document-ai] Extraction failed for fileName={}", event.getFileName());
-      case PENDING -> logger.warn("[sap-document-ai] Document AI unavailable, left as PENDING");
+    if (result.status() == ExtractionResult.Status.FAILED) {
+      logger.error("[sap-document-ai] Extraction failed for fileName={}", event.getFileName());
+    } else if (result.status() == ExtractionResult.Status.PENDING) {
+      logger.warn("[sap-document-ai] Document AI unavailable, left as PENDING");
     }
 
     context.setCompleted();

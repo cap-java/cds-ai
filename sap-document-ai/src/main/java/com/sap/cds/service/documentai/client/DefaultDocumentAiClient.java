@@ -8,25 +8,27 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.service.exceptions.DocumentAiException;
 import com.sap.cds.service.model.DocumentInput;
+import com.sap.cds.service.model.ExtractionData;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DefaultDocumentAiClient implements DocumentAiClient {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultDocumentAiClient.class);
-  private static final String DOCUMENT_AI_API_PATH = "document-information-extraction/v1";
   private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final String DOCUMENT_AI_API_PATH = "document-information-extraction/v1";
+  public static final String DOCUMENT_JOBS = "/document/jobs";
+  public static final String EXTRACTED_VALUES_TRUE = "?extractedValues=true";
   private final HttpDestination destination;
   private final HttpClient httpClient;
 
@@ -37,16 +39,26 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
 
   @Override
   public String submitDocument(DocumentInput documentInput) {
-    URI submitUri = buildSubmitUri();
+    URI submitUri = buildUri(DOCUMENT_AI_API_PATH + DOCUMENT_JOBS);
     HttpPost request = buildSubmitRequest(documentInput, submitUri);
     String body = executeRequest(request, submitUri);
     return extractJobId(body);
   }
 
-  private URI buildSubmitUri() {
+  @Override
+  public ExtractionData getJobResult(String dieJobId) {
+    URI uri =
+        buildUri(DOCUMENT_AI_API_PATH + DOCUMENT_JOBS + "/" + dieJobId + EXTRACTED_VALUES_TRUE);
+    logger.info("[sap-document-ai] Polling DIE for dieJobId={}", dieJobId);
+    HttpGet request = new HttpGet(uri);
+    String body = executeRequest(request, uri);
+    return parseJobResult(dieJobId, body);
+  }
+
+  private URI buildUri(String path) {
     String base = destination.getUri().toString();
-    String path = base.endsWith("/") ? base : base + "/";
-    return URI.create(path).resolve(DOCUMENT_AI_API_PATH + "/document/jobs");
+    String prefix = base.endsWith("/") ? base : base + "/";
+    return URI.create(prefix).resolve(path);
   }
 
   private HttpPost buildSubmitRequest(DocumentInput documentInput, URI submitUri) {
@@ -56,39 +68,42 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
         documentInput.fileName(),
         documentInput.mimeType());
 
-    String optionsJson = buildOptionsJson();
-
     ContentType contentType =
         documentInput.mimeType() != null
             ? ContentType.create(documentInput.mimeType())
             : ContentType.APPLICATION_OCTET_STREAM;
+    String options = documentInput.options();
+    if (options == null) {
+      logger.warn(
+          "[sap-document-ai] No options provided for fileName={}, sending empty options to DIE",
+          documentInput.fileName());
+      options = "{}";
+    }
     HttpPost request = new HttpPost(submitUri);
     request.setEntity(
         MultipartEntityBuilder.create()
             .addBinaryBody("file", documentInput.content(), contentType, documentInput.fileName())
-            .addTextBody("options", optionsJson, ContentType.APPLICATION_JSON)
+            .addTextBody("options", options, ContentType.APPLICATION_JSON)
             .build());
 
-    logger.info("[sap-document-ai] POST {} | Headers: {}", submitUri, request.getAllHeaders());
+    logger.info("[sap-document-ai] POST {} | Headers: {}", submitUri, request.getHeaders());
     return request;
   }
 
-  private String executeRequest(HttpPost request, URI submitUri) {
-
-    try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(request)) {
-
-      String body = EntityUtils.toString(response.getEntity());
-
-      int statusCode = response.getStatusLine().getStatusCode();
-
-      if (statusCode < 200 || statusCode >= 300) {
-        throw new DocumentAiException.Request(statusCode, body);
-      }
-
-      return body;
-
+  private String executeRequest(HttpUriRequestBase request, URI uri) {
+    try {
+      return httpClient.execute(
+          request,
+          response -> {
+            String body = EntityUtils.toString(response.getEntity());
+            int statusCode = response.getCode();
+            if (statusCode < 200 || statusCode >= 300) {
+              throw new DocumentAiException.Request(statusCode, body);
+            }
+            return body;
+          });
     } catch (IOException e) {
-      throw new DocumentAiException.Connectivity(submitUri.toString(), e);
+      throw new DocumentAiException.Connectivity(uri.toString(), e);
     }
   }
 
@@ -97,7 +112,7 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
       JsonNode json = objectMapper.readTree(body);
 
       if (!json.has("id")) {
-        throw new RuntimeException("Unexpected DIE response. body=" + body);
+        throw new DocumentAiException.Processing("Unexpected DIE response. body=" + body, null);
       }
 
       String jobId = json.get("id").asText();
@@ -105,21 +120,23 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
       return jobId;
 
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to parse DIE response", e);
+      throw new DocumentAiException.Processing("Failed to parse DIE response", e);
     }
   }
 
-  private String buildOptionsJson() {
-    // TODO: Currently options are hard-coded. Make these dynamic
-    Map<String, Object> options =
-        Map.of(
-            "clientId", "default",
-            "documentType", "invoice",
-            "receivedDate", "2020-02-17",
-            "schemaId", "cf8cc8a9-1eee-42d9-9a3e-507a61baac23",
-            "templateId", "detect",
-            "candidateTemplateIds", List.of(),
-            "enrichment", Map.of());
-    return objectMapper.valueToTree(options).toString();
+  private ExtractionData parseJobResult(String dieJobId, String body) {
+    try {
+      JsonNode json = objectMapper.readTree(body);
+      String status = json.path("status").asText();
+      if (status.isEmpty()) {
+        throw new DocumentAiException.Processing(
+            "DIE job response missing 'status' field for dieJobId=" + dieJobId + ". body=" + body,
+            null);
+      }
+      logger.info("[sap-document-ai] DIE job dieJobId={} status={}", dieJobId, status);
+      return new ExtractionData(dieJobId, status, body);
+    } catch (JsonProcessingException e) {
+      throw new DocumentAiException.Processing("Failed to parse DIE job result response", e);
+    }
   }
 }

@@ -6,8 +6,8 @@ package com.sap.cds.service;
 public enum ExtractionStatus {
   PENDING,
   SUBMITTED,
-  PROCESSING,
-  COMPLETED,
+  RUNNING,
+  DONE,
   FAILED;
 
   public static ExtractionStatus fromString(String value) {

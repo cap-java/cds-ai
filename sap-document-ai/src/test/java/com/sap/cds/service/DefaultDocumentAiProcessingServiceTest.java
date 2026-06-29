@@ -38,7 +38,8 @@ class DefaultDocumentAiProcessingServiceTest {
         new DocumentInput(
             TEST_PDF,
             CONTENT_TYPE,
-            new ByteArrayInputStream(TEST_CONTENT.getBytes(StandardCharsets.UTF_8)));
+            new ByteArrayInputStream(TEST_CONTENT.getBytes(StandardCharsets.UTF_8)),
+            null);
   }
 
   // ----- isAvailable() -------

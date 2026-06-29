@@ -23,3 +23,10 @@ cds:
   data-source:
     auto-config:
       enabled: false
+  outbox:
+    services:
+      DefaultOutboxUnordered:
+        maxAttempts: 10
+    persistent:
+      scheduler:
+        enabled: true

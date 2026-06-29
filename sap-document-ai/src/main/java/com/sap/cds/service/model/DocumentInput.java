@@ -5,4 +5,5 @@ package com.sap.cds.service.model;
 
 import java.io.InputStream;
 
-public record DocumentInput(String fileName, String mimeType, InputStream content) {}
+public record DocumentInput(
+    String fileName, String mimeType, InputStream content, String options) {}
