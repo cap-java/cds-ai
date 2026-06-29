@@ -6,13 +6,17 @@ package com.sap.cds.service;
 import com.sap.cds.service.documentai.client.DocumentAiClient;
 import com.sap.cds.service.exceptions.DocumentAiException;
 import com.sap.cds.service.model.DocumentInput;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+/**
+ * Default implementation of {@link DocumentAiProcessingService}.
+ *
+ * <p>Delegates directly to {@link DocumentAiClient}. When no DIE service binding is configured, the
+ * configuration layer passes {@code null} as the client and {@link #isAvailable()} returns {@code
+ * false}, allowing the rest of the plugin to remain operational while queuing jobs as {@code
+ * PENDING}.
+ */
 public class DefaultDocumentAiProcessingService implements DocumentAiProcessingService {
 
-  private static final Logger logger =
-      LoggerFactory.getLogger(DefaultDocumentAiProcessingService.class);
   public static final String SAP_DOCUMENT_AI_SERVICE_LABEL = "sap-document-information-extraction";
 
   private final DocumentAiClient documentAiClient;
@@ -23,17 +27,8 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
 
   @Override
   public String processDocument(String jobId, DocumentInput documentInput) {
-    logger.info(
-        "[sap-document-ai] Processing document for jobId={}, fileName={}",
-        jobId,
-        documentInput.fileName());
-
     try {
       String documentAiJobId = documentAiClient.submitDocument(documentInput);
-      logger.info(
-          "[sap-document-ai] Document submitted successfully for jobId={}, DIE jobId={}",
-          jobId,
-          documentAiJobId);
       return documentAiJobId;
     } catch (Exception e) {
       throw new DocumentAiException.Processing("Failed to process document for jobId=" + jobId, e);

@@ -28,6 +28,24 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Outbox-driven handler that polls the DIE service for the status of all active extraction jobs.
+ *
+ * <p>Registered against the persistent unordered outbox service. On each invocation it:
+ *
+ * <ol>
+ *   <li>Queries all jobs in {@code SUBMITTED} or {@code RUNNING} status.
+ *   <li>For each job, calls {@link DocumentAiClient#getJobResult} and maps the DIE status to an
+ *       {@link ExtractionStatus} transition.
+ *   <li>Persists the new status via {@link ExtractionService#updateExtractionResult}.
+ *   <li>When a job reaches {@code DONE}, emits a {@code DocumentExtractionResult} event on the
+ *       {@code DocumentAiService} so consumer handlers can react.
+ *   <li>If jobs remain active, re-schedules itself via the outbox after {@link #POLL_DELAY}.
+ * </ol>
+ *
+ * <p>This self-rescheduling pattern means polling stops automatically once all jobs reach a
+ * terminal status ({@code DONE} or {@code FAILED}), avoiding unnecessary cycles.
+ */
 @ServiceName(value = ExtractionPollingHandler.OUTBOX_NAME, type = OutboxService.class)
 public class ExtractionPollingHandler implements EventHandler {
 
@@ -57,6 +75,12 @@ public class ExtractionPollingHandler implements EventHandler {
     this.runtime = runtime;
   }
 
+  /**
+   * Outbox event handler that performs a single poll cycle across all active jobs.
+   *
+   * @param context the outbox message context; {@link OutboxMessageEventContext#setCompleted()} is
+   *     called to acknowledge the message regardless of per-job errors
+   */
   @On(event = POLL_EVENT)
   public void pollExtractionJobs(OutboxMessageEventContext context) {
     List<ExtractionJob> activeJobs =
@@ -70,10 +94,10 @@ public class ExtractionPollingHandler implements EventHandler {
                                 .or(j.status().eq(ExtractionStatus.RUNNING.name()))))
             .listOf(ExtractionJob.class);
 
-    logger.info("[sap-document-ai] Polling {} active extraction job(s)", activeJobs.size());
+    logger.debug("[sap-document-ai] Polling {} active extraction job(s)", activeJobs.size());
 
     if (activeJobs.isEmpty()) {
-      logger.info("[sap-document-ai] No active jobs, polling stopped");
+      logger.debug("[sap-document-ai] No active jobs, polling stopped");
       context.setCompleted();
       return;
     }
@@ -121,9 +145,7 @@ public class ExtractionPollingHandler implements EventHandler {
 
       if (newStatus == ExtractionStatus.DONE) {
         logger.info(
-            "[sap-document-ai] Extraction result for jobId={}, dieJobId={} is done!!",
-            jobId,
-            dieJobId);
+            "[sap-document-ai] Extraction complete for jobId={}, dieJobId={}", jobId, dieJobId);
         emitExtractionCompleted(jobId, extractionResult);
       }
 

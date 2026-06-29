@@ -14,6 +14,15 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * CDS event handler that listens for {@code DocumentExtraction} events on any {@link
+ * ApplicationService} and delegates to {@link ExtractionService} to create and submit an extraction
+ * job.
+ *
+ * <p>The handler is intentionally service-name-agnostic ({@code @ServiceName(value = "*")}) so
+ * consumer applications can emit {@code DocumentExtraction} from their own CAP service without
+ * needing to couple to the plugin's internal service name.
+ */
 @ServiceName(value = "*", type = ApplicationService.class)
 public class DocumentSubmissionHandler implements EventHandler {
 
@@ -25,6 +34,15 @@ public class DocumentSubmissionHandler implements EventHandler {
     this.extractionService = extractionService;
   }
 
+  /**
+   * Handles an incoming {@code DocumentExtraction} event.
+   *
+   * <p>Extracts the file metadata and content from the event context, calls {@link
+   * ExtractionService#triggerExtraction}, and logs a warning or error if the job could not be
+   * submitted immediately.
+   *
+   * @param context the CDS event context carrying the {@link DocumentExtraction} payload
+   */
   @On(event = DocumentExtractionContext.CDS_NAME)
   public void onDocumentExtraction(DocumentExtractionContext context) {
     DocumentExtraction event = context.getData();

@@ -22,6 +22,22 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Default {@link DocumentAiClient} implementation that communicates with the DIE REST API over HTTP
+ * using the SAP Cloud SDK destination and Apache HttpClient 5.
+ *
+ * <p>Two operations are provided:
+ *
+ * <ul>
+ *   <li>{@link #submitDocument} — POSTs a multipart request containing the document file and a JSON
+ *       options body, then parses the DIE job ID from the response.
+ *   <li>{@link #getJobResult} — GETs the current status and extracted values for a previously
+ *       submitted DIE job.
+ * </ul>
+ *
+ * <p>All HTTP failures and unexpected response shapes are wrapped in the appropriate {@link
+ * com.sap.cds.service.exceptions.DocumentAiException} subclass.
+ */
 public class DefaultDocumentAiClient implements DocumentAiClient {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultDocumentAiClient.class);
@@ -32,6 +48,11 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
   private final HttpDestination destination;
   private final HttpClient httpClient;
 
+  /**
+   * @param destination the pre-configured SAP Cloud SDK HTTP destination pointing to the DIE
+   *     service base URL with OAuth2 credentials
+   * @param httpClient the Apache HttpClient 5 instance used for all HTTP calls
+   */
   public DefaultDocumentAiClient(HttpDestination destination, HttpClient httpClient) {
     this.destination = destination;
     this.httpClient = httpClient;
@@ -86,7 +107,6 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
             .addTextBody("options", options, ContentType.APPLICATION_JSON)
             .build());
 
-    logger.info("[sap-document-ai] POST {} | Headers: {}", submitUri, request.getHeaders());
     return request;
   }
 
@@ -133,7 +153,7 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
             "DIE job response missing 'status' field for dieJobId=" + dieJobId + ". body=" + body,
             null);
       }
-      logger.info("[sap-document-ai] DIE job dieJobId={} status={}", dieJobId, status);
+      logger.debug("[sap-document-ai] DIE job dieJobId={} status={}", dieJobId, status);
       return new ExtractionData(dieJobId, status, body);
     } catch (JsonProcessingException e) {
       throw new DocumentAiException.Processing("Failed to parse DIE job result response", e);

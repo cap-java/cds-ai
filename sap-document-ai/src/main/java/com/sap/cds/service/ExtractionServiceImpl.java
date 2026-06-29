@@ -27,6 +27,23 @@ import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Default implementation of {@link ExtractionService}.
+ *
+ * <p>Orchestrates the full extraction lifecycle:
+ *
+ * <ol>
+ *   <li>Persists a new {@code ExtractionJob} in {@code PENDING} status.
+ *   <li>Delegates document submission to {@link DocumentAiProcessingService}.
+ *   <li>On success, advances the job to {@code SUBMITTED} and schedules a polling cycle via the
+ *       persistent outbox.
+ *   <li>On failure, marks the job as {@code FAILED} and returns the appropriate result.
+ * </ol>
+ *
+ * <p>Status updates use an optimistic-lock pattern: the {@code UPDATE} query includes a {@code
+ * WHERE status = currentStatus} predicate. Zero rows affected raises {@link
+ * com.sap.cds.service.exceptions.ConcurrentJobUpdateException}.
+ */
 public class ExtractionServiceImpl extends ServiceDelegator implements ExtractionService {
 
   private static final Logger logger = LoggerFactory.getLogger(ExtractionServiceImpl.class);
@@ -39,6 +56,17 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     super(NAME);
   }
 
+  /**
+   * Injects runtime dependencies after Spring/CDS wiring is complete.
+   *
+   * <p>Called from {@link com.sap.cds.configuration.DocumentAiServiceConfiguration} once all
+   * dependent services are resolved from the service catalog.
+   *
+   * @param persistenceService the CDS persistence service for job CRUD operations
+   * @param documentAiProcessingService the processing service wrapping the DIE HTTP client
+   * @param outboxService the persistent outbox used to schedule polling; may be {@code null} if the
+   *     outbox is not configured
+   */
   public void init(
       PersistenceService persistenceService,
       DocumentAiProcessingService documentAiProcessingService,
@@ -56,10 +84,9 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
         "[sap-document-ai] Direct extraction triggered for fileName={}, tenantId={}",
         fileName,
         tenantId);
-    // create pending job
+
     String jobId = createExtractionJob(tenantId);
 
-    // check for availability of the service.
     if (!documentAiProcessingService.isAvailable()) {
       logger.warn(
           "[sap-document-ai] Document AI unavailable, job {} left as PENDING for retry", jobId);
@@ -112,7 +139,7 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
         POLL_EVENT,
         OutboxMessage.create(),
         Schedule.create().taskName(POLL_TASK_NAME).after(POLL_DELAY));
-    logger.info("[sap-document-ai] Poll schedule submitted");
+    logger.debug("[sap-document-ai] Poll schedule submitted");
   }
 
   private void markJobAsFailed(String jobId) {

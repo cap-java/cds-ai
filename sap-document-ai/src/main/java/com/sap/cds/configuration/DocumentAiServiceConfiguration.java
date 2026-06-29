@@ -25,6 +25,24 @@ import org.apache.hc.client5.http.classic.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * CDS plugin configuration that wires up all Document AI services and event handlers at runtime.
+ *
+ * <p>Implements {@link CdsRuntimeConfiguration} so it is picked up automatically by the CDS runtime
+ * via the Java {@code ServiceLoader} mechanism (declared in {@code
+ * META-INF/services/com.sap.cds.services.runtime.CdsRuntimeConfiguration}).
+ *
+ * <p>Responsibilities:
+ *
+ * <ul>
+ *   <li>Registers {@link ExtractionServiceImpl} as a CDS service.
+ *   <li>Resolves the DIE service binding from the environment and builds an authenticated {@link
+ *       DefaultDocumentAiClient} via the SAP Cloud SDK destination API.
+ *   <li>Wires all dependencies into {@link ExtractionServiceImpl} and registers the {@link
+ *       DocumentSubmissionHandler} and (when a binding is present) the {@link
+ *       ExtractionPollingHandler}.
+ * </ul>
+ */
 public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
 
   private static final Logger logger =
@@ -41,12 +59,24 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
         DefaultOAuth2PropertySupplier::new);
   }
 
+  /**
+   * Registers {@link ExtractionServiceImpl} as a CDS service so it is available in the service
+   * catalog for injection into event handlers.
+   */
   @Override
   public void services(CdsRuntimeConfigurer configurer) {
     extractionService = new ExtractionServiceImpl();
     configurer.service(extractionService);
   }
 
+  /**
+   * Resolves runtime dependencies and registers all plugin event handlers.
+   *
+   * <p>{@link DocumentSubmissionHandler} is always registered. {@link ExtractionPollingHandler} is
+   * only registered when a DIE service binding is found and a {@link DocumentAiClient} can be
+   * built; without a binding the plugin accepts extraction events but leaves jobs as {@code
+   * PENDING}.
+   */
   @Override
   public void eventHandlers(CdsRuntimeConfigurer configurer) {
     CdsRuntime runtime = configurer.getCdsRuntime();
@@ -81,6 +111,16 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
     }
   }
 
+  /**
+   * Attempts to build a {@link DocumentAiClient} from the first DIE service binding found in the
+   * environment.
+   *
+   * <p>If no binding is present, or if the Cloud SDK destination cannot be constructed, {@code
+   * null} is returned and extraction is effectively disabled until a binding becomes available.
+   *
+   * @param environment the CDS runtime environment used to look up service bindings
+   * @return a configured {@link DefaultDocumentAiClient}, or {@code null} if unavailable
+   */
   static DocumentAiClient buildDocumentAi(CdsEnvironment environment) {
     Optional<ServiceBinding> optionalBinding =
         environment
