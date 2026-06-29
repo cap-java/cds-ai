@@ -9,7 +9,7 @@
 
   <properties>
     <jdk.version>17</jdk.version>
-    <cds.services.version>4.9.0</cds.services.version>
+    <cds.services.version>4.9.1</cds.services.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <generation-package>com.sap.cds.feature.documentai.generated</generation-package>
   </properties>
@@ -43,12 +43,6 @@
       <artifactId>spring-context</artifactId>
       <version>6.2.6</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents.client5</groupId>
-      <artifactId>httpclient5</artifactId>
-      <version>5.6</version>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
