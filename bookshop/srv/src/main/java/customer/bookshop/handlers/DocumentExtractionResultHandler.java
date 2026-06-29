@@ -5,6 +5,7 @@ package customer.bookshop.handlers;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResult;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResultContext;
+import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -13,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-@ServiceName("sap.document.ai.DocumentAiService")
+@ServiceName(value = "*", type = ApplicationService.class)
 public class DocumentExtractionResultHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DocumentExtractionResultHandler.class);
