@@ -82,10 +82,14 @@ public class ExtractionPollingHandler implements EventHandler {
       processJob(job);
     }
 
-    outboxService.submit(
-        POLL_EVENT,
-        OutboxMessage.create(),
-        Schedule.create().taskName(POLL_TASK_NAME).after(POLL_DELAY));
+    if (outboxService != null) {
+      outboxService.submit(
+          POLL_EVENT,
+          OutboxMessage.create(),
+          Schedule.create().taskName(POLL_TASK_NAME).after(POLL_DELAY));
+    } else {
+      logger.warn("[sap-document-ai] Outbox not available, next poll cycle will not be scheduled");
+    }
 
     context.setCompleted();
   }
