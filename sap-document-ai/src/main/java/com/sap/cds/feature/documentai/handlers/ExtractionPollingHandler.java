@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *   <li>Persists the new status via {@link ExtractionService#updateExtractionResult}.
  *   <li>When a job reaches {@code DONE}, emits a {@code DocumentExtractionResult} event on the
  *       {@code DocumentAiService} so consumer handlers can react.
- *   <li>If jobs remain active, re-schedules itself via the outbox after {@link #POLL_DELAY}.
+ *   <li>If jobs remain active, re-schedules itself via the outbox after {@link #DEFAULT_POLL_INTERVAL_SECONDS} seconds.
  * </ol>
  *
  * <p>This self-rescheduling pattern means polling stops automatically once all jobs reach a
