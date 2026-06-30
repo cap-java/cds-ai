@@ -54,13 +54,13 @@ The plugin is implemented in the `sap-document-ai` module. The following Java pa
 
 | Package | Description |
 |---|---|
-| `com.sap.cds.configuration` | Bootstraps all plugin components and registers them with the CDS runtime at startup |
-| `com.sap.cds.handlers` | CDS event handlers for document submission and outbox-driven polling |
-| `com.sap.cds.service` | Core extraction service, processing service, status enum, and transition validator |
-| `com.sap.cds.service.documentai.client` | HTTP client abstraction for the DIE REST API |
-| `com.sap.cds.service.model` | Immutable value objects used as internal data transfer types |
-| `com.sap.cds.service.exceptions` | Typed exceptions for error classification |
-| `com.sap.cds.service.utils` | Utility classes |
+| `com.sap.cds.feature.documentai.configuration` | Bootstraps all plugin components and registers them with the CDS runtime at startup |
+| `com.sap.cds.feature.documentai.handlers` | CDS event handlers for document submission and outbox-driven polling |
+| `com.sap.cds.feature.documentai.service` | Core extraction service, processing service, status enum, and transition validator |
+| `com.sap.cds.feature.documentai.service.client` | HTTP client abstraction for the DIE REST API |
+| `com.sap.cds.feature.documentai.service.model` | Immutable value objects used as internal data transfer types |
+| `com.sap.cds.feature.documentai.service.exceptions` | Typed exceptions for error classification |
+| `com.sap.cds.feature.documentai.service.utils` | Utility classes |
 
 ### CDS Model
 

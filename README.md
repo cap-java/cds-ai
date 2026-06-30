@@ -359,10 +359,7 @@ To enable debug-level logging for the plugin, add the following to `application.
 ```yaml
 logging:
   level:
-    com.sap.cds.handlers.DocumentSubmissionHandler: DEBUG
-    com.sap.cds.handlers.ExtractionPollingHandler: DEBUG
-    com.sap.cds.service.ExtractionServiceImpl: DEBUG
-    com.sap.cds.service.documentai.client.DefaultDocumentAiClient: DEBUG
+    com.sap.cds.feature.documentai: DEBUG
 ```
 ---
 ## References
