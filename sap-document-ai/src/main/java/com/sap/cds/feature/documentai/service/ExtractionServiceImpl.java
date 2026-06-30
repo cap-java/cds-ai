@@ -198,8 +198,11 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
     Result updateResult =
         persistenceService.run(
             Update.entity(ExtractionJob_.class)
-                .byId(jobId)
-                .where(j -> j.get(ExtractionJob.STATUS).eq(currentStatus.name()))
+                .where(
+                    j ->
+                        j.get(ExtractionJob.ID)
+                            .eq(jobId)
+                            .and(j.get(ExtractionJob.STATUS).eq(currentStatus.name())))
                 .entry(extractionJob));
 
     if (updateResult.rowCount() == 0) {
