@@ -15,7 +15,6 @@
 - [Status State Machine](#status-state-machine)
 - [Tests](#tests)
   - [Unit Tests](#unit-tests)
-  - [Integration Tests](#integration-tests)
 - [Quality Tools](#quality-tools)
 
 ---
@@ -43,7 +42,6 @@
 | `bookshop/srv` | Spring Boot application module for the sample |
 | `bookshop/db` | CDS data model for the sample |
 | `bookshop/app` | Fiori UI applications for the sample |
-| `integration-tests` | Integration test module |
 | `docs` | Design and architecture documentation |
 
 ---
@@ -214,10 +212,6 @@ Unit tests are located in `sap-document-ai/src/test/java`. Each production class
 | `ExceptionsTest` | Exception message and cause propagation |
 
 Tests use Mockito for dependencies and AssertJ for assertions. The `jacoco-maven-plugin` enforces a minimum instruction coverage of **85%** across the plugin bundle (generated code excluded).
-
-### Integration Tests
-
-Integration tests are located in the `integration-tests` module. They run a full Spring Boot application against an in-memory H2 database and verify end-to-end behaviour including CDS model deployment, event dispatch, and outbox scheduling.
 
 ---
 
