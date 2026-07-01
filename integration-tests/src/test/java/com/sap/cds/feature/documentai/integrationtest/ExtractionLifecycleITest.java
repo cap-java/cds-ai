@@ -137,6 +137,10 @@ class ExtractionLifecycleITest extends AbstractDocumentAiITest {
 
     assertThat(job(jobIdA).getStatus()).isEqualTo(ExtractionStatus.DONE.name());
     assertThat(job(jobIdB).getStatus()).isEqualTo(ExtractionStatus.SUBMITTED.name());
+
+    assertThat(captureHandler.getCaptured())
+        .singleElement()
+        .satisfies(event -> assertThat(event.getJobId()).isEqualTo(jobIdA));
   }
 
   private ExtractionResult submit(String fileName) {

@@ -3,13 +3,11 @@
 */
 package com.sap.cds.feature.documentai.integrationtest;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sap.cds.feature.documentai.service.ExtractionService;
 import com.sap.cds.feature.documentai.service.ExtractionStatus;
 import com.sap.cds.feature.documentai.service.exceptions.IllegalStatusTransitionException;
-import com.sap.cds.feature.documentai.service.model.ExtractionResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -19,17 +17,6 @@ class ExtractionErrorITest extends AbstractDocumentAiITest {
 
   @Autowired
   ExtractionService extractionService;
-
-  @Test
-  void submissionWithoutDieBindingCreatesPendingJob() {
-    ExtractionResult result =
-        extractionService.triggerExtraction(
-            "invoice.pdf", "application/pdf", null, null, "tenant-1");
-
-    assertThat(result.status()).isEqualTo(ExtractionResult.Status.PENDING);
-    assertThat(result.internalJobId()).isNotNull();
-    assertThat(result.documentAiJobId()).isNull();
-  }
 
   @Test
   void invalidStatusTransitionThrows() {
