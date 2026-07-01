@@ -22,6 +22,7 @@ A CAP Java plugin that integrates [SAP Document AI](https://help.sap.com/docs/do
 - [Monitoring and Logging](#monitoring-and-logging)
 - [References](#references)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
+- [Integration Tests](#integration-tests)
 
 ---
 
@@ -377,3 +378,29 @@ logging:
 
 - Bug reports and feature requests should be submitted as issues in this project repository.
 - Pull requests are welcome. All contributions must pass `mvn verify`, which enforces Spotless code formatting (Google Java Format), PMD static analysis, and a minimum JaCoCo instruction coverage of 85%.
+
+---
+
+## Integration Tests
+
+Spring Boot tests are implemented in the `integration-tests/` folder. The tests are executed during the build of the project in the GitHub Actions.
+
+The folder contains a simple Spring Boot application backed by an in-memory H2 database. No DIE service binding is required — the tests use a stub `DocumentAiClient` that returns controlled responses.
+
+The following scenarios are covered:
+
+- Plugin startup — service catalog registration and schema initialisation
+- Document submission via the CAP event API
+- Full extraction lifecycle (PENDING → SUBMITTED → RUNNING → DONE and FAILED paths)
+- Parallel document processing in a single poll cycle
+- Poll cycle resilience when one job's DIE call fails
+- Graceful degradation when no DIE binding is present
+- Rejection of invalid state machine transitions
+- `DocumentExtractionResult` CAP event emission on job completion
+
+To run the tests locally, first install the plugin snapshot, then run `mvn verify` from the `integration-tests/` folder:
+
+```bash
+cd sap-document-ai && mvn install -DskipTests
+cd ../integration-tests && npm install && mvn verify
+```
