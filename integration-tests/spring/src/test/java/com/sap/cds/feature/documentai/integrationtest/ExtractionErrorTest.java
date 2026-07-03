@@ -15,8 +15,7 @@ class ExtractionErrorTest extends AbstractDocumentAiTest {
 
   private static final String DIE_JOB_ID = "die-1";
 
-  @Autowired
-  ExtractionService extractionService;
+  @Autowired ExtractionService extractionService;
 
   @Test
   void invalidStatusTransitionThrows() {

@@ -21,8 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class DocumentSubmissionTest extends AbstractDocumentAiTest {
 
-  @Autowired
-  ExtractionService extractionService;
+  @Autowired ExtractionService extractionService;
 
   @Test
   void submissionWithoutDieBindingCreatesJobAsPending() {
@@ -31,7 +30,8 @@ class DocumentSubmissionTest extends AbstractDocumentAiTest {
 
     documentAiService.emit(createExtractionContext());
 
-    assertThat(persistenceService.run(Select.from(ExtractionJob_.class)).listOf(ExtractionJob.class))
+    assertThat(
+            persistenceService.run(Select.from(ExtractionJob_.class)).listOf(ExtractionJob.class))
         .singleElement()
         .satisfies(
             job -> {

@@ -35,10 +35,10 @@ abstract class AbstractDocumentAiTest {
     persistenceService.run(Delete.from(ExtractionJob_.class));
   }
 
-  // Executes a single polling cycle using a test DIE client that returns results supplied by the caller.
+  // Executes a single polling cycle using a test DIE client that returns results supplied by the
+  // caller.
   void runPollCycle(
-      ExtractionService extractionService,
-      Function<String, ExtractionData> jobResultFn) {
+      ExtractionService extractionService, Function<String, ExtractionData> jobResultFn) {
     ExtractionPollingHandler handler =
         new ExtractionPollingHandler(
             persistenceService,

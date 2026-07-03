@@ -65,9 +65,12 @@ public class MockAICoreApiHandler implements EventHandler {
         "Inference client is not available without an AI Core service binding");
   }
 
-  /** Resolves (or creates) the resource group name for the given tenant using the configured prefix. */
+  /**
+   * Resolves (or creates) the resource group name for the given tenant using the configured prefix.
+   */
   public String resolveResourceGroup(String tenantId) {
-    return tenantResourceGroupCache.computeIfAbsent(tenantId, id -> config.resourceGroupPrefix() + id);
+    return tenantResourceGroupCache.computeIfAbsent(
+        tenantId, id -> config.resourceGroupPrefix() + id);
   }
 
   /** Returns the mock tenant cache for test inspection. */

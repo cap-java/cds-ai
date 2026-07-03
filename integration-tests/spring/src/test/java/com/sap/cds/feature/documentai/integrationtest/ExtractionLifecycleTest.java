@@ -24,10 +24,8 @@ class ExtractionLifecycleTest extends AbstractDocumentAiTest {
   private static final String DIE_JOB_ID = "die-job-1";
   private static final String EXTRACTION_RESULT_JSON = "{\"invoiceNumber\":\"INV-001\"}";
 
-  @Autowired
-  ExtractionService extractionService;
-  @Autowired
-  ExtractionResultCaptureHandler captureHandler;
+  @Autowired ExtractionService extractionService;
+  @Autowired ExtractionResultCaptureHandler captureHandler;
 
   @AfterEach
   void resetCapture() {
