@@ -19,6 +19,8 @@
             <!-- Allow null objects to import for testing -->
             <Bug pattern="NP_NULL_PARAM_DEREF_ALL_TARGETS_DANGEROUS"/>
             <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+            <!-- Tests intentionally use platform default encoding for byte fixtures -->
+            <Bug pattern="DM_DEFAULT_ENCODING"/>
         </Or>
     </Match>
 </FindBugsFilter>
