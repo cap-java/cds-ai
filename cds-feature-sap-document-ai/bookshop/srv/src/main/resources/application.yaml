@@ -1,0 +1,39 @@
+
+---
+spring:
+  config:
+    activate:
+      on-profile: default
+  sql:
+    init:
+      platform: h2
+  h2:
+    console:
+      enabled: true
+cds:
+  security:
+    mock:
+      users:
+        admin:
+          password: admin
+          roles:
+          - admin
+        user:
+          password: user
+  data-source:
+    auto-config:
+      enabled: false
+  outbox:
+    services:
+      DefaultOutboxUnordered:
+        maxAttempts: 10
+    persistent:
+      scheduler:
+        enabled: true
+  document-ai:
+    polling:
+      interval-seconds: 5
+
+logging:
+  level:
+    com.sap.cds.feature.documentai: DEBUG
