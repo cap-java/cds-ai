@@ -1,6 +1,6 @@
 # SAP Document AI Plugin for SAP Cloud Application Programming Model (CAP) (Alpha Version)
 
-A CAP Java plugin that integrates [SAP Document AI](https://help.sap.com/docs/document-ai?locale=en-US) into CDS applications. The plugin exposes a CDS event-based API for submitting documents, manages asynchronous polling against the DIE service, and delivers results via a CDS outbound event — backed by the CDS persistent outbox for resilience across restarts.
+A CAP Java plugin that integrates [SAP Document AI](https://help.sap.com/docs/document-ai?locale=en-US) into CDS applications. The plugin exposes a CDS event-based API for submitting documents, manages asynchronous polling against the DIE service, and delivers results via a CDS outbound event - backed by the CDS persistent outbox for resilience across restarts.
 
 ## Table of Contents
 
@@ -39,13 +39,13 @@ For a working reference, see the [Bookshop Sample](#bookshop-sample), which demo
 
 ## Prerequisites
 
-| Requirement | Minimum version |
-|---|---|
-| Java | 17+ |
-| Maven | 3.9+ |
-| CAP Java | 4.9.x (LTS) |
-| SAP Cloud SDK | 5.28.0+ |
-| Node.js | Required only for the build-time `cds` CLI (`@sap/cds-dk`) |
+| Requirement     | Minimum version                                                       |
+| --------------- | --------------------------------------------------------------------- |
+| Java            | 17+                                                                   |
+| Maven           | 3.9+                                                                  |
+| CAP Java        | 4.9.x (LTS)                                                           |
+| SAP Cloud SDK   | 5.28.0+                                                               |
+| Node.js         | Required only for the build-time `cds` CLI (`@sap/cds-dk`)            |
 | SAP BTP service | DIE service instance with label `sap-document-information-extraction` |
 
 All plugin dependencies are declared with `provided` scope and are available on the classpath of any standard CAP Spring Boot application.
@@ -56,7 +56,7 @@ All plugin dependencies are declared with `provided` scope and are available on 
 
 This section walks through integrating the plugin into an existing CAP Java application from start to finish.
 
-### Step 1 — Add the dependency
+### Step 1 - Add the dependency
 
 Declare the plugin in `srv/pom.xml`:
 
@@ -86,7 +86,7 @@ Ensure the `cds-maven-plugin` is configured with the `resolve` goal so the plugi
 </plugin>
 ```
 
-### Step 2 — Enable the persistent outbox
+### Step 2 - Enable the persistent outbox
 
 Add the following to `src/main/resources/application.yaml`:
 
@@ -100,7 +100,7 @@ cds:
 
 Without this, documents will be submitted to DIE but results will never be retrieved.
 
-### Step 3 — Bind the DIE service
+### Step 3 - Bind the DIE service
 
 **On SAP BTP (Cloud Foundry / Kubernetes):** Bind your application to a DIE service instance. The plugin discovers the binding at startup and activates extraction processing automatically.
 
@@ -111,15 +111,15 @@ cf login
 cds bind --to <your-die-instance-name>
 ```
 
-This creates a `[hybrid]` profile entry in `.cdsrc-private.json`. Do not commit this file — it contains environment-specific binding references. Then run the application with the hybrid profile:
+This creates a `[hybrid]` profile entry in `.cdsrc-private.json`. Do not commit this file - it contains environment-specific binding references. Then run the application with the hybrid profile:
 
 ```bash
 cds bind --exec mvn spring-boot:run
 ```
 
-Without a binding, the plugin starts in degraded mode — extraction events are accepted and jobs are created in `PENDING` status, but no actual processing occurs. See [Degraded Operation](#degraded-operation) for details.
+Without a binding, the plugin starts in degraded mode - extraction events are accepted and jobs are created in `PENDING` status, but no actual processing occurs. See [Degraded Operation](#degraded-operation) for details.
 
-### Step 4 — Emit a DocumentExtraction event
+### Step 4 - Emit a DocumentExtraction event
 
 From any event handler or service method in your application, emit a `DocumentExtraction` event:
 
@@ -140,7 +140,7 @@ myApplicationService.emit(ctx);
 
 The call returns immediately. The plugin handles submission and schedules polling asynchronously.
 
-### Step 5 — Handle the result
+### Step 5 - Handle the result
 
 Implement an event handler in your application to receive the extraction output once the DIE service reports the job as complete:
 
@@ -165,14 +165,14 @@ public class MyExtractionResultHandler implements EventHandler {
 }
 ```
 
-### Step 6 — Build and run
+### Step 6 - Build and run
 
 ```bash
 mvn compile
 mvn spring-boot:run
 ```
 
-Submit a document via your application. The plugin logs progress at `INFO` level — look for `[sap-document-ai]` prefixed entries to trace the job from submission through to result delivery. See [Monitoring and Logging](#monitoring-and-logging) for how to enable debug-level output.
+Submit a document via your application. The plugin logs progress at `INFO` level - look for `[sap-document-ai]` prefixed entries to trace the job from submission through to result delivery. See [Monitoring and Logging](#monitoring-and-logging) for how to enable debug-level output.
 
 ---
 
@@ -181,35 +181,35 @@ Submit a document via your application. The plugin logs progress at `INFO` level
 > **Note:** In the current version, document extraction can only be triggered programmatically via event emission, as shown in the [Integration Guide](#integration-guide). Annotation-based triggering (e.g. declaratively marking an entity field or action to trigger extraction) is not yet supported and is planned for a future release.
 
 > **Note:** Multitenancy is not implemented in the current version and is planned for a future release.
-> 
+
 ### CDS Model
 
 The plugin registers its CDS models automatically via the CAP plugin mechanism. No `using` declarations are required in the application model.
 
 The plugin exposes the service `sap.document.ai.DocumentAiService` with two events:
 
-| Event | Direction | Description |
-|---|---|---|
-| `DocumentExtraction` | Inbound — emitted by the application | Triggers document extraction |
-| `DocumentExtractionResult` | Outbound — emitted by the plugin | Delivers the extraction result upon completion |
+| Event                      | Direction                            | Description                                    |
+| -------------------------- | ------------------------------------ | ---------------------------------------------- |
+| `DocumentExtraction`       | Inbound - emitted by the application | Triggers document extraction                   |
+| `DocumentExtractionResult` | Outbound - emitted by the plugin     | Delivers the extraction result upon completion |
 
 **`DocumentExtraction` payload:**
 
-| Field | Type | Description |
-|---|---|---|
-| `fileName` | `String` | File name forwarded to the DIE service |
-| `mimeType` | `String` | MIME type of the document (e.g. `application/pdf`) |
-| `content` | `LargeBinary` | Document byte stream |
-| `options` | `LargeString` | JSON options string passed to DIE; may be `null` |
+| Field      | Type          | Description                                        |
+| ---------- | ------------- | -------------------------------------------------- |
+| `fileName` | `String`      | File name forwarded to the DIE service             |
+| `mimeType` | `String`      | MIME type of the document (e.g. `application/pdf`) |
+| `content`  | `LargeBinary` | Document byte stream                               |
+| `options`  | `LargeString` | JSON options string passed to DIE; may be `null`   |
 
-The `options` field maps directly to the DIE API's `options` body parameter. Refer to the [SAP Document AI's API documentation](https://help.sap.com/docs/document-ai/sap-document-ai/upload-document?locale=en-US&q=submit+document) for the full options schema. 
+The `options` field maps directly to the DIE API's `options` body parameter. Refer to the [SAP Document AI's API documentation](https://help.sap.com/docs/document-ai/sap-document-ai/upload-document?locale=en-US&q=submit+document) for the full options schema.
 
 **`DocumentExtractionResult` payload:**
 
-| Field | Type | Description |
-|---|---|---|
-| `jobId` | `String` | Plugin-internal extraction job identifier |
-| `documentAiJobId` | `String` | Job identifier assigned by the DIE service |
+| Field              | Type          | Description                                |
+| ------------------ | ------------- | ------------------------------------------ |
+| `jobId`            | `String`      | Plugin-internal extraction job identifier  |
+| `documentAiJobId`  | `String`      | Job identifier assigned by the DIE service |
 | `extractionResult` | `LargeString` | Raw JSON extraction result returned by DIE |
 
 ---
@@ -236,13 +236,13 @@ To run the sample with a real DIE service instance, the SAP BTP Cloud Foundry en
 
 **Prerequisites:** The `@sap/cds-dk` CLI installed, and CF CLI logged in to the org and space where the DIE service instance is provisioned.
 
-**Step 1 — Log in to Cloud Foundry:**
+**Step 1 - Log in to Cloud Foundry:**
 
 ```bash
 cf login
 ```
 
-**Step 2 — Bind the DIE service instance:**
+**Step 2 - Bind the DIE service instance:**
 
 ```bash
 cd bookshop
@@ -251,17 +251,17 @@ cds bind --to <<instance-name>>
 
 This creates or updates `.cdsrc-private.json` with a `[hybrid]` profile entry pointing to the CF service instance and its service key. The file should not be committed to version control as it contains environment-specific binding references.
 
-**Step 3 — Compile and run with the hybrid profile:**
+**Step 3 - Compile and run with the hybrid profile:**
 
 ```bash
 cd bookshop
 mvn compile
-cds bind --exec mvn spring-boot:run 
+cds bind --exec mvn spring-boot:run
 ```
 
 The plugin will resolve the DIE service binding at startup, construct an OAuth2-authenticated destination, and activate extraction processing.
 
-The `AdminService` exposes a `Books` entity with a bound action `extractDocumentData()` illustrating how to trigger extraction from a CAP action. The `Attachments` composition on `Books` provides a Fiori UI for file upload and is used here purely as a convenient way to supply documents in the sample. The CAP Attachments plugin is not a dependency of this plugin — document storage and retrieval are outside the scope of `sap-document-ai`, which is concerned solely with submitting documents to SAP Document AI and delivering the extracted results.
+The `AdminService` exposes a `Books` entity with a bound action `extractDocumentData()` illustrating how to trigger extraction from a CAP action. The `Attachments` composition on `Books` provides a Fiori UI for file upload and is used here purely as a convenient way to supply documents in the sample. The CAP Attachments plugin is not a dependency of this plugin - document storage and retrieval are outside the scope of `sap-document-ai`, which is concerned solely with submitting documents to SAP Document AI and delivering the extracted results.
 
 ---
 
@@ -299,7 +299,7 @@ The poll interval can be configured in `application.yaml`:
 cds:
   document-ai:
     polling:
-      interval-seconds: 3  # default
+      interval-seconds: 3 # default
 ```
 
 The outbox retry limit can be adjusted alongside other outbox services:
@@ -316,13 +316,13 @@ cds:
 
 The plugin is designed to accept events and preserve job state even when dependent services are unavailable.
 
-| Condition | Behaviour |
-|---|---|
-| No DIE service binding found at startup | `DocumentExtraction` events are accepted; jobs are created with status `PENDING`; polling is not scheduled |
-| DIE binding present but destination initialisation fails | Same as above; a warning is logged |
-| Persistent outbox not configured | Documents are submitted to DIE; the polling task is not persisted and results are not delivered |
-| DIE returns a non-2xx HTTP response | The affected job is marked `FAILED`; an error is logged |
-| Concurrent status update detected | The update is skipped; the later writer's state is preserved (optimistic locking) |
+| Condition                                                | Behaviour                                                                                                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| No DIE service binding found at startup                  | `DocumentExtraction` events are accepted; jobs are created with status `PENDING`; polling is not scheduled |
+| DIE binding present but destination initialisation fails | Same as above; a warning is logged                                                                         |
+| Persistent outbox not configured                         | Documents are submitted to DIE; the polling task is not persisted and results are not delivered            |
+| DIE returns a non-2xx HTTP response                      | The affected job is marked `FAILED`; an error is logged                                                    |
+| Concurrent status update detected                        | The update is skipped; the later writer's state is preserved (optimistic locking)                          |
 
 ---
 
@@ -336,9 +336,9 @@ For a detailed description of the plugin's design, component responsibilities, e
 
 The plugin communicates with the SAP Document Information Extraction service via its **REST API** (`document-information-extraction/v1`). This is supported across all available DIE service plans.
 
-| DIE Service Plan | Supported |
-|---|---|
-| All plans | Yes — via REST API |
+| DIE Service Plan | Supported          |
+| ---------------- | ------------------ |
+| All plans        | Yes - via REST API |
 
 **Future:** Support for the DIE **OData API** is planned for a future release. This would enable richer query capabilities over extraction results directly through the CAP OData layer.
 
@@ -348,11 +348,11 @@ The plugin communicates with the SAP Document Information Extraction service via
 
 All plugin log statements are prefixed with `[sap-document-ai]` to facilitate log filtering. The plugin uses SLF4J and is configured through the standard logging framework of the host application.
 
-| Level | Logged events |
-|---|---|
-| `INFO` | Service binding resolution, job creation, status transitions, result emission |
-| `WARN` | Missing binding, unavailable outbox, jobs skipped due to missing DIE job ID, concurrent update conflicts |
-| `ERROR` | Submission failures, non-2xx DIE responses, polling exceptions |
+| Level   | Logged events                                                                                                |
+| ------- | ------------------------------------------------------------------------------------------------------------ |
+| `INFO`  | Service binding resolution, job creation, status transitions, result emission                                |
+| `WARN`  | Missing binding, unavailable outbox, jobs skipped due to missing DIE job ID, concurrent update conflicts     |
+| `ERROR` | Submission failures, non-2xx DIE responses, polling exceptions                                               |
 | `DEBUG` | Per-cycle active job counts, DIE status poll responses, idempotent update skips, poll schedule confirmations |
 
 To enable debug-level logging for the plugin, add the following to `application.yaml`:
@@ -362,7 +362,9 @@ logging:
   level:
     com.sap.cds.feature.documentai: DEBUG
 ```
+
 ---
+
 ## References
 
 - [Getting Started with CAP](https://cap.cloud.sap/docs/get-started/)
@@ -372,6 +374,7 @@ logging:
   - [Technical Outbox API](https://cap.cloud.sap/docs/java/outbox#technical-outbox-api)
 - [SAP Document AI Docs](https://help.sap.com/docs/document-ai?locale=en-US)
 - [Enabling Document AI Service Instance on SAP BTP Cloud Foundry](https://help.sap.com/docs/document-ai/sap-document-ai/enabling-service-in-cloud-foundry-environment?locale=en-US)
+
 ---
 
 ## Support, Feedback, Contributing
@@ -385,11 +388,11 @@ logging:
 
 Spring Boot tests are implemented in the `integration-tests/` folder. The tests are executed during the build of the project in the GitHub Actions.
 
-The folder contains a simple Spring Boot application backed by an in-memory H2 database. No DIE service binding is required — the tests use a stub `DocumentAiClient` that returns controlled responses.
+The folder contains a simple Spring Boot application backed by an in-memory H2 database. No DIE service binding is required - the tests use a stub `DocumentAiClient` that returns controlled responses.
 
 The following scenarios are covered:
 
-- Plugin startup — service catalog registration and schema initialisation
+- Plugin startup - service catalog registration and schema initialisation
 - Document submission via the CAP event API
 - Full extraction lifecycle (PENDING → SUBMITTED → RUNNING → DONE and FAILED paths)
 - Parallel document processing in a single poll cycle
