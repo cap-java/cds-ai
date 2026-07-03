@@ -101,7 +101,7 @@ public class DocumentExtractionHandler implements EventHandler {
     Service documentAiService = serviceCatalog.getService(Service.class, DocumentAiService_.CDS_NAME);
     if (documentAiService == null) {
       throw new ServiceException(ErrorStatuses.SERVER_ERROR,
-          "Document AI service is not available. Please ensure the sap-document-ai plugin is configured.");
+          "Document AI service is not available. Please ensure the cds-feature-sap-document-ai plugin is configured.");
     }
 
     DocumentExtraction event = DocumentExtraction.create();

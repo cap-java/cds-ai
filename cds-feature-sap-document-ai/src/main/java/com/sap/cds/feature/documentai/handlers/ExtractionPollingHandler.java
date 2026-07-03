@@ -1,6 +1,6 @@
 /*
-* © 2026 SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
-*/
+ * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
+ */
 package com.sap.cds.feature.documentai.handlers;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.ExtractionJob;

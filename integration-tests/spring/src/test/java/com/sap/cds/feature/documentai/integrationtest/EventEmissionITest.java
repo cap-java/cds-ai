@@ -1,6 +1,6 @@
 /*
-* © 2026 SAP SE or an SAP affiliate company and cds-feature-sap-document-ai contributors.
-*/
+ * © 2026 SAP SE or an SAP affiliate company and cds-ai contributors.
+ */
 package com.sap.cds.feature.documentai.integrationtest;
 
 import static org.assertj.core.api.Assertions.assertThat;
