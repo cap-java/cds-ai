@@ -11,7 +11,7 @@ import com.sap.cds.ql.Select;
 import com.sap.cds.services.Service;
 import org.junit.jupiter.api.Test;
 
-class PluginLoadITest extends AbstractDocumentAiITest {
+class PluginLoadTest extends AbstractDocumentAiTest {
 
   @Test
   void documentAiServiceIsRegisteredInCatalog() {

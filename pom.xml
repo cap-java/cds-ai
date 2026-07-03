@@ -34,6 +34,7 @@
   <modules>
     <module>cds-feature-ai-core</module>
     <module>cds-feature-recommendations</module>
+    <module>cds-feature-sap-document-ai</module>
     <module>cds-starter-ai</module>
   </modules>
 
@@ -162,6 +163,12 @@
       <dependency>
         <groupId>com.sap.cds</groupId>
         <artifactId>cds-feature-recommendations</artifactId>
+        <version>${revision}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.sap.cds</groupId>
+        <artifactId>cds-feature-sap-document-ai</artifactId>
         <version>${revision}</version>
       </dependency>
 

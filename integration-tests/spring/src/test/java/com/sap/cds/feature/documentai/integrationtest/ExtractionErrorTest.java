@@ -11,7 +11,7 @@ import com.sap.cds.feature.documentai.service.exceptions.IllegalStatusTransition
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class ExtractionErrorITest extends AbstractDocumentAiITest {
+class ExtractionErrorTest extends AbstractDocumentAiTest {
 
   private static final String DIE_JOB_ID = "die-1";
 

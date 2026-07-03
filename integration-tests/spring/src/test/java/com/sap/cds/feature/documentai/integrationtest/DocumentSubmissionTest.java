@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class DocumentSubmissionITest extends AbstractDocumentAiITest {
+class DocumentSubmissionTest extends AbstractDocumentAiTest {
 
   @Autowired
   ExtractionService extractionService;

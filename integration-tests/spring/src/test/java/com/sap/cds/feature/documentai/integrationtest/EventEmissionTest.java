@@ -13,7 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class EventEmissionITest extends AbstractDocumentAiITest {
+class EventEmissionTest extends AbstractDocumentAiTest {
 
   private static final String DIE_JOB_ID = "die-job-emit-1";
   private static final String EXTRACTION_RESULT_JSON = "{\"invoiceNumber\":\"INV-042\"}";

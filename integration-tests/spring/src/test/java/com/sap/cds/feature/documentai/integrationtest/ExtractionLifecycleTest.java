@@ -19,7 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class ExtractionLifecycleITest extends AbstractDocumentAiITest {
+class ExtractionLifecycleTest extends AbstractDocumentAiTest {
 
   private static final String DIE_JOB_ID = "die-job-1";
   private static final String EXTRACTION_RESULT_JSON = "{\"invoiceNumber\":\"INV-001\"}";
