@@ -110,4 +110,4 @@ clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
 
 ## Sample
 
-A runnable CAP Java sample demonstrating this plugin together with the other AI plugins in the repository lives at [`samples/bookshop`](../samples/bookshop).
+A runnable CAP Java sample demonstrating the AI plugins (which depend on this module) lives at [`samples/bookshop`](../samples/bookshop).

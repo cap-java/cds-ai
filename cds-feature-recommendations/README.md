@@ -226,4 +226,4 @@ Without an AI Core binding, the plugin uses a `MockAIClient` that returns random
 
 ## Sample
 
-A runnable CAP Java sample demonstrating this plugin together with the other AI plugins in the repository lives at [`samples/bookshop`](../samples/bookshop).
+A runnable CAP Java sample demonstrating this plugin lives at [`samples/bookshop`](../samples/bookshop). The `AdminService.Books` entity is draft-enabled with value-list fields (genre, author) - when editing a book draft, the plugin suggests values based on the existing catalog.

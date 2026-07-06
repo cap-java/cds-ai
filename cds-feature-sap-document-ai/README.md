@@ -216,7 +216,7 @@ The `options` field maps directly to the DIE API's `options` body parameter. Ref
 
 ## Bookshop Sample
 
-A runnable CAP Java bookshop demonstrating this plugin together with the other AI plugins in the repository lives at [`samples/bookshop`](../samples/bookshop). The sample wires the `AdminService.Books` entity with a bound `extractDocumentData()` action and the CAP Attachments plugin to supply documents.
+A runnable CAP Java bookshop demonstrating this plugin lives at [`samples/bookshop`](../samples/bookshop). The `SupplierInvoicesService` showcases a realistic document extraction flow: upload a supplier PDF invoice, extract vendor, date, total and line items, and populate the invoice entity.
 
 **Prerequisites:** Java 17, Maven 3.9+, Node.js (required by the `cds` CLI invoked during the Maven build).
 

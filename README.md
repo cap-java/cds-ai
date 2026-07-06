@@ -45,7 +45,7 @@ Without an AI Core binding the plugins fall back to mock implementations for loc
 
 ## Samples
 
-A runnable CAP Java bookshop demonstrating all plugins together lives in [`samples/bookshop`](samples/bookshop). See the sample's own instructions for how to run it. The plugin READMEs link back to this sample.
+A runnable CAP Java bookshop demonstrating all plugins together lives in [`samples/bookshop`](samples/bookshop). It provides an `AdminService` showcasing recommendations on draft-enabled Books, and a `SupplierInvoicesService` showcasing document extraction from supplier invoices. See the sample's own instructions for how to run it.
 
 ## Local Development
 
