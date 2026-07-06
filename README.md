@@ -31,6 +31,8 @@ For the simplest setup, add the **`cds-starter-ai`** dependency which bundles bo
 }
 ```
 
+> Note: [`cds-feature-sap-document-ai`](cds-feature-sap-document-ai/README.md) is not part of `cds-starter-ai` yet - it will be added once the plugin supports multi-tenancy. Add it as an explicit dependency in your application if you need it today.
+
 ## Prerequisites
 
 - Java 17+
