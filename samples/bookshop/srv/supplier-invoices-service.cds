@@ -8,5 +8,4 @@ service SupplierInvoicesService @(requires: 'any') {
 
   @readonly entity Suppliers     as projection on my.Suppliers;
   @readonly entity InvoiceStatus as projection on my.InvoiceStatus;
-  @readonly entity Books         as projection on my.Books;
 }

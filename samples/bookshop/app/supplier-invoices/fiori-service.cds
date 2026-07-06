@@ -41,12 +41,6 @@ annotate service.SupplierInvoices with @(UI: {
     },
     {
       $Type : 'UI.ReferenceFacet',
-      ID    : 'LineItemsFacet',
-      Label : '{i18n>LineItems}',
-      Target: 'lineItems/@UI.LineItem'
-    },
-    {
-      $Type : 'UI.ReferenceFacet',
       ID    : 'AttachmentsFacet',
       Label : '{i18n>Attachments}',
       Target: 'attachments/@UI.LineItem'
@@ -62,13 +56,16 @@ annotate service.SupplierInvoices with @(UI: {
   ]}
 });
 
-annotate service.SupplierInvoices.lineItems with @(UI: {
-  LineItem: [
-    {Value: description, Label: '{i18n>Description}'},
-    {Value: quantity,    Label: '{i18n>Quantity}'},
-    {Value: unitPrice,   Label: '{i18n>UnitPrice}'}
+// Action button on Object Page header
+annotate service.SupplierInvoices with @(
+  UI.Identification : [
+    {
+      $Type  : 'UI.DataFieldForAction',
+      Action : 'SupplierInvoicesService.extractInvoiceData',
+      Label  : 'Extract Invoice Data'
+    }
   ]
-});
+);
 
 annotate service.SupplierInvoices with {
   supplier @Common: {

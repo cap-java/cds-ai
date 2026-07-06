@@ -61,14 +61,4 @@ entity SupplierInvoices : managed, cuid {
   currency        : Currency;
   status          : Association to InvoiceStatus;
   documentAiJobId : String;
-  lineItems       : Composition of many SupplierInvoiceLineItems
-                      on lineItems.invoice = $self;
-}
-
-entity SupplierInvoiceLineItems : cuid {
-  invoice   : Association to SupplierInvoices;
-  description : String(500);
-  quantity    : Integer;
-  unitPrice   : Decimal;
-  book        : Association to Books;
 }
