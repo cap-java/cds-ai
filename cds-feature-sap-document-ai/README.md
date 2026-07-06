@@ -389,7 +389,6 @@ The plugin communicates with the SAP Document Information Extraction service via
 
 - **Multi-tenancy** — not implemented; all jobs run in a single-tenant context. Planned for a future release.
 - **Annotation-based triggering** — document extraction can only be initiated programmatically via event emission; declarative triggering is not yet supported.
-- **OData API** — the plugin uses the Document AI Service REST API only; OData API support is planned for a future release.
 
 ---
 
