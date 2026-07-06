@@ -37,3 +37,28 @@ entity Genres : CodeList {
       children : Composition of many Genres
                    on children.parent = $self;
 }
+
+// --- Procurement domain (Document AI showcase) ---
+
+entity Suppliers : managed, cuid {
+  @mandatory name : String(200);
+  country         : String(3);
+  email           : String(200);
+  invoices        : Association to many SupplierInvoices
+                      on invoices.supplier = $self;
+}
+
+@cds.odata.valuelist
+entity InvoiceStatus : CodeList {
+  key code : String(20);
+}
+
+entity SupplierInvoices : managed, cuid {
+  invoiceNumber   : String(50);
+  invoiceDate     : Date;
+  supplier        : Association to Suppliers;
+  totalAmount     : Decimal;
+  currency        : Currency;
+  status          : Association to InvoiceStatus;
+  documentAiJobId : String;
+}

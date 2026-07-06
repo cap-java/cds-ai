@@ -32,6 +32,14 @@
       <artifactId>cds-feature-recommendations</artifactId>
       <scope>runtime</scope>
     </dependency>
+
+    <!--
+      TODO: include cds-feature-sap-document-ai once it supports multi-tenancy.
+      Until then the plugin is deliberately kept out of the starter to avoid
+      surprising multi-tenant CAP applications that pull cds-starter-ai. Add
+      cds-feature-sap-document-ai as an explicit dependency in your app if
+      you need it today.
+    -->
   </dependencies>
 
 </project>

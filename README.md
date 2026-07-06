@@ -8,10 +8,11 @@ This repository contains a collection of AI plugins for [CAP Java](https://cap.c
 
 ### Plugins
 
-| Module                                                                 | Description                                                                                                               |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [`cds-feature-ai-core`](cds-feature-ai-core/README.md)                 | Bridges CAP Java to SAP AI Core - resource group management, deployment lifecycle, configuration CRUD, and prediction API |
-| [`cds-feature-recommendations`](cds-feature-recommendations/README.md) | AI-powered field recommendations for Fiori UIs in draft-enabled entities                                                  |
+| Module                                                                       | Description                                                                                                               |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [`cds-feature-ai-core`](cds-feature-ai-core/README.md)                       | Bridges CAP Java to SAP AI Core - resource group management, deployment lifecycle, configuration CRUD, and prediction API |
+| [`cds-feature-recommendations`](cds-feature-recommendations/README.md)       | AI-powered field recommendations for Fiori UIs in draft-enabled entities                                                  |
+| [`cds-feature-sap-document-ai`](cds-feature-sap-document-ai/README.md)       | SAP Document AI integration for asynchronous document information extraction via the DIE service                          |
 
 ### Starter
 
@@ -31,6 +32,8 @@ For the simplest setup, add the **`cds-starter-ai`** dependency which bundles bo
 }
 ```
 
+> Note: [`cds-feature-sap-document-ai`](cds-feature-sap-document-ai/README.md) is not part of `cds-starter-ai` yet - it will be added once the plugin supports multi-tenancy. Add it as an explicit dependency in your application if you need it today.
+
 ## Prerequisites
 
 - Java 17+
@@ -42,13 +45,7 @@ Without an AI Core binding the plugins fall back to mock implementations for loc
 
 ## Samples
 
-In [`samples/bookshop`](samples/bookshop) you can find a complete CAP Java bookshop demonstrating both plugins:
-
-```bash
-mvn clean install
-cd samples/bookshop
-mvn spring-boot:run
-```
+A runnable CAP Java bookshop demonstrating all plugins together lives in [`samples/bookshop`](samples/bookshop). It provides an `AdminService` showcasing recommendations on draft-enabled Books, and a `SupplierInvoicesService` showcasing document extraction from supplier invoices. See the sample's own instructions for how to run it.
 
 ## Local Development
 
@@ -57,12 +54,7 @@ mvn clean install     # build all modules
 mvn test              # run unit tests
 ```
 
-For integration tests against a real AI Core instance:
-
-```bash
-cds bind ai-core -2 <your-ai-core-service-instance>
-cds bind --exec mvn test -pl integration-tests/spring -am
-```
+For per-plugin details (configuration, programmatic API, multi-tenancy behaviour) see the individual module READMEs. For integration tests against a real AI Core instance see [`integration-tests/spring`](integration-tests/spring).
 
 ## Support, Feedback, Contributing
 

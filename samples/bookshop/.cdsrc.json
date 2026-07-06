@@ -9,6 +9,6 @@
     }
   },
   "cdsc": {
-    "moduleLookupDirectories": ["node_modules/"]
+    "moduleLookupDirectories": ["node_modules/", "target/cds/"]
   }
 }

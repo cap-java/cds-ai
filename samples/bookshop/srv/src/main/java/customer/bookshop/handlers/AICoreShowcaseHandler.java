@@ -2,12 +2,12 @@ package customer.bookshop.handlers;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
-import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
-import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
-import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.aicore.api.DeploymentIdContext;
 import com.sap.cds.feature.aicore.api.InferenceClientContext;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Configurations_;
+import com.sap.cds.feature.aicore.generated.cds4j.aicore.Deployments_;
 import com.sap.cds.feature.recommendation.api.RptInferenceClient;
 import com.sap.cds.feature.recommendation.api.RptModelSpec;
 import com.sap.cds.ql.Insert;
@@ -132,9 +132,11 @@ public class AICoreShowcaseHandler implements EventHandler {
     List<CdsData> contextRows =
         List.of(
             CdsData.create(
-                Map.of("ID", "ctx-1", "name", "Laptop", "price", "999.99", "category", "Electronics")),
+                Map.of(
+                    "ID", "ctx-1", "name", "Laptop", "price", "999.99", "category", "Electronics")),
             CdsData.create(
-                Map.of("ID", "ctx-2", "name", "Mouse", "price", "29.99", "category", "Electronics")),
+                Map.of(
+                    "ID", "ctx-2", "name", "Mouse", "price", "29.99", "category", "Electronics")),
             CdsData.create(
                 Map.of("ID", "ctx-3", "name", "Shirt", "price", "49.99", "category", "Clothing")),
             CdsData.create(
@@ -149,8 +151,7 @@ public class AICoreShowcaseHandler implements EventHandler {
     List<Map<String, Object>> results = new ArrayList<>();
     for (Map<String, Object> product : products) {
       CdsData predictionRow = CdsData.create(new HashMap<>(product));
-      List<CdsData> predictions =
-          client.predict(predictionRow, contextRows, List.of("category"));
+      List<CdsData> predictions = client.predict(predictionRow, contextRows, List.of("category"));
       for (CdsData prediction : predictions) {
         String id = (String) prediction.get("ID");
         Object categoryObj = prediction.get("category");
@@ -175,8 +176,7 @@ public class AICoreShowcaseHandler implements EventHandler {
   }
 
   /** Helper to resolve a ready-to-use RptInferenceClient from the AI Core RemoteService. */
-  private static RptInferenceClient createRptClient(
-      RemoteService service, List<String> keyNames) {
+  private static RptInferenceClient createRptClient(RemoteService service, List<String> keyNames) {
     ResourceGroupContext rgCtx = ResourceGroupContext.create();
     service.emit(rgCtx);
     String rg = rgCtx.getResult();
