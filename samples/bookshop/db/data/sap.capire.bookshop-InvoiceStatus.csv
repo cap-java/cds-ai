@@ -1,0 +1,6 @@
+code;name;descr
+DRAFT;Draft;Invoice created but not yet submitted for extraction
+EXTRACTING;Extracting;Document submitted to SAP Document AI for extraction
+EXTRACTED;Extracted;Extraction completed successfully - review the results
+VERIFIED;Verified;Invoice data verified and accepted by the user
+FAILED;Failed;Extraction failed - check the document and retry

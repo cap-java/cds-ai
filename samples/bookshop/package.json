@@ -11,5 +11,15 @@
     "@cap-js/ai": "^1",
     "@sap/cds": "^9",
     "@sap/cds-common-content": "^1.4.0"
+  },
+  "cds": {
+    "requires": {
+      "com.sap.cds/sap-document-ai": {
+        "model": "com.sap.cds/sap-document-ai"
+      },
+      "com.sap.cds/cds-feature-attachments": {
+        "model": "com.sap.cds/cds-feature-attachments"
+      }
+    }
   }
 }

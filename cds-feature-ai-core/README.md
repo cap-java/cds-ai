@@ -107,3 +107,7 @@ clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
 
 - [SAP AI Core Documentation](https://help.sap.com/docs/sap-ai-core)
 - [SAP AI SDK for Java](https://github.com/SAP/ai-sdk-java)
+
+## Sample
+
+A runnable CAP Java sample demonstrating the AI plugins (which depend on this module) lives at [`samples/bookshop`](../samples/bookshop).
