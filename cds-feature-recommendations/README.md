@@ -223,3 +223,7 @@ Without an AI Core binding, the plugin uses a `MockAIClient` that returns random
 
 - [`cds-feature-ai-core`](../cds-feature-ai-core/README.md) - Required dependency for AI Core connectivity
 - [SAP Fiori Elements - Intelligent Suggestions](https://experience.sap.com/fiori-design-web/)
+
+## Sample
+
+A runnable CAP Java sample demonstrating this plugin together with the other AI plugins in the repository lives at [`samples/bookshop`](../samples/bookshop).

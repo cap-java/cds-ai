@@ -17,12 +17,16 @@ import org.springframework.stereotype.Component;
 @ServiceName(value = "*", type = ApplicationService.class)
 public class DocumentExtractionResultHandler implements EventHandler {
 
-  private static final Logger logger = LoggerFactory.getLogger(DocumentExtractionResultHandler.class);
+  private static final Logger logger =
+      LoggerFactory.getLogger(DocumentExtractionResultHandler.class);
 
   @On(event = DocumentExtractionResultContext.CDS_NAME)
   public void onExtractionCompleted(DocumentExtractionResultContext context) {
     DocumentExtractionResult data = context.getData();
-    logger.info("[bookshop] Extraction completed & results are ready! jobId={} result ={}", data.getJobId(), data.getExtractionResult());
+    logger.info(
+        "[bookshop] Extraction completed & results are ready! jobId={} result ={}",
+        data.getJobId(),
+        data.getExtractionResult());
     context.setCompleted();
   }
 }

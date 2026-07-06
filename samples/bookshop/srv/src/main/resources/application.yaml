@@ -2,6 +2,7 @@ logging:
   level:
     root: INFO
     com.sap.cds.feature.aicore.core: DEBUG
+    com.sap.cds.feature.documentai: DEBUG
 ---
 spring:
   datasource:
@@ -28,6 +29,16 @@ cds:
   data-source:
     auto-config:
       enabled: false
+  outbox:
+    services:
+      DefaultOutboxUnordered:
+        maxAttempts: 10
+    persistent:
+      scheduler:
+        enabled: true
+  document-ai:
+    polling:
+      interval-seconds: 5
 ---
 management:
   endpoint:

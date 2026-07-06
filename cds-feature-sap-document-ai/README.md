@@ -216,7 +216,7 @@ The `options` field maps directly to the DIE API's `options` body parameter. Ref
 
 ## Bookshop Sample
 
-The `bookshop/` directory provides a runnable reference application demonstrating the plugin integrated with the CAP Attachments plugin.
+A runnable CAP Java bookshop demonstrating this plugin together with the other AI plugins in the repository lives at [`samples/bookshop`](../samples/bookshop). The sample wires the `AdminService.Books` entity with a bound `extractDocumentData()` action and the CAP Attachments plugin to supply documents.
 
 **Prerequisites:** Java 17, Maven 3.9+, Node.js (required by the `cds` CLI invoked during the Maven build).
 
@@ -225,8 +225,8 @@ The `bookshop/` directory provides a runnable reference application demonstratin
 The sample can be started locally without any service binding. Extraction jobs will be created in `PENDING` status and no actual processing will occur, but the full application and UI are functional for integration exploration.
 
 ```bash
-cd bookshop/srv
-mvn compile
+mvn -f samples/bookshop/pom.xml clean install
+cd samples/bookshop/srv
 mvn spring-boot:run
 ```
 
@@ -245,7 +245,7 @@ cf login
 **Step 2 - Bind the DIE service instance:**
 
 ```bash
-cd bookshop
+cd samples/bookshop
 cds bind --to <<instance-name>>
 ```
 
@@ -254,14 +254,14 @@ This creates or updates `.cdsrc-private.json` with a `[hybrid]` profile entry po
 **Step 3 - Compile and run with the hybrid profile:**
 
 ```bash
-cd bookshop
+cd samples/bookshop
 mvn compile
 cds bind --exec mvn spring-boot:run
 ```
 
 The plugin will resolve the DIE service binding at startup, construct an OAuth2-authenticated destination, and activate extraction processing.
 
-The `AdminService` exposes a `Books` entity with a bound action `extractDocumentData()` illustrating how to trigger extraction from a CAP action. The `Attachments` composition on `Books` provides a Fiori UI for file upload and is used here purely as a convenient way to supply documents in the sample. The CAP Attachments plugin is not a dependency of this plugin - document storage and retrieval are outside the scope of `sap-document-ai`, which is concerned solely with submitting documents to SAP Document AI and delivering the extracted results.
+The `AdminService` exposes a `Books` entity with a bound action `extractDocumentData()` illustrating how to trigger extraction from a CAP action. The `Attachments` composition on `Books` provides a Fiori UI for file upload and is used here purely as a convenient way to supply documents in the sample. The CAP Attachments plugin is not a dependency of this plugin - document storage and retrieval are outside the scope of `cds-feature-sap-document-ai`, which is concerned solely with submitting documents to SAP Document AI and delivering the extracted results.
 
 ---
 

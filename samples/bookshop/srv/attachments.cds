@@ -2,7 +2,7 @@ using {sap.capire.bookshop as my} from '../db/schema';
 using {sap.attachments.Attachments} from 'com.sap.cds/cds-feature-attachments';
 
 extend my.Books with {
-  attachments                      : Composition of many Attachments;
+  attachments : Composition of many Attachments;
 }
 
 // Add UI component for attachments table to the Browse Books App
@@ -24,7 +24,3 @@ annotate adminService.Books with @(UI.Facets: [{
   Label : '{i18n>attachments}',
   Target: 'attachments/@UI.LineItem'
 }]);
-
-service nonDraftService {
-  entity Books as projection on my.Books;
-}
