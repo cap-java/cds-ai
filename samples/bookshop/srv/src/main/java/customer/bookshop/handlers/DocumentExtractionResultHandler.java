@@ -3,11 +3,12 @@
  */
 package customer.bookshop.handlers;
 
+import cds.gen.sap.capire.bookshop.SupplierInvoices;
+import cds.gen.sap.capire.bookshop.SupplierInvoices_;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResult;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResultContext;
-import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.handler.EventHandler;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -33,18 +35,16 @@ public class DocumentExtractionResultHandler implements EventHandler {
   private static final Logger logger =
       LoggerFactory.getLogger(DocumentExtractionResultHandler.class);
   private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final String STATUS_EXTRACTED = "EXTRACTED";
+  private static final String STATUS_EXTRACTING = "EXTRACTING";
+  private static final String STATUS_FAILED = "FAILED";
 
-  private final PersistenceService db;
-
-  public DocumentExtractionResultHandler(PersistenceService db) {
-    this.db = db;
-  }
+  @Autowired private PersistenceService db;
 
   @On(event = DocumentExtractionResultContext.CDS_NAME)
   public void onExtractionCompleted(DocumentExtractionResultContext context) {
     DocumentExtractionResult data = context.getData();
-    logger.info(
-        "[bookshop] Invoice extraction completed! jobId={}", data.getJobId());
+    logger.info("[bookshop] Invoice extraction completed! jobId={}", data.getJobId());
 
     try {
       JsonNode root = objectMapper.readTree(data.getExtractionResult());
@@ -57,27 +57,26 @@ public class DocumentExtractionResultHandler implements EventHandler {
       BigDecimal grossAmount = getHeaderFieldNumber(headerFields, "grossAmount");
 
       logger.info(
-          "[bookshop] Extracted: number={}, date={}, amount={} {}, sender={}",
+          "[bookshop] Extracted: number={}, date={}, amount={} {}",
           documentNumber,
           documentDate,
           grossAmount,
-          currencyCode,
-          getHeaderFieldValue(headerFields, "senderName"));
+          currencyCode);
 
       // Update the invoice that is currently in EXTRACTING status.
       // In a production app you would correlate by a stored jobId; for this sample
       // we use the status as a simple correlation mechanism.
       Map<String, Object> updateData = new HashMap<>();
-      updateData.put("status_code", "EXTRACTED");
-      if (documentNumber != null) updateData.put("invoiceNumber", documentNumber);
-      if (documentDate != null) updateData.put("invoiceDate", documentDate);
-      if (grossAmount != null) updateData.put("totalAmount", grossAmount);
-      if (currencyCode != null) updateData.put("currency_code", currencyCode);
+      updateData.put(SupplierInvoices.STATUS_CODE, STATUS_EXTRACTED);
+      if (documentNumber != null) updateData.put(SupplierInvoices.INVOICE_NUMBER, documentNumber);
+      if (documentDate != null) updateData.put(SupplierInvoices.INVOICE_DATE, documentDate);
+      if (grossAmount != null) updateData.put(SupplierInvoices.TOTAL_AMOUNT, grossAmount);
+      if (currencyCode != null) updateData.put(SupplierInvoices.CURRENCY_CODE, currencyCode);
 
       long updated =
           db.run(
-                  Update.entity("sap.capire.bookshop.SupplierInvoices")
-                      .where(i -> i.get("status_code").eq("EXTRACTING"))
+                  Update.entity(SupplierInvoices_.CDS_NAME)
+                      .where(i -> i.get(SupplierInvoices.STATUS_CODE).eq(STATUS_EXTRACTING))
                       .data(updateData))
               .rowCount();
 
@@ -85,11 +84,10 @@ public class DocumentExtractionResultHandler implements EventHandler {
 
     } catch (Exception e) {
       logger.error("[bookshop] Failed to process extraction result", e);
-      // Mark as FAILED
       db.run(
-          Update.entity("sap.capire.bookshop.SupplierInvoices")
-              .where(i -> i.get("status_code").eq("EXTRACTING"))
-              .data(Map.of("status_code", "FAILED")));
+          Update.entity(SupplierInvoices_.CDS_NAME)
+              .where(i -> i.get(SupplierInvoices.STATUS_CODE).eq(STATUS_EXTRACTING))
+              .data(Map.of(SupplierInvoices.STATUS_CODE, STATUS_FAILED)));
     }
 
     context.setCompleted();
