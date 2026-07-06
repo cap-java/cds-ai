@@ -45,7 +45,7 @@ Aggregated code coverage is produced by the `coverage-report/` module at the pro
 
 1. Each module that runs tests has the JaCoCo agent attached (`prepare-agent`), which writes a `target/jacoco.exec` file during test execution.
 2. The `coverage-report` module (built last in the reactor) merges all `.exec` files into a single `target/jacoco-merged.exec`.
-3. It then generates an aggregated HTML/XML report via `jacoco:report-aggregate` and runs `jacoco:check` against configurable thresholds.
+3. It then generates an aggregated HTML/XML report via `jacoco:report-aggregate`. Coverage thresholds are enforced by SonarQube in the pipeline, not by JaCoCo check goals.
 
 ### Generating the report
 
@@ -61,12 +61,7 @@ coverage-report/target/site/jacoco-aggregate/index.html
 
 ### Thresholds
 
-Per-module thresholds are defined in `coverage-report/pom.xml`:
-
-| Module | Instruction | Branch | Complexity |
-|--------|-------------|--------|------------|
-| `cds-feature-ai-core` | 0% | 0% | 0% |
-| `cds-feature-recommendations` | 80% | 80% | 80% |
+Coverage thresholds are enforced by SonarQube in the CI pipeline. The JaCoCo `check` goal is not used — the aggregated report feeds SonarQube, which is the authoritative gate.
 
 ### Coverage data sources
 
@@ -74,5 +69,6 @@ The merged report combines execution data from:
 
 - `cds-feature-ai-core/target/jacoco.exec` (unit tests)
 - `cds-feature-recommendations/target/jacoco.exec` (unit tests)
+- `cds-feature-sap-document-ai/target/jacoco.exec` (unit tests)
 - `integration-tests/spring/target/jacoco.exec` (integration tests)
 - `integration-tests/mtx-local/srv/target/jacoco.exec` (MTX integration tests, only when profile is active)

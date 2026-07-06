@@ -9,6 +9,7 @@ A CAP Java plugin that integrates [SAP Document AI](https://help.sap.com/docs/do
 - [Integration Guide](#integration-guide)
 - [Usage](#usage)
   - [CDS Model](#cds-model)
+- [Multi-Tenancy](#multi-tenancy)
 - [Bookshop Sample](#bookshop-sample)
   - [Running without a Document AI service binding](#running-without-a-die-service-binding)
   - [Running with a Document AI service binding (hybrid mode)](#running-with-a-die-service-binding-hybrid-mode)
@@ -190,7 +191,9 @@ Submit a document via your application. The plugin logs progress at `INFO` level
 
 > **Note:** In the current version, document extraction can only be triggered programmatically via event emission, as shown in the [Integration Guide](#integration-guide). Annotation-based triggering (e.g. declaratively marking an entity field or action to trigger extraction) is not yet supported and is planned for a future release.
 
-> **Note:** Multitenancy is not implemented in the current version and is planned for a future release. Until then, the plugin should only be used in single-tenant deployments.
+## Multi-Tenancy
+
+Multi-tenancy is not implemented in the current version and is planned for a future release. The `tenantId` field is stored on the `ExtractionJob` entity as groundwork.
 
 ### CDS Model
 
@@ -379,6 +382,14 @@ The plugin communicates with the SAP Document Information Extraction service via
 | All plans                | Yes - via REST API |
 
 **Future:** Support for the Document AI **OData API** is planned for a future release. This would enable richer query capabilities over extraction results directly through the CAP OData layer.
+
+---
+
+## Known Limitations
+
+- **Multi-tenancy** — not implemented; all jobs run in a single-tenant context. Planned for a future release.
+- **Annotation-based triggering** — document extraction can only be initiated programmatically via event emission; declarative triggering is not yet supported.
+- **OData API** — the plugin uses the DIE REST API only; OData API support is planned for a future release.
 
 ---
 
