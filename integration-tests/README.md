@@ -61,7 +61,7 @@ coverage-report/target/site/jacoco-aggregate/index.html
 
 ### Thresholds
 
-Coverage thresholds are enforced by SonarQube in the CI pipeline. The JaCoCo `check` goal is not used — the aggregated report feeds SonarQube, which is the authoritative gate.
+Coverage thresholds are enforced by SonarQube in the CI pipeline (80% on new code).
 
 ### Coverage data sources
 

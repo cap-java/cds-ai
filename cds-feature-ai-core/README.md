@@ -110,4 +110,4 @@ clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
 
 ## Sample
 
-A runnable CAP Java sample demonstrating both `cds-feature-ai-core` and `cds-feature-recommendations` lives at [`samples/bookshop`](../samples/bookshop). The `AdminService.Books` entity is draft-enabled with value-list fields (genre, author) — when editing a book draft, the plugin suggests values based on the existing catalog.
+A runnable CAP Java sample demonstrating the AI plugins (which depend on this module) lives at [`samples/bookshop`](../samples/bookshop).
