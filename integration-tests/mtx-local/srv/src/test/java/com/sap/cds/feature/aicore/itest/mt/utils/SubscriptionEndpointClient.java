@@ -18,13 +18,12 @@ public class SubscriptionEndpointClient {
 
   private static final String MT_SUBSCRIPTIONS_TENANTS = "/mt/v1.0/subscriptions/tenants/";
 
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper = new ObjectMapper();
   private final MockMvc client;
   private final String credentials =
       "Basic " + Base64.getEncoder().encodeToString("privileged:".getBytes(StandardCharsets.UTF_8));
 
-  public SubscriptionEndpointClient(ObjectMapper objectMapper, MockMvc client) {
-    this.objectMapper = objectMapper;
+  public SubscriptionEndpointClient(MockMvc client) {
     this.client = client;
   }
 
