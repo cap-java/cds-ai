@@ -35,7 +35,7 @@ For the Node.js side of `cds-feature-recommendations`, also add the `@cap-js/ai`
 
 ## Prerequisites
 
-- Java 17+
+- Java 21+
 - CAP Java 4.9+
 - An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for production use)
 - A [SAP Document Information Extraction](https://help.sap.com/docs/document-ai) service binding (once `cds-feature-sap-document-ai` is included)
