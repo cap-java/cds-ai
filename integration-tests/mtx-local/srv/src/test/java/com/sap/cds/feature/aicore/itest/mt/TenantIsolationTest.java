@@ -5,7 +5,6 @@ package com.sap.cds.feature.aicore.itest.mt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.core.AICoreConfig;
@@ -17,7 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,14 +27,13 @@ import org.springframework.test.web.servlet.MockMvc;
 class TenantIsolationTest {
 
   @Autowired MockMvc client;
-  @Autowired ObjectMapper objectMapper;
   @Autowired CdsRuntime runtime;
 
   SubscriptionEndpointClient subscriptionEndpointClient;
 
   @BeforeEach
   void setup() {
-    subscriptionEndpointClient = new SubscriptionEndpointClient(objectMapper, client);
+    subscriptionEndpointClient = new SubscriptionEndpointClient(client);
   }
 
   @Test

@@ -80,7 +80,7 @@ runs:
         -Dsonar.projectKey=com.sap.cds.cds-ai
         -Dsonar.projectVersion=${{ steps.get-revision.outputs.REVISION }}
         -Dsonar.qualitygate.wait=true
-        -Dsonar.java.source=17
+        -Dsonar.java.source=21
         -Dsonar.exclusions=**/samples/**,**/integration-tests/**
         -Dsonar.coverage.jacoco.xmlReportPaths=${{ github.workspace }}/cds-feature-ai-core/target/site/jacoco/jacoco.xml,${{ github.workspace }}/cds-feature-recommendations/target/site/jacoco/jacoco.xml,${{ github.workspace }}/integration-tests/spring/target/site/jacoco/jacoco.xml,${{ github.workspace }}/coverage-report/target/site/jacoco-aggregate/jacoco.xml
         -Dsonar.coverage.exclusions=**/src/test/**,**/src/gen/**
