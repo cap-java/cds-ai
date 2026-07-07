@@ -6,7 +6,6 @@ package com.sap.cds.feature.aicore.itest.mt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
@@ -30,14 +29,13 @@ class MtxLifecycleTest {
   private static final String TENANT = "tenant-3";
 
   @Autowired MockMvc client;
-  @Autowired ObjectMapper objectMapper;
   @Autowired CdsRuntime runtime;
 
   SubscriptionEndpointClient subscriptionEndpointClient;
 
   @BeforeEach
   void setup() {
-    subscriptionEndpointClient = new SubscriptionEndpointClient(objectMapper, client);
+    subscriptionEndpointClient = new SubscriptionEndpointClient(client);
   }
 
   @AfterEach

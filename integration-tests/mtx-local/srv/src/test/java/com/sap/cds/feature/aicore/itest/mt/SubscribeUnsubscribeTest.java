@@ -8,7 +8,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.aicore.generated.cds4j.aicore.AICore_;
 import com.sap.cds.feature.aicore.api.ResourceGroupContext;
 import com.sap.cds.feature.aicore.itest.mt.utils.SubscriptionEndpointClient;
@@ -31,14 +30,13 @@ class SubscribeUnsubscribeTest {
   private static final String PRODUCTS_URL = "/odata/v4/MtTestService/Products";
 
   @Autowired MockMvc client;
-  @Autowired ObjectMapper objectMapper;
   @Autowired CdsRuntime runtime;
 
   SubscriptionEndpointClient subscriptionEndpointClient;
 
   @BeforeEach
   void setup() {
-    subscriptionEndpointClient = new SubscriptionEndpointClient(objectMapper, client);
+    subscriptionEndpointClient = new SubscriptionEndpointClient(client);
   }
 
   @Test
