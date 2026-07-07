@@ -276,6 +276,8 @@ The plugin will resolve the Document AI service binding at startup, construct an
 
 The `AdminService` exposes a `Books` entity with a bound action `extractDocumentData()` illustrating how to trigger extraction from a CAP action. The `Attachments` composition on `Books` provides a Fiori UI for file upload and is used here purely as a convenient way to supply documents in the sample. The CAP Attachments plugin is not a dependency of this plugin - document storage and retrieval are outside the scope of `cds-feature-sap-document-ai`, which is concerned solely with submitting documents to SAP Document AI and delivering the extracted results.
 
+A sample PDF invoice (`dummy invoice.pdf`) is included in the `samples/bookshop/` directory. You can upload it via the Fiori UI and trigger `extractDocumentData()` to see the full extraction flow end-to-end without needing your own test document.
+
 ---
 
 ## How It Works
