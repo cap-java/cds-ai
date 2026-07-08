@@ -51,7 +51,7 @@ Static analysis runs at **compile time on every build** via Maven plugins config
 - **Spotless** — Google Java Format + SAP license headers (enforced at `process-sources`)
 - **SpotBugs** — `effort=Max` (at `process-test-classes`)
 - **PMD + CPD** — SAP Cloud SDK ruleset (at `process-test-classes`)
-- **Maven Enforcer** — no duplicate dependency versions, requires Maven 3.6.3+ and Java 17+
+- **Maven Enforcer** — no duplicate dependency versions, requires Maven 3.6.3+ and Java 21+
 
 Integration tests live in [`integration-tests/`](integration-tests/README.md) — see that README for test modules, run commands, and profiles.
 
