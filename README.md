@@ -4,7 +4,7 @@
 
 ## About this project
 
-This repository contains a collection of AI plugins for [CAP Java](https://cap.cloud.sap/docs/java/) applications, leveraging [SAP AI Core](https://help.sap.com/docs/sap-ai-core) and the SAP-RPT-1 foundation model.
+This repository contains a collection of AI plugins for [CAP Java](https://cap.cloud.sap/docs/java/) applications, leveraging [SAP AI Core](https://help.sap.com/docs/sap-ai-core), the SAP-RPT-1 foundation model, and SAP Document AI.
 
 ### Plugins
 
@@ -16,32 +16,17 @@ This repository contains a collection of AI plugins for [CAP Java](https://cap.c
 
 ### Starter
 
-For the simplest setup, add the **`cds-starter-ai`** dependency which bundles both plugins:
-
-```xml
-<dependency>
-    <groupId>com.sap.cds</groupId>
-    <artifactId>cds-starter-ai</artifactId>
-    <version>${cds-ai.version}</version>
-</dependency>
-```
-
-```json
-"dependencies": {
-    "@cap-js/ai": "^1"
-}
-```
-
-> Note: [`cds-feature-sap-document-ai`](cds-feature-sap-document-ai/README.md) is not part of `cds-starter-ai` yet - it will be added once the plugin supports multi-tenancy. Add it as an explicit dependency in your application if you need it today.
+See [`cds-starter-ai`](cds-starter-ai/README.md) for the quickest setup.
 
 ## Prerequisites
 
 - Java 17+
 - CAP Java 4.9+
 - Node.js 20+ with `@sap/cds-dk` 9+ (for CDS build tooling)
-- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for production use)
+- An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for `cds-feature-ai-core` and `cds-feature-recommendations`)
+- A [SAP Document Information Extraction](https://help.sap.com/docs/document-ai) service binding (for `cds-feature-sap-document-ai`)
 
-Without an AI Core binding the plugins fall back to mock implementations for local development.
+Without the respective service binding, each plugin falls back to a mock or degraded mode for local development.
 
 ## Samples
 
@@ -54,7 +39,7 @@ mvn clean install     # build all modules
 mvn test              # run unit tests
 ```
 
-For per-plugin details (configuration, programmatic API, multi-tenancy behaviour) see the individual module READMEs. For integration tests against a real AI Core instance see [`integration-tests/spring`](integration-tests/spring).
+For per-plugin details (configuration, programmatic API, multi-tenancy behaviour) see the individual module READMEs. For integration tests against a real AI Core instance see [`integration-tests/`](integration-tests/README.md).
 
 ## Support, Feedback, Contributing
 
