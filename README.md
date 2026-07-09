@@ -21,7 +21,7 @@ See [`cds-starter-ai`](cds-starter-ai/README.md) for the quickest setup.
 ## Prerequisites
 
 - Java 17+
-- CAP Java 4.9+
+- CAP Java 5.0+
 - Node.js 20+ with `@sap/cds-dk` 9+ (for CDS build tooling)
 - An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for `cds-feature-ai-core` and `cds-feature-recommendations`)
 - A [SAP Document Information Extraction](https://help.sap.com/docs/document-ai) service binding (for `cds-feature-sap-document-ai`)
