@@ -55,7 +55,6 @@ This is an alpha release. The core extraction pipeline works end-to-end, and the
 | S9  | **CLI scaffolding**    | Setup is manual and documented in the README. A `cds add document-ai` command is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | S10 | **OData API**          | REST API works across all plans. OData support for higher-tier plans is a future enhancement.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | S11 | **Job cleanup**        | Job records are kept for observability. A configurable retention policy is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| S12 | **Multiple bindings**  | One Document AI binding is resolved at startup. Routing documents to different instances by type, region, or business unit is not yet supported.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 ---
 
@@ -79,25 +78,35 @@ If a binding is added after the app starts, it won't be picked up until a restar
 
 These are ideas and suggestions and not a fixed plan. The ordering reflects what felt most important at the time of writing, but the incoming team should feel free to reprioritise based on their own context and stakeholder needs.
 
-### 1. Multitenancy _(S1)_
+### 1. Multitenancy _(S1)_ - Priority
 
 A natural first area to tackle would be making each tenant use its own Document AI credentials with isolated jobs. The polling logic and HTTP client would need to become tenant-aware - the `tenantId` field is already on `ExtractionJob`, so no schema migration is needed.
 
-### 2. Annotation-Based Triggering _(S2)_
+**Tracking issue:** [#98](https://github.com/cap-java/cds-ai/issues/98)
+
+### 2. Annotation-Based Triggering _(S2)_ - Priority
 
 One possible enhancement is to allow developers to annotate a CDS entity field with `@DocumentAI` to automatically trigger extraction - removing the need for boilerplate event emission. This could cover both the backend (plugin reacts to annotated field writes) and the Fiori Elements UI (an "Upload & Extract" button injected automatically on the Object Page).
+
+**Tracking issue:** [#97](https://github.com/cap-java/cds-ai/issues/97)
 
 ### 3. Job Recovery on Startup _(S6)_
 
 A useful addition could be a startup check for any jobs left in `PENDING`, `SUBMITTED`, or `RUNNING` status from before a restart, resuming polling for them automatically rather than waiting for a new submission to arrive.
 
+**Tracking issue:** [#100](https://github.com/cap-java/cds-ai/issues/100)
+
 ### 4. Extraction Progress Indicator
 
 The backend already tracks `SUBMITTED` and `RUNNING` states - it could be worth surfacing that status in the Fiori Elements Object Page as a visible progress indicator or status strip so users have feedback while extraction is running.
 
+**Tracking issue:** [#108](https://github.com/cap-java/cds-ai/issues/108)
+
 ### 5. Automatic Field Mapping _(S5)_
 
 One idea is to have the plugin match extracted fields to CDS entity properties by name convention and pre-fill the Fiori form automatically. Fields below a configurable confidence threshold could be visually flagged (e.g. amber highlight) so users know what to double-check before saving.
+
+**Tracking issue:** [#101](https://github.com/cap-java/cds-ai/issues/101)
 
 ### 6. Document Viewer with Extraction Highlights and Human-in-the-Loop Verification
 
@@ -107,45 +116,62 @@ It could also be worth visually marking AI-extracted fields in the Fiori form (e
 
 A further possibility is a human-in-the-loop confirmation step: the user reviews the extracted fields, corrects any errors, and explicitly confirms the result. This confirmed payload could be submitted back to Document AI as ground-truth feedback to activate the [instant learning](https://help.sap.com/docs/document-ai/sap-document-ai/instant-learning?locale=en-US) feature, improving model accuracy for that schema over time.
 
+**Tracking issue:** [#109](https://github.com/cap-java/cds-ai/issues/109)
+
 ### 7. Document AI Outbound Channels - Push-Based Result Delivery
 
 Document AI supports outbound channels at the schema level: notification channels (status pushes) and extension channels (callbacks triggered after prediction). One option worth exploring is registering the plugin as a target so Document AI pushes results to it directly, eliminating the need to poll. The `DocumentAiClient` interface and `ExtractionService.updateExtractionResult()` are already the right place to plug this in.
+
+**Tracking issue:** [#106](https://github.com/cap-java/cds-ai/issues/106)
 
 ### 8. Custom Schema Synchronisation _(S4)_
 
 One possible enhancement is to let developers define custom document type extraction schemas in the CDS model via annotations, with the plugin syncing these to Document AI automatically at deploy time or startup - removing the need for manual configuration in the Document AI workspace.
 
+**Tracking issue:** [#107](https://github.com/cap-java/cds-ai/issues/107)
+
 ### 9. Customisable Extraction Templates
 
 Right now, every submission requires constructing the Document AI `options` JSON by hand. A template mechanism could let developers define named configurations - document type, schema ID, field selection, confidence thresholds - declaratively in the CDS model or `application.yaml`, and just reference the template name at submission time.
+
+**Tracking issue:** [#116](https://github.com/cap-java/cds-ai/issues/116)
 
 ### 10. Local Mock Mode _(S7)_
 
 A mock mode returning configurable static extraction results without a real Document AI binding would make local development more convenient.
 
-### 11. Application-Level Outbound Channels
+**Tracking issue:** [#102](https://github.com/cap-java/cds-ai/issues/102)
+
+### 11. Configurable result delivery channels
 
 The plugin currently delivers results only via the `DocumentExtractionResult` CDS event. It could be worth exploring additional delivery channels so consuming applications can receive results through whatever channel fits their architecture.
+
+**Tracking issue:** [#115](https://github.com/cap-java/cds-ai/issues/115)
 
 ### 12. `cds add document-ai` Scaffold Command _(S9)_
 
 A `cds add document-ai` CLI command could set up the Document AI service binding in `mta.yaml`, enable the persistent outbox in `application.yaml`, and generate boilerplate handler stubs - lowering the barrier significantly for new adopters.
 
+**Tracking issue:** [#105](https://github.com/cap-java/cds-ai/issues/105)
+
 ### 13. OData API Support _(S10)_
 
 For applications on higher-tier plans, it could be worth exploring the Document AI OData API as an alternative transport, enabling richer querying and result navigation.
+
+**Tracking issue:** [#99](https://github.com/cap-java/cds-ai/issues/99)
 
 ### 14. Terminal Job Cleanup _(S11)_
 
 A configurable retention policy that deletes or archives `ExtractionJob` rows after they've been in `DONE` or `FAILED` status for a set period would prevent unbounded table growth on high-volume deployments.
 
+**Tracking issue:** [#103](https://github.com/cap-java/cds-ai/issues/103)
+
 ### 15. Malware Scanning _(S8)_
 
 It may be worth assessing whether documents should be scanned via SAP Malware Scanning Service before being forwarded to Document AI - particularly for multitenant deployments where uploaded content is less trusted.
 
-### 16. Multiple Service Binding Support _(S12)_
+**Tracking issue:** [#104](https://github.com/cap-java/cds-ai/issues/104)
 
-Supporting multiple Document AI bindings could allow applications to route documents to different instances based on context - document type, region, business unit. This would need a binding selection strategy, either convention-based or configurable via annotations or `application.yaml`.
 
 ---
 

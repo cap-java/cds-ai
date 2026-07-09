@@ -9,6 +9,7 @@ A CAP Java plugin that integrates [SAP Document AI](https://help.sap.com/docs/do
 - [Integration Guide](#integration-guide)
 - [Usage](#usage)
   - [CDS Model](#cds-model)
+- [Multi-Tenancy](#multi-tenancy)
 - [Bookshop Sample](#bookshop-sample)
   - [Running without a Document AI service binding](#running-without-a-die-service-binding)
   - [Running with a Document AI service binding (hybrid mode)](#running-with-a-die-service-binding-hybrid-mode)
@@ -190,7 +191,9 @@ Submit a document via your application. The plugin logs progress at `INFO` level
 
 > **Note:** In the current version, document extraction can only be triggered programmatically via event emission, as shown in the [Integration Guide](#integration-guide). Annotation-based triggering (e.g. declaratively marking an entity field or action to trigger extraction) is not yet supported and is planned for a future release.
 
-> **Note:** Multitenancy is not implemented in the current version and is planned for a future release. Until then, the plugin should only be used in single-tenant deployments.
+## Multi-Tenancy
+
+Multi-tenancy is not implemented in the current version and is planned for a future release. The `tenantId` field is stored on the `ExtractionJob` entity as groundwork.
 
 ### CDS Model
 
@@ -272,6 +275,8 @@ cds bind --exec mvn spring-boot:run
 The plugin will resolve the Document AI service binding at startup, construct an OAuth2-authenticated destination, and activate extraction processing.
 
 The `AdminService` exposes a `Books` entity with a bound action `extractDocumentData()` illustrating how to trigger extraction from a CAP action. The `Attachments` composition on `Books` provides a Fiori UI for file upload and is used here purely as a convenient way to supply documents in the sample. The CAP Attachments plugin is not a dependency of this plugin - document storage and retrieval are outside the scope of `cds-feature-sap-document-ai`, which is concerned solely with submitting documents to SAP Document AI and delivering the extracted results.
+
+A sample PDF invoice (`dummy invoice.pdf`) is included in the `samples/bookshop/` directory. You can upload it via the Fiori UI and trigger `extractDocumentData()` to see the full extraction flow end-to-end without needing your own test document.
 
 ---
 
@@ -379,6 +384,13 @@ The plugin communicates with the SAP Document Information Extraction service via
 | All plans                | Yes - via REST API |
 
 **Future:** Support for the Document AI **OData API** is planned for a future release. This would enable richer query capabilities over extraction results directly through the CAP OData layer.
+
+---
+
+## Known Limitations
+
+- **Multi-tenancy** — not implemented; all jobs run in a single-tenant context. Planned for a future release.
+- **Annotation-based triggering** — document extraction can only be initiated programmatically via event emission; declarative triggering is not yet supported.
 
 ---
 
