@@ -199,4 +199,4 @@ End-to-end integration tests against a real AI Core instance live in [`integrati
 
 ## Quality Tools
 
-→ [CI Checks and static analysis of outer module](../../README.md#ci-checks)
+→ [CI Checks and static analysis](../../CONTRIBUTING.md#ci-checks)
