@@ -33,7 +33,7 @@ Bridges CAP Java to SAP AI Core's management and inference REST APIs, providing 
 | `com.sap.ai.sdk:ai-core` (SAP AI SDK) | Provides the generated `DeploymentApi`, `ConfigurationApi`, `ResourceGroupApi`, and `ApiClient` types used to call the AI Core REST API. The plugin wraps these behind CDS events so callers never deal with the SDK directly. |
 | `com.github.ben-manes.caffeine:caffeine` | Thread-safe in-process caching for `tenantId → resourceGroupId` and `resourceGroupId::configName → deploymentId` mappings (1 h TTL, 10k max per cache). |
 | `io.github.resilience4j:resilience4j-retry` | Exponential backoff (initial 300 ms, doubling, max 30 s, up to 10 attempts) on 403/404/412 responses from AI Core - needed because resource group creation is asyncronous. |
-| CAP Java `DeploymentService` | MTX lifecycle hook: `AICoreSetupHandler` subscribes to `SubscribeEvent` (`@After LATE`) and `UnsubscribeEvent` (`@Before EARLY`) to create/delete per-tenant resource groups automatically. |
+| `com.sap.cds:cds-services-api/-impl/-utils` | CAP Java integration — used to integrate the plugin into the CAP runtime. |
 
 ---
 
@@ -114,23 +114,60 @@ resourceGroupId (cached 1h after last access — subsequent calls skip the AI Co
 
 #### Inference Client Resolution
 
+##### Event 1: resourceGroup
+
 ```mermaid
 flowchart TD
-    A["aiCoreService.inferenceClient(rgId, deploymentId)"] --> B["DeploymentResolver: check tenantResourceGroupCache"]
-    B -->|cache hit| E["check deploymentCache"]
-    B -->|cache miss| C["GET /v2/admin/resourceGroups — find by tenantId label"]
-    C --> D["PUT in tenantResourceGroupCache (1h TTL)"]
-    D --> E
-    E -->|cache hit| V["validateCachedDeployment: GET /v2/lm/deployments/{id}"]
-    V -->|valid| H["emit InferenceClientContext → ApiClient"]
-    V -->|invalid — invalidate cache entry| F
-    E -->|cache miss| F["GET /v2/lm/deployments — match by ModelDeploymentSpec"]
-    F -->|not found| G["POST /v2/lm/configurations + POST /v2/lm/deployments — poll until RUNNING"]
-    F -->|found| I["PUT in deploymentCache (1h TTL)"]
-    G --> I
-    I --> H
+    A1["emit ResourceGroupContext (tenantId)"]
+    A1 --> A2{"multiTenancy enabled<br>AND tenantId != null?"}
+    A2 -->|no| A3["return config.defaultResourceGroup()"]
+    A2 -->|yes| A4{"tenantResourceGroupCache<br>lookup by tenantId"}
+    A4 -->|cache hit| A5["return cached resourceGroupId"]
+    A4 -->|cache miss| A6["GET /v2/admin/resourceGroups<br>labelSelector: ext.ai.sap.com/tenant={tenantId}"]
+    A6 --> A7{"found?"}
+    A7 -->|yes| A8["cache result (expireAfterAccess 1h)"]
+    A7 -->|no| A9["POST /v2/admin/resourceGroups<br>(handle 409 Conflict = already exists)"]
+    A9 --> A8
+    A8 --> A5
 ```
+
+##### Event 2: deploymentId — invoked with `resourceGroupId`
+
+```mermaid
+flowchart TD
+    B1["emit DeploymentIdContext<br>(resourceGroupId, ModelDeploymentSpec)"]
+    B1 --> B2["acquire per-key lock<br>(ConcurrentHashMap)"]
+    B2 --> B3{"deploymentCache<br>lookup by rgId::configName"}
+    B3 -->|cache hit| B4["validateCachedDeployment:<br>GET /v2/lm/deployments/{id}"]
+    B4 --> B5{"status RUNNING or PENDING?"}
+    B5 -->|yes| B6["return cached deploymentId"]
+    B5 -->|no / 404| B7["invalidate cache entry"]
+    B7 --> B8
+    B3 -->|cache miss| B8["findOrCreateDeployment (under lock)"]
+    B8 --> B9["queryDeploymentsUntilReady (with retry):<br>GET /v2/lm/deployments?scenarioId=..."]
+    B9 --> B10{"match by configName<br>+ matchesExisting() + RUNNING/PENDING?"}
+    B10 -->|found| B11["cache deploymentId (expireAfterAccess 1h)"]
+    B10 -->|not found| B12["findOrCreateConfiguration:<br>GET /v2/lm/configurations?scenarioId=..."]
+    B12 --> B13{"config with matching name exists?"}
+    B13 -->|yes| B14["reuse existing configId"]
+    B13 -->|no| B15["POST /v2/lm/configurations"]
+    B15 --> B14
+    B14 --> B16["POST /v2/lm/deployments (with retry for 403/412)"]
+    B16 --> B17["pollUntilRunning:<br>GET /v2/lm/deployments/{id}<br>(exponential backoff)"]
+    B17 --> B11
+    B11 --> B6
+```
+
 *Resilience4j exponential backoff (300 ms initial, doubling, capped at 30 s, max 10 attempts) on: 403/412 during deployment creation (`POST /v2/lm/deployments`); 403/404/412 during deployment polling (`GET /v2/lm/deployments`).*
+
+##### Event 3: inferenceClient — invoked with `resourceGroupId` and `deploymentId`
+
+```mermaid
+flowchart TD
+    C1["emit InferenceClientContext<br>(resourceGroupId, deploymentId)"]
+    C1 --> C2["clients.sdkService()<br>.getInferenceDestination(rgId)<br>.usingDeploymentId(depId)"]
+    C2 --> C3["return ApiClient.create(destination)"]
+```
 
 
 #### Tenant Unsubscribe
