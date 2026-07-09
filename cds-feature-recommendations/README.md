@@ -2,7 +2,7 @@
 
 AI-powered field recommendations for SAP Fiori UIs in CAP Java applications, leveraging SAP AI Core and the SAP-RPT-1 foundation model.
 
-## How It Works
+## Features
 
 The plugin generically hooks into any draft-enabled entity that has properties with a value help. When a user edits a draft record, the plugin:
 
@@ -97,6 +97,11 @@ annotate Books with {
       LocalDataProperty: status_code
     }]
   }
+}
+
+// Opt out a specific field
+annotate Books with {
+  genre @UI.RecommendationState: 0;
 }
 ```
 
