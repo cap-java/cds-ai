@@ -44,7 +44,7 @@ For a working reference, see the [Bookshop Sample](#bookshop-sample), which demo
 | --------------- | ----------------------------------------------------------------------------- |
 | Java            | 17+                                                                           |
 | Maven           | 3.9+                                                                          |
-| CAP Java        | 4.9.x (LTS)                                                                   |
+| CAP Java        | 5.0+                                                                          |
 | SAP Cloud SDK   | 5.28.0+                                                                       |
 | Node.js         | Required only for the build-time `cds` CLI (`@sap/cds-dk`)                    |
 | SAP BTP service | Document AI service instance with label `sap-document-information-extraction` |
