@@ -62,3 +62,7 @@ entity SupplierInvoices : managed, cuid {
   status          : Association to InvoiceStatus;
   documentAiJobId : String;
 }
+
+annotate SupplierInvoices with {
+  status @UI.RecommendationState: 0;
+}

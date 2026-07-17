@@ -5,10 +5,13 @@ package customer.bookshop.handlers;
 
 import cds.gen.sap.capire.bookshop.SupplierInvoices;
 import cds.gen.sap.capire.bookshop.SupplierInvoices_;
+import cds.gen.sap.capire.bookshop.Suppliers;
+import cds.gen.sap.capire.bookshop.Suppliers_;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResult;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResultContext;
+import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.handler.EventHandler;
@@ -17,7 +20,9 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +31,7 @@ import org.springframework.stereotype.Component;
 /**
  * Handles extraction results from the SAP Document AI plugin. Parses the extraction JSON returned
  * by the DIE service and populates the corresponding SupplierInvoice entity with the extracted
- * header fields (invoice number, date, total amount, currency).
+ * header fields (invoice number, date, total amount, currency, and matched supplier).
  */
 @Component
 @ServiceName(value = "*", type = ApplicationService.class)
@@ -50,18 +55,15 @@ public class DocumentExtractionResultHandler implements EventHandler {
       JsonNode root = objectMapper.readTree(data.getExtractionResult());
       JsonNode headerFields = root.path("extraction").path("headerFields");
 
-      // Extract relevant header fields from the DIE response
       String documentNumber = getHeaderFieldValue(headerFields, "documentNumber");
       String documentDate = getHeaderFieldValue(headerFields, "documentDate");
       String currencyCode = getHeaderFieldValue(headerFields, "currencyCode");
       BigDecimal grossAmount = getHeaderFieldNumber(headerFields, "grossAmount");
+      String senderName = getHeaderFieldValue(headerFields, "senderName");
 
       logger.info(
-          "[bookshop] Extracted: number={}, date={}, amount={} {}",
-          documentNumber,
-          documentDate,
-          grossAmount,
-          currencyCode);
+          "[bookshop] Extracted: number={}, date={}, amount={} {}, sender={}",
+          documentNumber, documentDate, grossAmount, currencyCode, senderName);
 
       // Update the invoice that is currently in EXTRACTING status.
       // In a production app you would correlate by a stored jobId; for this sample
@@ -72,6 +74,18 @@ public class DocumentExtractionResultHandler implements EventHandler {
       if (documentDate != null) updateData.put(SupplierInvoices.INVOICE_DATE, documentDate);
       if (grossAmount != null) updateData.put(SupplierInvoices.TOTAL_AMOUNT, grossAmount);
       if (currencyCode != null) updateData.put(SupplierInvoices.CURRENCY_CODE, currencyCode);
+
+      // Match extracted sender name to a Supplier record (case-insensitive)
+      if (senderName != null) {
+        findSupplierByName(senderName)
+            .ifPresentOrElse(
+                supplier -> {
+                  updateData.put(SupplierInvoices.SUPPLIER_ID, supplier.getId());
+                  logger.info(
+                      "[bookshop] Matched supplier: {} ({})", supplier.getName(), supplier.getId());
+                },
+                () -> logger.warn("[bookshop] No supplier found for sender name: {}", senderName));
+      }
 
       long updated =
           db.run(
@@ -91,6 +105,16 @@ public class DocumentExtractionResultHandler implements EventHandler {
     }
 
     context.setCompleted();
+  }
+
+  private Optional<Suppliers> findSupplierByName(String name) {
+    String normalized = name.toLowerCase(Locale.ROOT);
+    return db.run(Select.from(Suppliers_.class)
+            .where(s -> s.name().eq(name)))
+        .listOf(Suppliers.class)
+        .stream()
+        .filter(s -> s.getName() != null && normalized.equals(s.getName().toLowerCase(Locale.ROOT)))
+        .findFirst();
   }
 
   private String getHeaderFieldValue(JsonNode headerFields, String fieldName) {

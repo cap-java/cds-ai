@@ -68,6 +68,12 @@ annotate service.SupplierInvoices with @(
 );
 
 annotate service.SupplierInvoices with {
+  invoiceNumber @title: '{i18n>InvoiceNumber}';
+  supplier      @title: '{i18n>Supplier}';
+  status        @title: '{i18n>Status}';
+}
+
+annotate service.SupplierInvoices with {
   supplier @Common: {
     Text           : supplier.name,
     TextArrangement: #TextOnly,
