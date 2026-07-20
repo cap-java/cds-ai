@@ -26,9 +26,9 @@ public class DefaultDocumentAiProcessingService implements DocumentAiProcessingS
   }
 
   @Override
-  public String processDocument(String jobId, DocumentInput documentInput) {
+  public String processDocument(String jobId, DocumentInput documentInput, String tenantId) {
     try {
-      String documentAiJobId = documentAiClient.submitDocument(documentInput);
+      String documentAiJobId = documentAiClient.submitDocument(documentInput, tenantId);
       return documentAiJobId;
     } catch (Exception e) {
       throw new DocumentAiException.Processing("Failed to process document for jobId=" + jobId, e);

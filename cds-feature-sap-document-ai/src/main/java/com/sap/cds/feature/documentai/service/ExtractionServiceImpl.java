@@ -114,7 +114,8 @@ public class ExtractionServiceImpl extends ServiceDelegator implements Extractio
   private ExtractionResult performExtraction(
       String jobId, String fileName, DocumentInput documentInput, String tenantId) {
     try {
-      String documentAiJobId = documentAiProcessingService.processDocument(jobId, documentInput);
+      String documentAiJobId =
+          documentAiProcessingService.processDocument(jobId, documentInput, tenantId);
       updateExtractionJob(jobId, SUBMITTED, documentAiJobId, null);
       schedulePolling();
       return new ExtractionResult(jobId, Status.SUCCESS, documentAiJobId);

@@ -44,6 +44,7 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static final String DOCUMENT_AI_API_PATH = "document-information-extraction/v1";
   public static final String DOCUMENT_JOBS = "/document/jobs";
+  public static final String CLIENT_ID_PARAM = "clientId";
   public static final String EXTRACTED_VALUES_TRUE = "?extractedValues=true";
   private final HttpDestination destination;
   private final HttpClient httpClient;
@@ -59,17 +60,20 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
   }
 
   @Override
-  public String submitDocument(DocumentInput documentInput) {
-    URI submitUri = buildUri(DOCUMENT_AI_API_PATH + DOCUMENT_JOBS);
+  public String submitDocument(DocumentInput documentInput, String tenantId) {
+    URI submitUri = buildUriWithClientId(DOCUMENT_AI_API_PATH + DOCUMENT_JOBS, tenantId);
     HttpPost request = buildSubmitRequest(documentInput, submitUri);
     String body = executeRequest(request, submitUri);
     return extractJobId(body);
   }
 
   @Override
-  public ExtractionData getJobResult(String dieJobId) {
-    URI uri =
-        buildUri(DOCUMENT_AI_API_PATH + DOCUMENT_JOBS + "/" + dieJobId + EXTRACTED_VALUES_TRUE);
+  public ExtractionData getJobResult(String dieJobId, String tenantId) {
+    String path = DOCUMENT_AI_API_PATH + DOCUMENT_JOBS + "/" + dieJobId + EXTRACTED_VALUES_TRUE;
+    if (tenantId != null) {
+      path = path + "&" + CLIENT_ID_PARAM + "=" + tenantId;
+    }
+    URI uri = buildUri(path);
     logger.info("[sap-document-ai] Polling DIE for dieJobId={}", dieJobId);
     HttpGet request = new HttpGet(uri);
     String body = executeRequest(request, uri);
@@ -80,6 +84,11 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
     String base = destination.getUri().toString();
     String prefix = base.endsWith("/") ? base : base + "/";
     return URI.create(prefix).resolve(path);
+  }
+
+  private URI buildUriWithClientId(String path, String tenantId) {
+    String fullPath = (tenantId != null) ? path + "?" + CLIENT_ID_PARAM + "=" + tenantId : path;
+    return buildUri(fullPath);
   }
 
   private HttpPost buildSubmitRequest(DocumentInput documentInput, URI submitUri) {

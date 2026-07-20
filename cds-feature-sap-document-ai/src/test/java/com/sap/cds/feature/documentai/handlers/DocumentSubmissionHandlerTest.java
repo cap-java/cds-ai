@@ -9,8 +9,10 @@ import static org.mockito.Mockito.*;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtraction;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionContext;
+import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResultContext;
 import com.sap.cds.feature.documentai.service.ExtractionService;
 import com.sap.cds.feature.documentai.service.model.ExtractionResult;
+import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.request.UserInfo;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -30,6 +32,7 @@ class DocumentSubmissionHandlerTest {
   @Mock ExtractionService extractionService;
   @Mock DocumentExtractionContext eventContext;
   @Mock UserInfo userInfo;
+  @Mock ApplicationService applicationService;
 
   DocumentSubmissionHandler handler;
 
@@ -72,19 +75,20 @@ class DocumentSubmissionHandlerTest {
 
     handler.onDocumentExtraction(eventContext);
 
-    verify(extractionService).triggerExtraction(any(), any(), any(), any(), any());
+    verify(eventContext, never()).getService();
   }
 
   @Test
-  void onDocumentExtraction_logsFailedWhenExtractionFails() {
+  void onDocumentExtraction_emitsResultEventWhenExtractionFails() {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn(TENANT_ID);
     when(eventContext.getData()).thenReturn(createEvent());
     when(extractionService.triggerExtraction(any(), any(), any(), any(), any()))
         .thenReturn(new ExtractionResult("job-123", ExtractionResult.Status.FAILED, null));
+    when(eventContext.getService()).thenReturn(applicationService);
 
     handler.onDocumentExtraction(eventContext);
 
-    verify(extractionService).triggerExtraction(any(), any(), any(), any(), any());
+    verify(applicationService).emit(any(DocumentExtractionResultContext.class));
   }
 }

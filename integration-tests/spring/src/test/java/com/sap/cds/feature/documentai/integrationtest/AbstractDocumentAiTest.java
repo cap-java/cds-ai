@@ -46,7 +46,8 @@ abstract class AbstractDocumentAiTest {
             pollingClient(jobResultFn),
             null,
             cdsRuntime,
-            Duration.ZERO);
+            Duration.ZERO,
+            false);
 
     OutboxMessageEventContext ctx =
         EventContext.create(OutboxMessageEventContext.class, ExtractionPollingHandler.POLL_EVENT);
@@ -56,12 +57,12 @@ abstract class AbstractDocumentAiTest {
   private DocumentAiClient pollingClient(Function<String, ExtractionData> jobResultFn) {
     return new DocumentAiClient() {
       @Override
-      public String submitDocument(DocumentInput input) {
+      public String submitDocument(DocumentInput input, String tenantId) {
         throw new UnsupportedOperationException("Submission is not supported by this test client.");
       }
 
       @Override
-      public ExtractionData getJobResult(String dieJobId) {
+      public ExtractionData getJobResult(String dieJobId, String tenantId) {
         return jobResultFn.apply(dieJobId);
       }
     };

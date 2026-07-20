@@ -30,5 +30,5 @@ public interface DocumentAiProcessingService {
    * @throws com.sap.cds.feature.documentai.service.exceptions.DocumentAiException if submission or
    *     response parsing fails
    */
-  String processDocument(String jobId, DocumentInput documentInput);
+  String processDocument(String jobId, DocumentInput documentInput, String tenantId);
 }

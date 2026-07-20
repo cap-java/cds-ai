@@ -73,7 +73,7 @@ class ExtractionServiceImplTest {
     mockAllDatabaseCalls();
     Result statusResult = resultWithJobStatus(PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
-    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    when(documentAiProcessingService.processDocument(any(), any(), any())).thenReturn(DIE_JOB_ID);
 
     extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 
@@ -91,7 +91,7 @@ class ExtractionServiceImplTest {
     mockAllDatabaseCalls();
     Result statusResult = resultWithJobStatus(PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
-    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    when(documentAiProcessingService.processDocument(any(), any(), any())).thenReturn(DIE_JOB_ID);
 
     ExtractionResult result =
         extractionService.triggerExtraction(
@@ -111,7 +111,7 @@ class ExtractionServiceImplTest {
     mockAllDatabaseCalls();
     Result statusResult = resultWithJobStatus(PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
-    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    when(documentAiProcessingService.processDocument(any(), any(), any())).thenReturn(DIE_JOB_ID);
 
     ExtractionResult result =
         extractionService.triggerExtraction(
@@ -128,7 +128,7 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
     doThrow(new RuntimeException("simulated failure"))
         .when(documentAiProcessingService)
-        .processDocument(any(), any());
+        .processDocument(any(), any(), any());
 
     ExtractionResult result =
         extractionService.triggerExtraction(
@@ -144,7 +144,7 @@ class ExtractionServiceImplTest {
     mockAllDatabaseCalls();
     Result statusResult = resultWithJobStatus(PENDING);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
-    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    when(documentAiProcessingService.processDocument(any(), any(), any())).thenReturn(DIE_JOB_ID);
     Result zeroRowResult = mock(Result.class);
     when(zeroRowResult.rowCount()).thenReturn(0L);
     when(persistenceService.run(any(CqnUpdate.class))).thenReturn(zeroRowResult);
@@ -164,7 +164,7 @@ class ExtractionServiceImplTest {
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
     doThrow(new IllegalStatusTransitionException("invalid transition"))
         .when(documentAiProcessingService)
-        .processDocument(any(), any());
+        .processDocument(any(), any(), any());
 
     assertThrows(
         IllegalStatusTransitionException.class,
@@ -180,7 +180,7 @@ class ExtractionServiceImplTest {
     mockInsertDatabaseCalls();
     Result statusResult = resultWithJobStatus(SUBMITTED);
     lenient().when(persistenceService.run(any(CqnSelect.class))).thenReturn(statusResult);
-    when(documentAiProcessingService.processDocument(any(), any())).thenReturn(DIE_JOB_ID);
+    when(documentAiProcessingService.processDocument(any(), any(), any())).thenReturn(DIE_JOB_ID);
 
     extractionService.triggerExtraction(TEST_PDF, CONTENT_TYPE, contentStream(), null, TENANT_1);
 

@@ -32,7 +32,7 @@ class DefaultDocumentAiProcessingServiceTest {
   @BeforeEach
   void setUp() {
     documentAiClient = Mockito.mock(DocumentAiClient.class);
-    Mockito.when(documentAiClient.submitDocument(any())).thenReturn(MOCK_RESULT);
+    Mockito.when(documentAiClient.submitDocument(any(), any())).thenReturn(MOCK_RESULT);
     service = new DefaultDocumentAiProcessingService(documentAiClient);
     documentInput =
         new DocumentInput(
@@ -56,15 +56,22 @@ class DefaultDocumentAiProcessingServiceTest {
   // ------- processDocument() -------
   @Test
   void processDocumentCompletesWithoutException() {
-    Assertions.assertThatCode(() -> service.processDocument(JOB_1, documentInput))
+    Assertions.assertThatCode(() -> service.processDocument(JOB_1, documentInput, null))
         .doesNotThrowAnyException();
   }
 
   @Test
   void processDocumentThrowsWhenSubmitDocumentFails() {
-    Mockito.when(documentAiClient.submitDocument(any()))
+    Mockito.when(documentAiClient.submitDocument(any(), any()))
         .thenThrow(new RuntimeException("submit failed"));
-    Assertions.assertThatThrownBy(() -> service.processDocument(JOB_1, documentInput))
+    Assertions.assertThatThrownBy(() -> service.processDocument(JOB_1, documentInput, null))
         .isInstanceOf(DocumentAiException.Processing.class);
+  }
+
+  @Test
+  void processDocumentPassesTenantIdToClient() {
+    service.processDocument(JOB_1, documentInput, "tenant-a");
+
+    Mockito.verify(documentAiClient).submitDocument(any(), Mockito.eq("tenant-a"));
   }
 }

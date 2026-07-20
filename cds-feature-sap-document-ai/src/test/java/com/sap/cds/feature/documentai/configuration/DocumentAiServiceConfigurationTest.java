@@ -15,7 +15,9 @@ import com.sap.cds.feature.documentai.service.client.DocumentAiClient;
 import com.sap.cds.services.Service;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.mt.DeploymentService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
@@ -38,6 +40,9 @@ class DocumentAiServiceConfigurationTest {
   @Mock ServiceCatalog serviceCatalog;
   @Mock PersistenceService persistenceService;
   @Mock CdsEnvironment environment;
+  @Mock CdsProperties cdsProperties;
+  @Mock CdsProperties.MultiTenancy multiTenancy;
+  @Mock CdsProperties.MultiTenancy.Sidecar sidecar;
 
   DocumentAiServiceConfiguration registration;
 
@@ -66,6 +71,13 @@ class DocumentAiServiceConfigurationTest {
         .thenReturn(3);
     when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
         .thenReturn(persistenceService);
+    // stub MT detection
+    when(environment.getCdsProperties()).thenReturn(cdsProperties);
+    when(cdsProperties.getMultiTenancy()).thenReturn(multiTenancy);
+    when(multiTenancy.getSidecar()).thenReturn(sidecar);
+    when(sidecar.getUrl()).thenReturn(null);
+    when(serviceCatalog.getService(DeploymentService.class, DeploymentService.DEFAULT_NAME))
+        .thenReturn(null);
 
     registration.services(configurer);
     registration.eventHandlers(configurer);
@@ -107,5 +119,44 @@ class DocumentAiServiceConfigurationTest {
 
       assertThat(result).isNull();
     }
+  }
+
+  @Test
+  void detectMultiTenancy_withSidecarUrl_returnsTrue() {
+    when(cdsRuntime.getEnvironment()).thenReturn(environment);
+    when(environment.getCdsProperties()).thenReturn(cdsProperties);
+    when(cdsProperties.getMultiTenancy()).thenReturn(multiTenancy);
+    when(multiTenancy.getSidecar()).thenReturn(sidecar);
+    when(sidecar.getUrl()).thenReturn("https://sidecar.example.com");
+
+    assertThat(DocumentAiServiceConfiguration.detectMultiTenancy(cdsRuntime)).isTrue();
+  }
+
+  @Test
+  void detectMultiTenancy_withDeploymentService_returnsTrue() {
+    when(cdsRuntime.getEnvironment()).thenReturn(environment);
+    when(cdsRuntime.getServiceCatalog()).thenReturn(serviceCatalog);
+    when(environment.getCdsProperties()).thenReturn(cdsProperties);
+    when(cdsProperties.getMultiTenancy()).thenReturn(multiTenancy);
+    when(multiTenancy.getSidecar()).thenReturn(sidecar);
+    when(sidecar.getUrl()).thenReturn(null);
+    when(serviceCatalog.getService(DeploymentService.class, DeploymentService.DEFAULT_NAME))
+        .thenReturn(mock(DeploymentService.class));
+
+    assertThat(DocumentAiServiceConfiguration.detectMultiTenancy(cdsRuntime)).isTrue();
+  }
+
+  @Test
+  void detectMultiTenancy_noIndicators_returnsFalse() {
+    when(cdsRuntime.getEnvironment()).thenReturn(environment);
+    when(cdsRuntime.getServiceCatalog()).thenReturn(serviceCatalog);
+    when(environment.getCdsProperties()).thenReturn(cdsProperties);
+    when(cdsProperties.getMultiTenancy()).thenReturn(multiTenancy);
+    when(multiTenancy.getSidecar()).thenReturn(sidecar);
+    when(sidecar.getUrl()).thenReturn(null);
+    when(serviceCatalog.getService(DeploymentService.class, DeploymentService.DEFAULT_NAME))
+        .thenReturn(null);
+
+    assertThat(DocumentAiServiceConfiguration.detectMultiTenancy(cdsRuntime)).isFalse();
   }
 }

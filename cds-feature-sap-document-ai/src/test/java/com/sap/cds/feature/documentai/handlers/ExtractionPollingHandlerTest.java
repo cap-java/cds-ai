@@ -22,8 +22,10 @@ import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.outbox.Schedule;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
+import com.sap.cds.services.runtime.RequestContextRunner;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +48,7 @@ class ExtractionPollingHandlerTest {
   @Mock ApplicationService documentAiService;
   @Mock OutboxMessageEventContext context;
   @Mock Result queryResult;
+  @Mock RequestContextRunner requestContextRunner;
 
   ExtractionPollingHandler handler;
 
@@ -58,7 +61,8 @@ class ExtractionPollingHandlerTest {
             documentAiClient,
             outboxService,
             runtime,
-            Duration.ofSeconds(ExtractionPollingHandler.DEFAULT_POLL_INTERVAL_SECONDS));
+            Duration.ofSeconds(ExtractionPollingHandler.DEFAULT_POLL_INTERVAL_SECONDS),
+            false);
   }
 
   private void mockEmit() {
@@ -81,7 +85,7 @@ class ExtractionPollingHandlerTest {
   @Test
   void pollReschedulesWhenActiveJobsExist() {
     mockActiveJob(DIE_JOB_ID);
-    when(documentAiClient.getJobResult(DIE_JOB_ID))
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
         .thenReturn(new ExtractionData(DIE_JOB_ID, "RUNNING", null));
 
     handler.pollExtractionJobs(context);
@@ -97,13 +101,13 @@ class ExtractionPollingHandlerTest {
 
     handler.pollExtractionJobs(context);
 
-    verify(documentAiClient, never()).getJobResult(any());
+    verify(documentAiClient, never()).getJobResult(any(), any());
   }
 
   @Test
   void pollDoesNotUpdateStatusWhenDieReturnsPending() {
     mockActiveJob(DIE_JOB_ID);
-    when(documentAiClient.getJobResult(DIE_JOB_ID))
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
         .thenReturn(new ExtractionData(DIE_JOB_ID, "PENDING", null));
 
     handler.pollExtractionJobs(context);
@@ -114,7 +118,7 @@ class ExtractionPollingHandlerTest {
   @Test
   void pollUpdatesStatusToRunningWithoutEmittingEvent() {
     mockActiveJob(DIE_JOB_ID);
-    when(documentAiClient.getJobResult(DIE_JOB_ID))
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
         .thenReturn(new ExtractionData(DIE_JOB_ID, "RUNNING", null));
 
     handler.pollExtractionJobs(context);
@@ -127,7 +131,7 @@ class ExtractionPollingHandlerTest {
   @Test
   void pollUpdatesStatusToFailedWithoutEmittingEvent() {
     mockActiveJob(DIE_JOB_ID);
-    when(documentAiClient.getJobResult(DIE_JOB_ID))
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
         .thenReturn(new ExtractionData(DIE_JOB_ID, "FAILED", null));
 
     handler.pollExtractionJobs(context);
@@ -141,7 +145,7 @@ class ExtractionPollingHandlerTest {
   void pollUpdatesStatusToDoneAndEmitsEvent() {
     mockEmit();
     mockActiveJob(DIE_JOB_ID);
-    when(documentAiClient.getJobResult(DIE_JOB_ID))
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
         .thenReturn(new ExtractionData(DIE_JOB_ID, "DONE", RAW_RESULT));
 
     handler.pollExtractionJobs(context);
@@ -164,8 +168,9 @@ class ExtractionPollingHandlerTest {
     when(persistenceService.run(any(CqnSelect.class))).thenReturn(queryResult);
     when(queryResult.listOf(ExtractionJob.class)).thenReturn(List.of(failingJob, goodJob));
 
-    when(documentAiClient.getJobResult("die-fail")).thenThrow(new RuntimeException("timeout"));
-    when(documentAiClient.getJobResult(DIE_JOB_ID))
+    when(documentAiClient.getJobResult("die-fail", null))
+        .thenThrow(new RuntimeException("timeout"));
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
         .thenReturn(new ExtractionData(DIE_JOB_ID, "RUNNING", null));
 
     handler.pollExtractionJobs(context);
@@ -173,6 +178,99 @@ class ExtractionPollingHandlerTest {
     verify(extractionService)
         .updateExtractionResult(JOB_ID, ExtractionStatus.RUNNING, DIE_JOB_ID, null);
     verify(context).setCompleted();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void poll_multiTenancy_groupsJobsByTenant() {
+    ExtractionPollingHandler mtHandler =
+        new ExtractionPollingHandler(
+            persistenceService,
+            extractionService,
+            documentAiClient,
+            outboxService,
+            runtime,
+            Duration.ofSeconds(ExtractionPollingHandler.DEFAULT_POLL_INTERVAL_SECONDS),
+            true);
+
+    ExtractionJob jobA = ExtractionJob.create();
+    jobA.setId("job-a");
+    jobA.setDocumentAiJobId("die-a");
+    jobA.setTenantId("tenant-a");
+
+    ExtractionJob jobB = ExtractionJob.create();
+    jobB.setId("job-b");
+    jobB.setDocumentAiJobId("die-b");
+    jobB.setTenantId("tenant-b");
+
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(queryResult);
+    when(queryResult.listOf(ExtractionJob.class)).thenReturn(List.of(jobA, jobB));
+    when(documentAiClient.getJobResult(any(), any()))
+        .thenReturn(new ExtractionData("die-x", "RUNNING", null));
+
+    when(runtime.requestContext()).thenReturn(requestContextRunner);
+    when(requestContextRunner.systemUser(any())).thenReturn(requestContextRunner);
+    doAnswer(
+            inv -> {
+              inv.getArgument(0, Consumer.class).accept(null);
+              return null;
+            })
+        .when(requestContextRunner)
+        .run(any(Consumer.class));
+
+    mtHandler.pollExtractionJobs(context);
+
+    verify(runtime.requestContext()).systemUser("tenant-a");
+    verify(runtime.requestContext()).systemUser("tenant-b");
+    verify(documentAiClient).getJobResult("die-a", "tenant-a");
+    verify(documentAiClient).getJobResult("die-b", "tenant-b");
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void poll_multiTenancy_nullTenantId_processedWithoutContextSwitch() {
+    ExtractionPollingHandler mtHandler =
+        new ExtractionPollingHandler(
+            persistenceService,
+            extractionService,
+            documentAiClient,
+            outboxService,
+            runtime,
+            Duration.ofSeconds(ExtractionPollingHandler.DEFAULT_POLL_INTERVAL_SECONDS),
+            true);
+
+    ExtractionJob job = ExtractionJob.create();
+    job.setId(JOB_ID);
+    job.setDocumentAiJobId(DIE_JOB_ID);
+    // no tenantId set — null
+
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(queryResult);
+    when(queryResult.listOf(ExtractionJob.class)).thenReturn(List.of(job));
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
+        .thenReturn(new ExtractionData(DIE_JOB_ID, "RUNNING", null));
+
+    mtHandler.pollExtractionJobs(context);
+
+    verify(runtime, never()).requestContext();
+    verify(documentAiClient).getJobResult(DIE_JOB_ID, null);
+  }
+
+  @Test
+  void poll_singleTenant_doesNotCallRequestContext() {
+    // handler is constructed with multiTenancyEnabled=false in setUp()
+    ExtractionJob job = ExtractionJob.create();
+    job.setId(JOB_ID);
+    job.setDocumentAiJobId(DIE_JOB_ID);
+    job.setTenantId("tenant-a"); // has a tenantId, but MT is disabled
+
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(queryResult);
+    when(queryResult.listOf(ExtractionJob.class)).thenReturn(List.of(job));
+    when(documentAiClient.getJobResult(DIE_JOB_ID, null))
+        .thenReturn(new ExtractionData(DIE_JOB_ID, "RUNNING", null));
+
+    handler.pollExtractionJobs(context);
+
+    verify(runtime, never()).requestContext();
   }
 
   private void mockActiveJob(String dieJobId) {

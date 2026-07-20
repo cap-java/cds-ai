@@ -22,7 +22,7 @@ public interface DocumentAiClient {
    * @throws com.sap.cds.feature.documentai.service.exceptions.DocumentAiException if the HTTP call
    *     fails or the response cannot be parsed
    */
-  String submitDocument(DocumentInput documentInput);
+  String submitDocument(DocumentInput documentInput, String tenantId);
 
   /**
    * Polls the DIE service for the current status and result of a previously submitted job.
@@ -32,5 +32,5 @@ public interface DocumentAiClient {
    * @throws com.sap.cds.feature.documentai.service.exceptions.DocumentAiException if the HTTP call
    *     fails or the response cannot be parsed
    */
-  ExtractionData getJobResult(String dieJobId);
+  ExtractionData getJobResult(String dieJobId, String tenantId);
 }

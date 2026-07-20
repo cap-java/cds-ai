@@ -12,6 +12,8 @@ import com.sap.cds.feature.documentai.service.client.DefaultDocumentAiClient;
 import com.sap.cds.feature.documentai.service.client.DocumentAiClient;
 import com.sap.cds.services.ServiceCatalog;
 import com.sap.cds.services.environment.CdsEnvironment;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.mt.DeploymentService;
 import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
@@ -82,6 +84,7 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
   public void eventHandlers(CdsRuntimeConfigurer configurer) {
     CdsRuntime runtime = configurer.getCdsRuntime();
     ServiceCatalog serviceCatalog = runtime.getServiceCatalog();
+    boolean multiTenancyEnabled = detectMultiTenancy(runtime);
 
     // framework-managed dependency
     PersistenceService persistenceService =
@@ -123,7 +126,8 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
               documentAiClient,
               outboxService,
               runtime,
-              pollDelay));
+              pollDelay,
+              multiTenancyEnabled));
     }
   }
 
@@ -175,5 +179,17 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
           "[sap-document-ai] Failed to create Document AI destination, extraction disabled.", e);
       return null;
     }
+  }
+
+  static boolean detectMultiTenancy(CdsRuntime runtime) {
+    CdsProperties props = runtime.getEnvironment().getCdsProperties();
+    String sidecarUrl = props.getMultiTenancy().getSidecar().getUrl();
+    if (sidecarUrl != null && !sidecarUrl.isBlank()) {
+      return true;
+    }
+    return runtime
+            .getServiceCatalog()
+            .getService(DeploymentService.class, DeploymentService.DEFAULT_NAME)
+        != null;
   }
 }

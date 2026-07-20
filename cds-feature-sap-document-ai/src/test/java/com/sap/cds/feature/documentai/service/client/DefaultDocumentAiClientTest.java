@@ -59,7 +59,7 @@ class DefaultDocumentAiClientTest {
   void submitDocumentReturnsJobIdOnSuccess() throws IOException {
     mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\"}");
 
-    String result = client.submitDocument(documentInput);
+    String result = client.submitDocument(documentInput, null);
 
     assertThat(result).isEqualTo(JOB_ID);
   }
@@ -68,7 +68,7 @@ class DefaultDocumentAiClientTest {
   void submitDocumentThrowsRequestExceptionOnNon2xxResponse() throws IOException {
     mockHttpResponse(400, "Bad Request");
 
-    assertThatThrownBy(() -> client.submitDocument(documentInput))
+    assertThatThrownBy(() -> client.submitDocument(documentInput, null))
         .isInstanceOf(DocumentAiException.Request.class)
         .hasMessageContaining("400");
   }
@@ -78,7 +78,7 @@ class DefaultDocumentAiClientTest {
     when(httpClient.execute(any(HttpUriRequestBase.class), any(HttpClientResponseHandler.class)))
         .thenThrow(new IOException("timeout"));
 
-    assertThatThrownBy(() -> client.submitDocument(documentInput))
+    assertThatThrownBy(() -> client.submitDocument(documentInput, null))
         .isInstanceOf(DocumentAiException.Connectivity.class)
         .hasMessageContaining(BASE_URL);
   }
@@ -87,7 +87,7 @@ class DefaultDocumentAiClientTest {
   void submitDocumentThrowsWhenResponseHasNoIdField() throws IOException {
     mockHttpResponse(200, "{\"status\":\"ok\"}");
 
-    assertThatThrownBy(() -> client.submitDocument(documentInput))
+    assertThatThrownBy(() -> client.submitDocument(documentInput, null))
         .isInstanceOf(DocumentAiException.Processing.class)
         .hasMessageContaining("Unexpected DIE response");
   }
@@ -96,7 +96,7 @@ class DefaultDocumentAiClientTest {
   void submitDocumentThrowsWhenResponseIsNotValidJson() throws IOException {
     mockHttpResponse(200, "not-json{{{{");
 
-    assertThatThrownBy(() -> client.submitDocument(documentInput))
+    assertThatThrownBy(() -> client.submitDocument(documentInput, null))
         .isInstanceOf(DocumentAiException.Processing.class)
         .hasMessageContaining("Failed to parse DIE response");
   }
@@ -106,7 +106,7 @@ class DefaultDocumentAiClientTest {
     String responseBody = "{\"id\":\"" + JOB_ID + "\",\"status\":\"DONE\",\"extraction\":{}}";
     mockHttpResponse(200, responseBody);
 
-    ExtractionData result = client.getJobResult(JOB_ID);
+    ExtractionData result = client.getJobResult(JOB_ID, null);
 
     assertThat(result.dieJobId()).isEqualTo(JOB_ID);
     assertThat(result.dieStatus()).isEqualTo("DONE");
@@ -117,7 +117,7 @@ class DefaultDocumentAiClientTest {
   void getJobResultThrowsWhenStatusFieldMissing() throws IOException {
     mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\",\"extraction\":{}}");
 
-    assertThatThrownBy(() -> client.getJobResult(JOB_ID))
+    assertThatThrownBy(() -> client.getJobResult(JOB_ID, null))
         .isInstanceOf(DocumentAiException.Processing.class)
         .hasMessageContaining("missing 'status' field");
   }
@@ -126,7 +126,7 @@ class DefaultDocumentAiClientTest {
   void getJobResultThrowsRequestExceptionOnNon2xxResponse() throws IOException {
     mockHttpResponse(404, "Not Found");
 
-    assertThatThrownBy(() -> client.getJobResult(JOB_ID))
+    assertThatThrownBy(() -> client.getJobResult(JOB_ID, null))
         .isInstanceOf(DocumentAiException.Request.class)
         .hasMessageContaining("404");
   }
@@ -136,7 +136,7 @@ class DefaultDocumentAiClientTest {
     when(httpClient.execute(any(HttpUriRequestBase.class), any(HttpClientResponseHandler.class)))
         .thenThrow(new IOException("timeout"));
 
-    assertThatThrownBy(() -> client.getJobResult(JOB_ID))
+    assertThatThrownBy(() -> client.getJobResult(JOB_ID, null))
         .isInstanceOf(DocumentAiException.Connectivity.class);
   }
 
@@ -144,7 +144,7 @@ class DefaultDocumentAiClientTest {
   void getJobResultThrowsWhenResponseIsNotValidJson() throws IOException {
     mockHttpResponse(200, "not-json{{{{");
 
-    assertThatThrownBy(() -> client.getJobResult(JOB_ID))
+    assertThatThrownBy(() -> client.getJobResult(JOB_ID, null))
         .isInstanceOf(DocumentAiException.Processing.class)
         .hasMessageContaining("Failed to parse DIE job result response");
   }
@@ -155,7 +155,7 @@ class DefaultDocumentAiClientTest {
         new DocumentInput("invoice.pdf", null, new ByteArrayInputStream("bytes".getBytes()), null);
     mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\"}");
 
-    String result = client.submitDocument(documentInput);
+    String result = client.submitDocument(documentInput, null);
 
     assertThat(result).isEqualTo(JOB_ID);
   }
@@ -176,12 +176,56 @@ class DefaultDocumentAiClientTest {
               return handler.handleResponse(response);
             });
 
-    client.submitDocument(documentInput);
+    client.submitDocument(documentInput, null);
 
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     requestCaptor.getValue().getEntity().writeTo(buffer);
     String requestBody = buffer.toString();
     assertThat(requestBody).contains("{}").contains("options");
+  }
+
+  @Test
+  void submitDocument_withTenantId_appendsClientIdQueryParam() throws Exception {
+    mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\"}");
+
+    client.submitDocument(documentInput, "tenant-a");
+
+    ArgumentCaptor<HttpUriRequestBase> captor = ArgumentCaptor.forClass(HttpUriRequestBase.class);
+    verify(httpClient).execute(captor.capture(), any(HttpClientResponseHandler.class));
+    assertThat(captor.getValue().getUri().toString()).contains("?clientId=tenant-a");
+  }
+
+  @Test
+  void submitDocument_withNullTenantId_noClientIdQueryParam() throws Exception {
+    mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\"}");
+
+    client.submitDocument(documentInput, null);
+
+    ArgumentCaptor<HttpUriRequestBase> captor = ArgumentCaptor.forClass(HttpUriRequestBase.class);
+    verify(httpClient).execute(captor.capture(), any(HttpClientResponseHandler.class));
+    assertThat(captor.getValue().getUri().toString()).doesNotContain("clientId");
+  }
+
+  @Test
+  void getJobResult_withTenantId_appendsClientIdQueryParam() throws Exception {
+    mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\",\"status\":\"DONE\"}");
+
+    client.getJobResult(JOB_ID, "tenant-a");
+
+    ArgumentCaptor<HttpUriRequestBase> captor = ArgumentCaptor.forClass(HttpUriRequestBase.class);
+    verify(httpClient).execute(captor.capture(), any(HttpClientResponseHandler.class));
+    assertThat(captor.getValue().getUri().toString()).contains("&clientId=tenant-a");
+  }
+
+  @Test
+  void getJobResult_withNullTenantId_noClientIdQueryParam() throws Exception {
+    mockHttpResponse(200, "{\"id\":\"" + JOB_ID + "\",\"status\":\"DONE\"}");
+
+    client.getJobResult(JOB_ID, null);
+
+    ArgumentCaptor<HttpUriRequestBase> captor = ArgumentCaptor.forClass(HttpUriRequestBase.class);
+    verify(httpClient).execute(captor.capture(), any(HttpClientResponseHandler.class));
+    assertThat(captor.getValue().getUri().toString()).doesNotContain("clientId");
   }
 
   @SuppressWarnings("unchecked")

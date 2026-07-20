@@ -22,9 +22,13 @@ import com.sap.cds.services.outbox.OutboxMessageEventContext;
 import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.outbox.Schedule;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.RequestContext;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +64,7 @@ public class ExtractionPollingHandler implements EventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(ExtractionPollingHandler.class);
 
+  private final boolean multiTenancyEnabled;
   private final PersistenceService persistenceService;
   private final ExtractionService extractionService;
   private final DocumentAiClient documentAiClient;
@@ -81,13 +86,15 @@ public class ExtractionPollingHandler implements EventHandler {
       DocumentAiClient documentAiClient,
       OutboxService outboxService,
       CdsRuntime runtime,
-      Duration pollDelay) {
+      Duration pollDelay,
+      boolean multiTenancyEnabled) {
     this.persistenceService = persistenceService;
     this.extractionService = extractionService;
     this.documentAiClient = documentAiClient;
     this.outboxService = outboxService;
     this.runtime = runtime;
     this.pollDelay = pollDelay;
+    this.multiTenancyEnabled = multiTenancyEnabled;
   }
 
   /**
@@ -117,8 +124,17 @@ public class ExtractionPollingHandler implements EventHandler {
       return;
     }
 
-    for (ExtractionJob job : activeJobs) {
-      processJob(job);
+    if (multiTenancyEnabled) {
+      Map<String, List<ExtractionJob>> byTenant =
+          activeJobs.stream()
+              .collect(Collectors.groupingBy(j -> j.getTenantId() != null ? j.getTenantId() : ""));
+      byTenant.forEach(
+          (key, jobs) -> {
+            String tenantId = key.isEmpty() ? null : key;
+            processJobsForTenant(tenantId, jobs);
+          });
+    } else {
+      activeJobs.forEach(job -> processJob(job, null));
     }
 
     if (outboxService != null) {
@@ -133,7 +149,7 @@ public class ExtractionPollingHandler implements EventHandler {
     context.setCompleted();
   }
 
-  private void processJob(ExtractionJob job) {
+  private void processJob(ExtractionJob job, String tenantId) {
     String jobId = job.getId();
     String dieJobId = job.getDocumentAiJobId();
 
@@ -143,7 +159,7 @@ public class ExtractionPollingHandler implements EventHandler {
     }
 
     try {
-      ExtractionData result = documentAiClient.getJobResult(dieJobId);
+      ExtractionData result = documentAiClient.getJobResult(dieJobId, tenantId);
       ExtractionStatus newStatus = mapDieStatus(result.dieStatus());
 
       if (newStatus == null) {
@@ -168,6 +184,17 @@ public class ExtractionPollingHandler implements EventHandler {
       logger.error(
           "[sap-document-ai] Failed to poll/update jobId={}, dieJobId={}", jobId, dieJobId, e);
     }
+  }
+
+  private void processJobsForTenant(String tenantId, List<ExtractionJob> jobs) {
+    if (tenantId == null) {
+      jobs.forEach(job -> processJob(job, null));
+      return;
+    }
+    runtime
+        .requestContext()
+        .systemUser(tenantId)
+        .run((Consumer<RequestContext>) ctx -> jobs.forEach(job -> processJob(job, tenantId)));
   }
 
   private void emitExtractionCompleted(String jobId, String extractionResult) {

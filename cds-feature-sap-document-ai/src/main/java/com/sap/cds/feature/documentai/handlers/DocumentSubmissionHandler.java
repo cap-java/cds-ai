@@ -5,6 +5,8 @@ package com.sap.cds.feature.documentai.handlers;
 
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtraction;
 import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionContext;
+import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResult;
+import com.sap.cds.feature.documentai.generated.cds4j.sap.document.ai.documentaiservice.DocumentExtractionResultContext;
 import com.sap.cds.feature.documentai.service.ExtractionService;
 import com.sap.cds.feature.documentai.service.model.ExtractionResult;
 import com.sap.cds.services.cds.ApplicationService;
@@ -61,10 +63,22 @@ public class DocumentSubmissionHandler implements EventHandler {
 
     if (result.status() == ExtractionResult.Status.FAILED) {
       logger.error("[sap-document-ai] Extraction failed for fileName={}", event.getFileName());
+      emitExtractionResult(context, result.internalJobId(), null);
     } else if (result.status() == ExtractionResult.Status.PENDING) {
       logger.warn("[sap-document-ai] Document AI unavailable, left as PENDING");
     }
 
     context.setCompleted();
+  }
+
+  private void emitExtractionResult(
+      DocumentExtractionContext context, String jobId, String extractionResult) {
+    DocumentExtractionResult eventData = DocumentExtractionResult.create();
+    eventData.setJobId(jobId);
+    eventData.setExtractionResult(extractionResult);
+    DocumentExtractionResultContext eventContext = DocumentExtractionResultContext.create();
+    eventContext.setData(eventData);
+    context.getService().emit(eventContext);
+    logger.info("[sap-document-ai] Emitted DocumentExtractionResult for jobId={}", jobId);
   }
 }
