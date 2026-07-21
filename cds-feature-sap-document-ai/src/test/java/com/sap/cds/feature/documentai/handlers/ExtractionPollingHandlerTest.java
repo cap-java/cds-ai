@@ -220,8 +220,8 @@ class ExtractionPollingHandlerTest {
 
     mtHandler.pollExtractionJobs(context);
 
-    verify(runtime.requestContext()).systemUser("tenant-a");
-    verify(runtime.requestContext()).systemUser("tenant-b");
+    verify(requestContextRunner).systemUser("tenant-a");
+    verify(requestContextRunner).systemUser("tenant-b");
     verify(documentAiClient).getJobResult("die-a", "tenant-a");
     verify(documentAiClient).getJobResult("die-b", "tenant-b");
   }

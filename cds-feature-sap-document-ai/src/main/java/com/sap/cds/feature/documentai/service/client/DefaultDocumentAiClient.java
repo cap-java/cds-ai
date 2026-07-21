@@ -12,6 +12,8 @@ import com.sap.cds.feature.documentai.service.model.ExtractionData;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
@@ -71,7 +73,8 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
   public ExtractionData getJobResult(String dieJobId, String tenantId) {
     String path = DOCUMENT_AI_API_PATH + DOCUMENT_JOBS + "/" + dieJobId + EXTRACTED_VALUES_TRUE;
     if (tenantId != null) {
-      path = path + "&" + CLIENT_ID_PARAM + "=" + tenantId;
+      path =
+          path + "&" + CLIENT_ID_PARAM + "=" + URLEncoder.encode(tenantId, StandardCharsets.UTF_8);
     }
     URI uri = buildUri(path);
     logger.info("[sap-document-ai] Polling DIE for dieJobId={}", dieJobId);
@@ -80,15 +83,22 @@ public class DefaultDocumentAiClient implements DocumentAiClient {
     return parseJobResult(dieJobId, body);
   }
 
+  private URI buildUriWithClientId(String path, String tenantId) {
+    String fullPath =
+        (tenantId != null)
+            ? path
+                + "?"
+                + CLIENT_ID_PARAM
+                + "="
+                + URLEncoder.encode(tenantId, StandardCharsets.UTF_8)
+            : path;
+    return buildUri(fullPath);
+  }
+
   private URI buildUri(String path) {
     String base = destination.getUri().toString();
     String prefix = base.endsWith("/") ? base : base + "/";
     return URI.create(prefix).resolve(path);
-  }
-
-  private URI buildUriWithClientId(String path, String tenantId) {
-    String fullPath = (tenantId != null) ? path + "?" + CLIENT_ID_PARAM + "=" + tenantId : path;
-    return buildUri(fullPath);
   }
 
   private HttpPost buildSubmitRequest(DocumentInput documentInput, URI submitUri) {

@@ -17,6 +17,8 @@ import com.sap.cds.services.mt.DeploymentService;
 import com.sap.cds.services.mt.SubscribeEventContext;
 import com.sap.cds.services.mt.UnsubscribeEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.util.Arrays;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,15 +62,16 @@ public class DocumentAiSetupHandler implements EventHandler {
     ExtractionJob failedStatus = ExtractionJob.create();
     failedStatus.setStatus(ExtractionStatus.FAILED.name());
 
+    List<String> activeStatuses =
+        Arrays.stream(ExtractionStatus.values())
+            .filter(s -> !s.isTerminal())
+            .map(ExtractionStatus::name)
+            .toList();
+
     Result result =
         persistenceService.run(
             Update.entity(ExtractionJob_.class)
-                .where(
-                    j ->
-                        j.tenantId()
-                            .eq(tenantId)
-                            .and(j.status().ne(ExtractionStatus.DONE.name()))
-                            .and(j.status().ne(ExtractionStatus.FAILED.name())))
+                .where(j -> j.tenantId().eq(tenantId).and(j.status().in(activeStatuses)))
                 .entry(failedStatus));
 
     logger.info(

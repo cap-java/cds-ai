@@ -27,6 +27,11 @@ public enum ExtractionStatus {
   /** Processing failed at any stage. */
   FAILED;
 
+  /** Returns {@code true} if this status is terminal — no further transitions are permitted. */
+  public boolean isTerminal() {
+    return this == DONE || this == FAILED;
+  }
+
   /**
    * Converts a persisted string value back to an {@link ExtractionStatus}.
    *

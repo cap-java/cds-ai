@@ -214,6 +214,7 @@ cds:
 ```
 
 If you use an embedded MTX setup (no sidecar URL), multi-tenancy is detected automatically via the presence of `DeploymentService` in the CDS service catalog — no additional configuration is needed.
+
 ---
 
 ## Usage
