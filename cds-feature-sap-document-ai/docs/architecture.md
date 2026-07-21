@@ -86,12 +86,14 @@ The `ExtractionJob` entity uses `cuid` (auto-generated UUID primary key) and `ma
 
 At startup it:
 
+- Detects multi-tenancy by checking for a CAP MTX sidecar URL (`cds.multitenancy.sidecar.url`) or the presence of `DeploymentService` in the service catalog.
 - Registers `ExtractionServiceImpl` as a named CDS service in the service catalog.
 - Resolves the Document AI service binding from the environment by the label `sap-document-information-extraction`.
 - Constructs an OAuth2-authenticated HTTP destination via the SAP Cloud SDK if a binding is found.
 - Wires all resolved dependencies into `ExtractionServiceImpl`.
 - Registers `DocumentSubmissionHandler` unconditionally.
 - Registers `ExtractionPollingHandler` only when a valid Document AI client was successfully built.
+- Registers `DocumentAiSetupHandler` only when multi-tenancy is enabled.
 
 If no binding is found or the destination cannot be initialised, the plugin starts in degraded mode - events are accepted and jobs are queued as `PENDING`, but no extraction processing occurs.
 
@@ -99,8 +101,9 @@ If no binding is found or the destination cannot be initialised, the plugin star
 
 | Handler                     | Description                                                                                                                                                                                                                                                                   |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DocumentSubmissionHandler` | Listens for `DocumentExtraction` events on any `ApplicationService`. Service-name-agnostic by design - consumers emit events from their own service without coupling to the plugin's internal service name. Delegates to `ExtractionService` and completes the event context. |
-| `ExtractionPollingHandler`  | Registered against the persistent unordered outbox. Polls the Document AI service for all active jobs on each invocation. Self-reschedules after the configured interval if jobs remain active. Stops automatically when all jobs reach a terminal status.                    |
+| `DocumentSubmissionHandler` | Listens for `DocumentExtraction` events on any `ApplicationService`. Service-name-agnostic by design - consumers emit events from their own service without coupling to the plugin's internal service name. Delegates to `ExtractionService` and completes the event context. Emits a `DocumentExtractionResult` event immediately if submission fails. |
+| `ExtractionPollingHandler`  | Registered against the persistent unordered outbox. In multi-tenant mode, groups active jobs by tenant and switches the CDS request context per group so each job uses the correct subscriber OAuth token. Self-reschedules after the configured interval if jobs remain active. Stops automatically when all jobs reach a terminal status. |
+| `DocumentAiSetupHandler`    | Registered only when multi-tenancy is enabled. Hooks into the CAP MTX `DeploymentService` lifecycle. On subscribe: logs tenant onboarding. On unsubscribe: marks all active jobs for that tenant as `FAILED` to prevent poll errors after credentials are revoked. |
 
 ### Services
 
@@ -204,11 +207,12 @@ Unit tests are located in `sap-document-ai/src/test/java`. Each production class
 
 | Test Class                           | What is tested                                                                                            |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `DocumentSubmissionHandlerTest`      | Event handler delegation, PENDING and FAILED logging                                                      |
+| `DocumentSubmissionHandlerTest`      | Event handler delegation, PENDING and FAILED logging, result event emission on submission failure         |
 | `ExtractionServiceImplTest`          | Job creation, submission flow, concurrent update handling, failure marking, outbox scheduling             |
-| `ExtractionPollingHandlerTest`       | Poll cycle logic, Document AI status mapping, result emission, self-rescheduling, per-job error isolation |
-| `DefaultDocumentAiClientTest`        | HTTP submit and poll calls, response parsing, error wrapping for all three exception types                |
-| `DocumentAiServiceConfigurationTest` | Startup wiring, binding resolution, conditional handler registration                                      |
+| `ExtractionPollingHandlerTest`       | Poll cycle logic, Document AI status mapping, result emission, self-rescheduling, per-job error isolation, per-tenant context switching in multi-tenant mode |
+| `DocumentAiSetupHandlerTest`         | Subscribe logging, unsubscribe job marking, zero-job unsubscribe                                         |
+| `DefaultDocumentAiClientTest`        | HTTP submit and poll calls, `clientId` query param appended per tenant, response parsing, error wrapping  |
+| `DocumentAiServiceConfigurationTest` | Startup wiring, binding resolution, multi-tenancy detection, conditional handler registration             |
 | `StatusTransitionValidatorTest`      | All valid and invalid transitions                                                                         |
 | `ExceptionsTest`                     | Exception message and cause propagation                                                                   |
 

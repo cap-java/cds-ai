@@ -3,6 +3,7 @@
  */
 package com.sap.cds.feature.documentai.configuration;
 
+import com.sap.cds.feature.documentai.handlers.DocumentAiSetupHandler;
 import com.sap.cds.feature.documentai.handlers.DocumentSubmissionHandler;
 import com.sap.cds.feature.documentai.handlers.ExtractionPollingHandler;
 import com.sap.cds.feature.documentai.service.DefaultDocumentAiProcessingService;
@@ -116,6 +117,12 @@ public class DocumentAiServiceConfiguration implements CdsRuntimeConfiguration {
         persistenceService, documentAiProcessingService, outboxService, pollDelay);
 
     configurer.eventHandler(new DocumentSubmissionHandler(extractionService));
+
+    if (multiTenancyEnabled) {
+      configurer.eventHandler(new DocumentAiSetupHandler(persistenceService));
+      logger.debug(
+          "[sap-document-ai] Registered DocumentAiSetupHandler for MTX subscribe/unsubscribe.");
+    }
 
     // polling handler — only registered when a DIE binding is present
     if (documentAiClient != null) {

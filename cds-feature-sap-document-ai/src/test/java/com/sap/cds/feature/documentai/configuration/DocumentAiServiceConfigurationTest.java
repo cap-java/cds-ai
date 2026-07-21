@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.sap.cds.feature.documentai.handlers.DocumentAiSetupHandler;
 import com.sap.cds.feature.documentai.handlers.DocumentSubmissionHandler;
 import com.sap.cds.feature.documentai.service.DefaultDocumentAiProcessingService;
 import com.sap.cds.feature.documentai.service.ExtractionServiceImpl;
@@ -147,16 +148,28 @@ class DocumentAiServiceConfigurationTest {
   }
 
   @Test
-  void detectMultiTenancy_noIndicators_returnsFalse() {
-    when(cdsRuntime.getEnvironment()).thenReturn(environment);
+  void eventHandlers_multiTenancyEnabled_registersSetupHandler() {
+    when(configurer.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getServiceCatalog()).thenReturn(serviceCatalog);
+    when(cdsRuntime.getEnvironment()).thenReturn(environment);
+    when(environment.getServiceBindings()).thenReturn(Stream.empty());
+    when(environment.getProperty(
+            eq("cds.document-ai.polling.interval-seconds"), eq(Integer.class), any()))
+        .thenReturn(3);
+    when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
+        .thenReturn(persistenceService);
+    // MT enabled via sidecar URL
     when(environment.getCdsProperties()).thenReturn(cdsProperties);
     when(cdsProperties.getMultiTenancy()).thenReturn(multiTenancy);
     when(multiTenancy.getSidecar()).thenReturn(sidecar);
-    when(sidecar.getUrl()).thenReturn(null);
-    when(serviceCatalog.getService(DeploymentService.class, DeploymentService.DEFAULT_NAME))
-        .thenReturn(null);
+    when(sidecar.getUrl()).thenReturn("https://sidecar.example.com");
 
-    assertThat(DocumentAiServiceConfiguration.detectMultiTenancy(cdsRuntime)).isFalse();
+    registration.services(configurer);
+    registration.eventHandlers(configurer);
+
+    ArgumentCaptor<EventHandler> captor = ArgumentCaptor.forClass(EventHandler.class);
+    verify(configurer, atLeast(2)).eventHandler(captor.capture());
+
+    assertThat(captor.getAllValues()).anyMatch(h -> h instanceof DocumentAiSetupHandler);
   }
 }

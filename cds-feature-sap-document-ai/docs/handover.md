@@ -29,12 +29,13 @@ The plugin is a CAP Java plugin that lets any CAP Spring Boot application send d
 ### Current Maturity: Alpha / MVP
 
 | Implemented                                                         | Not yet implemented         |
-| ------------------------------------------------------------------- | --------------------------- |
-| Core asynchronous extraction workflow                               | Multitenancy                |
-| Event-based API (`DocumentExtraction` / `DocumentExtractionResult`) | Annotation-based triggering |
-| Persistent outbox polling with configurable interval                | Automatic field mapping     |
-| Unit and integration tests (85% coverage enforced)                  | Job recovery on restart     |
-| Working reference app (`bookshop`)                                  | Richer local mock mode      |
+|---------------------------------------------------------------------| --------------------------- |
+| Core asynchronous extraction workflow                               | Annotation-based triggering |
+| Multi-tenancy                                                       | Automatic field mapping     |
+| Event-based API (`DocumentExtraction` / `DocumentExtractionResult`) | Job recovery on restart     |
+| Persistent outbox polling with configurable interval                | Richer local mock mode      |
+| Unit and integration tests (85% coverage enforced)                  |                             |
+| Working reference app (`bookshop`)                                  |                             |
 
 ---
 
@@ -44,25 +45,24 @@ This is an alpha release. The core extraction pipeline works end-to-end, and the
 
 | #   | Area                   | Where things stand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | --- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S1  | **Multitenancy**       | `tenantId` is stored on `ExtractionJob` as groundwork, but polling and the HTTP client are not yet tenant-aware. Single-tenant use only for now.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| S2  | **Triggering**         | Programmatic triggering (emit `DocumentExtraction` from code) works fully. Declarative triggering via a CDS annotation + Fiori Elements button is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| S3  | **Document storage**   | The plugin is focused on extraction only. Applications are responsible for storing documents using their preferred mechanism. <br/> **Design Decision**: The plugin accepts document bytes directly on the `DocumentExtraction` event and has no knowledge of where those bytes came from. The plugin's job is extraction, not storage. A hard dependency on `@cap-java/cds-feature-attachments` would couple two independent plugins and create version compatibility overhead. Keeping the plugin storage-agnostic means it works with any document source - the Attachments plugin, a custom entity, an external store, or a direct upload. Each consuming application can choose its own storage strategy and feed documents into the plugin through the same event API regardless. |
-| S4  | **Custom schema sync** | Standard document types work out of the box. CDS-annotation-driven sync of custom extraction schemas to Document AI is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| S5  | **Field mapping**      | Results are delivered as raw JSON for maximum flexibility. Automatic mapping to CDS entity properties and Fiori form pre-fill is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| S6  | **Job recovery**       | Graceful degradation works (no binding → jobs stay `PENDING`). Automatic recovery of stuck or in-flight jobs on startup is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| S7  | **Local development**  | Degraded mode works without a binding. A richer mock that returns configurable static results is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| S8  | **Malware scanning**   | Not yet assessed or implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| S9  | **CLI scaffolding**    | Setup is manual and documented in the README. A `cds add document-ai` command is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| S10 | **OData API**          | REST API works across all plans. OData support for higher-tier plans is a future enhancement.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| S11 | **Job cleanup**        | Job records are kept for observability. A configurable retention policy is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| S1  | **Triggering**         | Programmatic triggering (emit `DocumentExtraction` from code) works fully. Declarative triggering via a CDS annotation + Fiori Elements button is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| S2  | **Document storage**   | The plugin is focused on extraction only. Applications are responsible for storing documents using their preferred mechanism. <br/> **Design Decision**: The plugin accepts document bytes directly on the `DocumentExtraction` event and has no knowledge of where those bytes came from. The plugin's job is extraction, not storage. A hard dependency on `@cap-java/cds-feature-attachments` would couple two independent plugins and create version compatibility overhead. Keeping the plugin storage-agnostic means it works with any document source - the Attachments plugin, a custom entity, an external store, or a direct upload. Each consuming application can choose its own storage strategy and feed documents into the plugin through the same event API regardless. |
+| S3  | **Custom schema sync** | Standard document types work out of the box. CDS-annotation-driven sync of custom extraction schemas to Document AI is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| S4  | **Field mapping**      | Results are delivered as raw JSON for maximum flexibility. Automatic mapping to CDS entity properties and Fiori form pre-fill is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| S5  | **Job recovery**       | Graceful degradation works (no binding → jobs stay `PENDING`). Automatic recovery of stuck or in-flight jobs on startup is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| S6  | **Local development**  | Degraded mode works without a binding. A richer mock that returns configurable static results is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| S7  | **Malware scanning**   | Not yet assessed or implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| S8  | **CLI scaffolding**    | Setup is manual and documented in the README. A `cds add document-ai` command is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| S9  | **OData API**          | REST API works across all plans. OData support for higher-tier plans is a future enhancement.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| S10 | **Job cleanup**        | Job records are kept for observability. A configurable retention policy is not yet implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ---
 
 ## Implementation Notes
 
-### Poll cycle queries all tenants
+### Poll cycle is tenant-aware
 
-The poll query fetches all active jobs across all tenants. In a multitenant deployment, jobs from different tenants get polled under the same credentials - which is incorrect. This is something to keep in mind if multitenancy becomes a priority.
+In multi-tenant mode, the poll handler groups active jobs by `tenantId` and switches the CDS request context per group via `runtime.requestContext().systemUser(tenantId).run(...)`. This ensures each job is polled with the correct subscriber OAuth token. In single-tenant mode the grouping is skipped.
 
 ### Service binding is resolved once at startup
 
@@ -78,37 +78,31 @@ If a binding is added after the app starts, it won't be picked up until a restar
 
 These are ideas and suggestions and not a fixed plan. The ordering reflects what felt most important at the time of writing, but the incoming team should feel free to reprioritise based on their own context and stakeholder needs.
 
-### 1. Multitenancy _(S1)_ - Priority
-
-A natural first area to tackle would be making each tenant use its own Document AI credentials with isolated jobs. The polling logic and HTTP client would need to become tenant-aware - the `tenantId` field is already on `ExtractionJob`, so no schema migration is needed.
-
-**Tracking issue:** [#98](https://github.com/cap-java/cds-ai/issues/98)
-
-### 2. Annotation-Based Triggering _(S2)_ - Priority
+### 1. Annotation-Based Triggering _(S1)_ - Priority
 
 One possible enhancement is to allow developers to annotate a CDS entity field with `@DocumentAI` to automatically trigger extraction - removing the need for boilerplate event emission. This could cover both the backend (plugin reacts to annotated field writes) and the Fiori Elements UI (an "Upload & Extract" button injected automatically on the Object Page).
 
 **Tracking issue:** [#97](https://github.com/cap-java/cds-ai/issues/97)
 
-### 3. Job Recovery on Startup _(S6)_
+### 2. Job Recovery on Startup _(S5)_
 
 A useful addition could be a startup check for any jobs left in `PENDING`, `SUBMITTED`, or `RUNNING` status from before a restart, resuming polling for them automatically rather than waiting for a new submission to arrive.
 
 **Tracking issue:** [#100](https://github.com/cap-java/cds-ai/issues/100)
 
-### 4. Extraction Progress Indicator
+### 3. Extraction Progress Indicator
 
 The backend already tracks `SUBMITTED` and `RUNNING` states - it could be worth surfacing that status in the Fiori Elements Object Page as a visible progress indicator or status strip so users have feedback while extraction is running.
 
 **Tracking issue:** [#108](https://github.com/cap-java/cds-ai/issues/108)
 
-### 5. Automatic Field Mapping _(S5)_
+### 4. Automatic Field Mapping _(S4)_
 
 One idea is to have the plugin match extracted fields to CDS entity properties by name convention and pre-fill the Fiori form automatically. Fields below a configurable confidence threshold could be visually flagged (e.g. amber highlight) so users know what to double-check before saving.
 
 **Tracking issue:** [#101](https://github.com/cap-java/cds-ai/issues/101)
 
-### 6. Document Viewer with Extraction Highlights and Human-in-the-Loop Verification
+### 5. Document Viewer with Extraction Highlights and Human-in-the-Loop Verification
 
 A more exploratory idea is to visualise extracted fields on the document itself - bounding boxes colour-coded by confidence level, with click-to-focus between the document viewer and the form. Bounding box coordinates come back from Document AI and would need to be stored alongside the extraction result and exposed to a UI viewer component.
 
@@ -118,55 +112,55 @@ A further possibility is a human-in-the-loop confirmation step: the user reviews
 
 **Tracking issue:** [#109](https://github.com/cap-java/cds-ai/issues/109)
 
-### 7. Document AI Outbound Channels - Push-Based Result Delivery
+### 6. Document AI Outbound Channels - Push-Based Result Delivery
 
 Document AI supports outbound channels at the schema level: notification channels (status pushes) and extension channels (callbacks triggered after prediction). One option worth exploring is registering the plugin as a target so Document AI pushes results to it directly, eliminating the need to poll. The `DocumentAiClient` interface and `ExtractionService.updateExtractionResult()` are already the right place to plug this in.
 
 **Tracking issue:** [#106](https://github.com/cap-java/cds-ai/issues/106)
 
-### 8. Custom Schema Synchronisation _(S4)_
+### 7. Custom Schema Synchronisation _(S3)_
 
 One possible enhancement is to let developers define custom document type extraction schemas in the CDS model via annotations, with the plugin syncing these to Document AI automatically at deploy time or startup - removing the need for manual configuration in the Document AI workspace.
 
 **Tracking issue:** [#107](https://github.com/cap-java/cds-ai/issues/107)
 
-### 9. Customisable Extraction Templates
+### 8. Customisable Extraction Templates
 
 Right now, every submission requires constructing the Document AI `options` JSON by hand. A template mechanism could let developers define named configurations - document type, schema ID, field selection, confidence thresholds - declaratively in the CDS model or `application.yaml`, and just reference the template name at submission time.
 
 **Tracking issue:** [#116](https://github.com/cap-java/cds-ai/issues/116)
 
-### 10. Local Mock Mode _(S7)_
+### 9. Local Mock Mode _(S6)_
 
 A mock mode returning configurable static extraction results without a real Document AI binding would make local development more convenient.
 
 **Tracking issue:** [#102](https://github.com/cap-java/cds-ai/issues/102)
 
-### 11. Configurable result delivery channels
+### 10. Configurable result delivery channels
 
 The plugin currently delivers results only via the `DocumentExtractionResult` CDS event. It could be worth exploring additional delivery channels so consuming applications can receive results through whatever channel fits their architecture.
 
 **Tracking issue:** [#115](https://github.com/cap-java/cds-ai/issues/115)
 
-### 12. `cds add document-ai` Scaffold Command _(S9)_
+### 11. `cds add document-ai` Scaffold Command _(S8)_
 
 A `cds add document-ai` CLI command could set up the Document AI service binding in `mta.yaml`, enable the persistent outbox in `application.yaml`, and generate boilerplate handler stubs - lowering the barrier significantly for new adopters.
 
 **Tracking issue:** [#105](https://github.com/cap-java/cds-ai/issues/105)
 
-### 13. OData API Support _(S10)_
+### 12. OData API Support _(S9)_
 
 For applications on higher-tier plans, it could be worth exploring the Document AI OData API as an alternative transport, enabling richer querying and result navigation.
 
 **Tracking issue:** [#99](https://github.com/cap-java/cds-ai/issues/99)
 
-### 14. Terminal Job Cleanup _(S11)_
+### 13. Terminal Job Cleanup _(S10)_
 
 A configurable retention policy that deletes or archives `ExtractionJob` rows after they've been in `DONE` or `FAILED` status for a set period would prevent unbounded table growth on high-volume deployments.
 
 **Tracking issue:** [#103](https://github.com/cap-java/cds-ai/issues/103)
 
-### 15. Malware Scanning _(S8)_
+### 14. Malware Scanning _(S7)_
 
 It may be worth assessing whether documents should be scanned via SAP Malware Scanning Service before being forwarded to Document AI - particularly for multitenant deployments where uploaded content is less trusted.
 

@@ -187,13 +187,38 @@ Submit a document via your application. The plugin logs progress at `INFO` level
 
 ---
 
+## Multi-Tenancy
+
+The plugin supports multi-tenancy for SAP BTP SaaS applications. When multi-tenancy is detected at startup, each subscriber tenant's documents are fully isolated within the shared Document AI service instance.
+
+### How It Works
+
+Multi-tenancy is detected automatically at startup — no configuration flag is needed. The plugin checks for either:
+- A CAP MTX sidecar URL (`cds.multitenancy.sidecar.url`)
+- The presence of a `DeploymentService` in the CDS service catalog
+
+When detected:
+- **Data isolation** — every Document AI API call includes a `clientId` query parameter set to the tenant ID (`?clientId=<tenantId>` on submit, `&clientId=<tenantId>` on poll). The Document AI service uses this to isolate each tenant's documents, schemas, and jobs within the shared service instance. Authentication uses the provider's service binding credentials.
+- **Per-tenant polling** — the polling handler groups active jobs by tenant and switches the CDS request context per group, ensuring database operations are correctly scoped to each tenant's schema.
+- **Tenant lifecycle** — on tenant unsubscribe, all active jobs (`PENDING`, `SUBMITTED`, `RUNNING`) belonging to that tenant are automatically marked `FAILED` so they do not generate poll errors after the tenant is removed.
+
+### MTX Sidecar Configuration
+
+If your app uses a CAP MTX sidecar, configure its URL in `application.yaml`:
+
+```yaml
+cds:
+  multitenancy:
+    sidecar:
+      url: <<side-car-url>>
+```
+
+If you use an embedded MTX setup (no sidecar URL), multi-tenancy is detected automatically via the presence of `DeploymentService` in the CDS service catalog — no additional configuration is needed.
+---
+
 ## Usage
 
 > **Note:** In the current version, document extraction can only be triggered programmatically via event emission, as shown in the [Integration Guide](#integration-guide). Annotation-based triggering (e.g. declaratively marking an entity field or action to trigger extraction) is not yet supported and is planned for a future release.
-
-## Multi-Tenancy
-
-Multi-tenancy is not implemented in the current version and is planned for a future release. The `tenantId` field is stored on the `ExtractionJob` entity as groundwork.
 
 ### CDS Model
 
@@ -389,7 +414,6 @@ The plugin communicates with the SAP Document Information Extraction service via
 
 ## Known Limitations
 
-- **Multi-tenancy** — not implemented; all jobs run in a single-tenant context. Planned for a future release.
 - **Annotation-based triggering** — document extraction can only be initiated programmatically via event emission; declarative triggering is not yet supported.
 
 ---
