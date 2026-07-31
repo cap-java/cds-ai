@@ -4,7 +4,7 @@
 
 ## About this project
 
-This repository contains a collection of AI plugins for [CAP Java](https://cap.cloud.sap/docs/java/) applications, leveraging [SAP AI Core](https://help.sap.com/docs/sap-ai-core), the SAP-RPT-1 foundation model, and SAP Document AI.
+This repository contains a collection of AI plugins for [CAP Java](https://cap.cloud.sap/docs/java/) applications, leveraging [SAP AI Core](https://help.sap.com/docs/sap-ai-core) and the SAP-RPT-1 foundation model.
 
 ### Plugins
 
@@ -12,7 +12,6 @@ This repository contains a collection of AI plugins for [CAP Java](https://cap.c
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | [`cds-feature-ai-core`](cds-feature-ai-core/README.md)                       | Bridges CAP Java to SAP AI Core - resource group management, deployment lifecycle, configuration CRUD, and prediction API |
 | [`cds-feature-recommendations`](cds-feature-recommendations/README.md)       | AI-powered field recommendations for Fiori UIs in draft-enabled entities                                                  |
-| [`cds-feature-sap-document-ai`](cds-feature-sap-document-ai/README.md)       | SAP Document AI integration for asynchronous document information extraction via the DIE service                          |
 
 ### Starter
 
@@ -24,13 +23,12 @@ See [`cds-starter-ai`](cds-starter-ai/README.md) for the quickest setup.
 - CAP Java 5.0+
 - Node.js 20+ with `@sap/cds-dk` 9+ (for CDS build tooling)
 - An [SAP AI Core](https://help.sap.com/docs/sap-ai-core) service binding (for `cds-feature-ai-core` and `cds-feature-recommendations`)
-- A [SAP Document Information Extraction](https://help.sap.com/docs/document-ai) service binding (for `cds-feature-sap-document-ai`)
 
 Without the respective service binding, each plugin falls back to a mock or degraded mode for local development.
 
 ## Samples
 
-A runnable CAP Java bookshop demonstrating all plugins together lives in [`samples/bookshop`](samples/bookshop). It provides an `AdminService` showcasing recommendations on draft-enabled Books, and a `SupplierInvoicesService` showcasing document extraction from supplier invoices. See the sample's own instructions for how to run it.
+A runnable CAP Java bookshop demonstrating all plugins together lives in [`samples/bookshop`](samples/bookshop). It provides an `AdminService` showcasing recommendations on draft-enabled Books. See the sample's own instructions for how to run it.
 
 ## Local Development
 
