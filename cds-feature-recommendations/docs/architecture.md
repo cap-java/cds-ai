@@ -16,12 +16,13 @@
     - [MTX Model Change — Cache Invalidation](#mtx-model-change--cache-invalidation)
 - [Tests](#tests)
 - [Quality Tools](#quality-tools)
+- [Architecture Decisions](#architecture-decisions)
 
 ---
 
 ## Purpose
 
-Automatically injects AI-powered field recommendations from the [SAP RPT-1](https://help.sap.com/docs/sap-ai-core/generative-ai/sap-rpt-1) tabular prediction foundation model into Fiori Elements OData responses for draft-enabled entities. Zero application code required.
+Automatically injects AI-powered field recommendations from the [SAP-RPT-1](https://help.sap.com/docs/sap-ai-core/generative-ai/sap-rpt-1) tabular prediction foundation model into Fiori Elements OData responses for draft-enabled entities. Zero application code required.
 
 → [README](../README.md)
 
@@ -159,3 +160,37 @@ End-to-end integration tests covering the full recommendation pipeline against a
 ## Quality Tools
 
 → [CI Checks and static analysis](../../CONTRIBUTING.md#ci-checks)
+
+---
+
+## Architecture Decisions
+
+### Annotation-driven activation
+
+**Context:** Recommendations need to work across any CAP application that has value-list fields on draft-enabled entities, without requiring application developers to write handler code or configure anything beyond the CDS model annotations they already need for Fiori value help.
+
+**Decision:** Annotation-driven activation. `FioriRecommendationHandler` registers as an `@After(entity="*")` handler on all application services and derives prediction targets from the CDS model on each request. The `@cap-js/ai` Node.js CDS plugin adds the `SAP_Recommendations` navigation property to the model at build time so the predictions are serialized in the OData response without application changes. The trade-off is less flexibility — application code cannot currently override the inference call or observe the raw prediction result — tracked in [#110](https://github.com/cap-java/cds-ai/issues/110).
+
+---
+
+### Recency-based context row selection
+
+**Context:** RPT-1 is a tabular prediction model that learns patterns from example rows (context rows) provided alongside the row to predict. The quality of predictions depends on the relevance of the context. Fetching all rows is impractical for large tables, and most models als impose a limit on the context rows (e.g. 2048 for SAP-RPT-1 https://help.sap.com/docs/sap-ai-core/generative-ai/sap-rpt-1#sap-rpt-models).
+
+**Solutions considered:**
+- **Similarity-based selection** — select rows most semantically similar to the current row (e.g. by embedding distance or matching field values). This would select a better training context but requires additional infrastructure and adds much more complexity.
+- **Recency-based selection (most recently modified first)** — orders by `@cds.on.update` descending, capped at `cds.ai.recommendations.contextRowLimit` (default 2000). Favors the most up-to-date data and requires no additional infrastructure.
+**Decision:** Recency-based selection. The assumption is that recent records reflect the current state of the data better than older ones, making them more representative training context for the current user's editing patterns. Similarity-based selection remains a possible future improvement ([#128](https://github.com/cap-java/cds-ai/issues/128)) but was rejected for the initial version due to infrastructure requirements.
+
+---
+
+### Miss-only entity skip cache
+
+**Context:** `RecommendationContextBuilder` derives prediction columns by scanning the CDS model on every request. For entities with no value-list fields, this scan is repeated on every OData GET — wasteful, since the model only changes on MTX upgrades.
+
+**Solutions considered:**
+- **No cache** — simple but scans the model on every request for every entity, including those that will never have predictions.
+- **Cache misses only (`Boolean` flag)** — entities with no prediction columns are cached; entities with columns are re-scanned every request. Small cache, but doesn't help for the common case of entities that do have predictions.
+- **Cache the prediction column set (`Set<String>`)** — cache the derived column names for all entities, using an empty set for no-prediction entities. Eliminates the per-request model scan entirely; slightly larger cache values.
+
+**Decision:** Cache misses only for now (`Cache<String, Boolean>`). The per-request model scan for entities that *do* have predictions was accepted as acceptable overhead in the initial version. Caching `Set<String>` instead is tracked as a follow-up in [#129](https://github.com/cap-java/cds-ai/issues/129). The cache is keyed by `<tenantId>:<entityName>` and invalidated on `EVENT_MODEL_CHANGED` so MTX model upgrades are reflected without a restart.
