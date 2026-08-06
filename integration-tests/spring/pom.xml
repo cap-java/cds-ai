@@ -42,11 +42,6 @@
       <artifactId>cds-feature-recommendations</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>com.sap.cds</groupId>
-      <artifactId>cds-feature-sap-document-ai</artifactId>
-    </dependency>
-
     <!-- H2 for Spring context -->
     <dependency>
       <groupId>com.h2database</groupId>
