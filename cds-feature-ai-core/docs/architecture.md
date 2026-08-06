@@ -15,6 +15,7 @@
     - [Inference Client Resolution](#inference-client-resolution)
 - [Tests](#tests)
 - [Quality Tools](#quality-tools)
+- [Architecture Decisions](#architecture-decisions)
 
 ---
 
@@ -34,6 +35,7 @@ Bridges CAP Java to SAP AI Core's management and inference REST APIs, providing 
 | `com.github.ben-manes.caffeine:caffeine` | Thread-safe in-process caching for `tenantId → resourceGroupId` and `resourceGroupId::configName → deploymentId` mappings (1 h TTL, 10k max per cache). |
 | `io.github.resilience4j:resilience4j-retry` | Exponential backoff (initial 300 ms, doubling, max 30 s, up to 10 attempts) on 403/404/412 responses from AI Core - needed because resource group creation is asyncronous. |
 | `com.sap.cds:cds-services-api/-impl/-utils` | CAP Java integration — used to integrate the plugin into the CAP runtime. |
+| CAP Java `DeploymentService` | MTX lifecycle hook: `AICoreSetupHandler` subscribes to `SubscribeEvent` (`@After LATE`) and `UnsubscribeEvent` (`@Before EARLY`) to create/delete per-tenant resource groups automatically. |
 
 ---
 
@@ -66,7 +68,20 @@ The three custom events are **not declared in the CDS model** — they are Java-
 
 ### Public API
 
-→ [Programmatic Usage in README](../README.md#programmatic-usage)
+Three custom CDS events are the only stable contract. All other classes are internal.
+
+```java
+// Resolve resource group for the current tenant
+String rgId = aiCoreService.resourceGroup();
+
+// Resolve (or lazily create) a deployment matching the given model spec
+String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
+
+// Obtain a pre-configured ApiClient for inference
+ApiClient client = aiCoreService.inferenceClient(rgId, deploymentId);
+```
+
+See also [Programmatic Usage in README](../README.md#programmatic-usage).
 
 ---
 
@@ -88,31 +103,31 @@ The three custom events are **not declared in the CDS model** — they are Java-
 
 → [Multi-Tenancy in README](../README.md#multi-tenancy)
 
+MT mode is detected automatically at startup: if `cds.multiTenancy.sidecar.url` is set or a `DeploymentService` bean is present in the CAP service catalog, MT mode is active. Resource groups are named `{resourceGroupPrefix}{tenantId}` (default prefix: `cds-`) and labelled `ext.ai.sap.com/CDS_TENANT_ID = <tenantId>` so they can be looked up by tenant.
+
 ---
 
 ### Key Flows
 
 #### Tenant Subscribe
 
-```
-CAP MTX DeploymentService
-        |
-        | SubscribeEvent @After(LATE)
-        v
-AICoreSetupHandler
-        |
-        | resolveResourceGroup(tenantId)
-        v
-DeploymentResolver
-        |
-        | GET /v2/admin/resourceGroups?labelFilter=CDS_TENANT_ID=tenantId
-        v
-SAP AI Core
-        |
-        | (if absent) POST /v2/admin/resourceGroups
-        v
-resourceGroupId (cached 1h after last access — subsequent calls skip the AI Core management API;
-                  if a resource group is deleted or reassigned externally, the plugin won't notice until the cache expires after 1h or the app restarts)
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'edgeLabelBackground': '#ffffff00', 'fontSize': '14px', 'primaryColor': '#fff', 'primaryBorderColor': '#000', 'primaryTextColor': '#000'}}}%%
+flowchart TD
+    classDef process fill:#fff,stroke:#000,color:#000
+    classDef skip    fill:#f4f4f4,stroke:#000,color:#000
+
+    START@{ shape: sm-circ, label: "start" } --> A(["CAP MTX DeploymentService fires SubscribeEvent @After(LATE)"]):::process
+    A --> B(["AICoreSetupHandler: resolveResourceGroup(tenantId)"]):::process
+    B --> C(["GET /v2/admin/resourceGroups?labelFilter=CDS_TENANT_ID=tenantId"]):::process
+    C --> D{resource group found?}
+    D -->|yes| E(["cache resourceGroupId (expireAfterAccess 1h)"]):::process
+    D -->|no| F(["POST /v2/admin/resourceGroups"]):::process
+    F --> E
+    E --> END1@{ shape: framed-circle, label: "stop" }
+
+    style START fill:#000,stroke:#000,color:#000
+    style END1  fill:#000,stroke:#000,stroke-width:3px,color:#000
 ```
 
 #### Inference Client Resolution
@@ -197,20 +212,18 @@ flowchart TD
 
 #### Tenant Unsubscribe
 
-```
-CAP MTX DeploymentService
-        |
-        | UnsubscribeEvent @Before(EARLY)
-        v
-AICoreSetupHandler
-        |
-        | DELETE /v2/admin/resourceGroups/{id}
-        v
-SAP AI Core
-        |
-        | invalidateTenant(tenantId) — evicts tenantResourceGroupCache and deploymentCache (which was filled on first call to resolveDeployment) entries for this tenant
-        v
-(done)
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'edgeLabelBackground': '#ffffff00', 'fontSize': '14px', 'primaryColor': '#fff', 'primaryBorderColor': '#000', 'primaryTextColor': '#000'}}}%%
+flowchart TD
+    classDef process fill:#fff,stroke:#000,color:#000
+
+    START@{ shape: sm-circ, label: "start" } --> A(["CAP MTX DeploymentService fires UnsubscribeEvent @Before(EARLY)"]):::process
+    A --> B(["AICoreSetupHandler: DELETE /v2/admin/resourceGroups/{id}"]):::process
+    B --> C(["invalidateTenant(tenantId) — evicts tenantResourceGroupCache and deploymentCache entries"]):::process
+    C --> END1@{ shape: framed-circle, label: "stop" }
+
+    style START fill:#000,stroke:#000,color:#000
+    style END1  fill:#000,stroke:#000,stroke-width:3px,color:#000
 ```
 ---
 
@@ -225,3 +238,45 @@ End-to-end integration tests against a real AI Core instance live in [`integrati
 ## Quality Tools
 
 → [CI Checks and static analysis](../../CONTRIBUTING.md#ci-checks)
+
+---
+
+## Architecture Decisions
+
+### Wrapping the AI SDK in a CAP service for multi-tenant isolation
+
+**Context:** The SAP AI SDK (`com.sap.ai.sdk:ai-core`) provides API clients with no CAP integration. Plugins like `cds-feature-recommendations` need to resolve a resource group, a deployment, and an inference client on every request — but should not need to know about AI Core internals, tenant routing, or caching.
+
+**Key boundary condition:** The AI SDK's [`DestinationResolver`](https://github.com/SAP/ai-sdk-java/blob/main/core/src/main/java/com/sap/ai/sdk/core/DestinationResolver.java) always connects using `OnBehalfOf.TECHNICAL_USER_PROVIDER` — the provider tenant's service binding. There is no per-subscriber credential mechanism in the SDK. Tenant isolation is the caller's responsibility and is achieved entirely by setting the `AI-Resource-Group` HTTP header on each request to a resource group that belongs to the subscriber tenant. This is a hard constraint imposed by the SDK: any CAP integration on top of it must manage per-tenant resource group resolution itself — there is no way to "just pass a tenant ID" to the SDK and have it route correctly.
+Beyond billing, proper per-tenant resource groups are also important for call history separation in AI Core: without them, all tenants' inference calls would appear under the same resource group in the AI Core audit log.
+
+**Decision:** Expose the three resolution steps (`resourceGroup`, `deploymentId`, `inferenceClient`) as custom CDS events on the `AICore` service. The `resourceGroup` event resolves the correct per-tenant resource group ID from the current CAP request context (`UserInfo.getTenant()`), which is then threaded through to `deploymentId` and `inferenceClient`. Every AI Core call made by `AICoreApiHandler` carries this resource group ID as the `AI-Resource-Group` header, satisfying the SDK's constraint.
+Callers invoke the `AICoreService` Java API (`resourceGroup()`, `deploymentId()`, `inferenceClient()`), which emits the corresponding CDS events; `AICoreApiHandler` handles them. This keeps the AI SDK entirely internal and gives application code a standard `@On`/`@After` handler hook to override or observe each step if needed.
+
+---
+
+### Caching resource group ids and deployment ids
+
+**Context:** Resolving an inference-ready `ApiClient` requires three sequential remote calls to AI Core (resource group lookup, deployment lookup/creation, client construction). AI Core deployments may not exist yet on first use and take minutes to reach RUNNING state. Calling the management API on every OData read would be prohibitively slow.
+
+**Solutions considered:**
+- **`TenantAwareCache` (CAP built-in)** — `com.sap.cds.services.utils.TenantAwareCache` provides tenant-scoped invalidation natively and is already on the classpath via `cds-services-utils`. Not used yet but a candidate to replace the current manual Caffeine caches; see [#129](https://github.com/cap-java/cds-ai/issues/129).
+ - **In-process Caffeine cache per step** — zero additional infrastructure, thread-safe, configurable TTL. Accepted: the worst case (cache miss on restart or TTL expiry) is a single slow request; subsequent requests are fast.
+
+**Decision:** Cache `tenantId → resourceGroupId` and `resourceGroupId::configName → deploymentId` in two separate Caffeine caches with 1 h expire-after-access TTL. The deployment cache entry is validated on each cache hit (a `GET` to verify RUNNING/PENDING status) to detect externally stopped deployments. The resource group cache has no hit-validation — a stale entry causes failures until the TTL expires; this was accepted as an acceptable trade-off given that resource groups are rarely deleted externally.
+
+---
+
+### Preventing duplicate AI deployments
+
+**Context:** Multiple requests may arrive concurrently before any deployment exists (e.g. on cold start of a new tenant). Without coordination, each request would independently discover the absence of a deployment and try to create one, resulting in duplicate deployments.
+
+**Decision:** Use a `ConcurrentHashMap<String, Object>` as a lock registry, synchronized on the value for the specific key being resolved. Only the first thread for a given key enters `findOrCreateDeployment`; subsequent threads wait and then find the deployment already in the cache.
+
+---
+
+### Resilience4j exponential backoff for asynchronous AI Core operations
+
+**Context:** AI Core resource group and deployment creation is asynchronous. After a `POST /v2/admin/resourceGroups` or `POST /v2/lm/deployments`, subsequent calls may return 403 or 412 (precondition failed) until the resource is fully provisioned. Polling is necessary to wait for a deployment to reach RUNNING status.
+
+**Decision:** Use Resilience4j retry with exponential backoff (300 ms initial delay, doubling each attempt, capped at 30 s, max 10 attempts) on 403/404/412 responses from: `POST /v2/lm/deployments` (creation) and `GET /v2/lm/deployments/{id}` (polling until RUNNING). The same retry strategy covers both the "resource not yet available" and "deployment not yet running" cases.
