@@ -69,6 +69,5 @@ The merged report combines execution data from:
 
 - `cds-feature-ai-core/target/jacoco.exec` (unit tests)
 - `cds-feature-recommendations/target/jacoco.exec` (unit tests)
-- `cds-feature-sap-document-ai/target/jacoco.exec` (unit tests)
 - `integration-tests/spring/target/jacoco.exec` (integration tests)
 - `integration-tests/mtx-local/srv/target/jacoco.exec` (MTX integration tests, only when profile is active)

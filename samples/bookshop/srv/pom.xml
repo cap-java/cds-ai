@@ -68,11 +68,6 @@
 
     <dependency>
       <groupId>com.sap.cds</groupId>
-      <artifactId>cds-feature-sap-document-ai</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.sap.cds</groupId>
       <artifactId>cds-feature-attachments</artifactId>
     </dependency>
 

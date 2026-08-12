@@ -25,7 +25,7 @@ runs:
         maven-version: ${{ inputs.maven-version }}
 
     - name: Build dependencies for integration tests
-      run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-feature-sap-document-ai,cds-starter-ai -am -DskipTests
+      run: mvn clean install -ntp -B -pl cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai -am -DskipTests
       shell: bash
 
     - name: Integration Tests (spring)

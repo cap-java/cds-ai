@@ -14,9 +14,6 @@
   },
   "cds": {
     "requires": {
-      "com.sap.cds/sap-document-ai": {
-        "model": "com.sap.cds/sap-document-ai"
-      },
       "com.sap.cds/cds-feature-attachments": {
         "model": "com.sap.cds/cds-feature-attachments"
       }
