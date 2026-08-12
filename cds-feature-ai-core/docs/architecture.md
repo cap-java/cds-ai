@@ -256,7 +256,7 @@ Callers invoke the `AICoreService` Java API (`resourceGroup()`, `deploymentId()`
 
 ---
 
-### Caching resource group ids and deployment ids
+### Caching resource group IDs and deployment IDs
 
 **Context:** Resolving an inference-ready `ApiClient` requires three sequential remote calls to AI Core (resource group lookup, deployment lookup/creation, client construction). AI Core deployments may not exist yet on first use and take minutes to reach RUNNING state. Calling the management API on every OData read would be prohibitively slow.
 
