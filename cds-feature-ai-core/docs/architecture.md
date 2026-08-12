@@ -274,6 +274,8 @@ Callers invoke the `AICoreService` Java API (`resourceGroup()`, `deploymentId()`
 
 **Decision:** Use a `ConcurrentHashMap<String, Object>` as a lock registry, synchronized on the value for the specific key being resolved. Only the first thread for a given key enters `findOrCreateDeployment`; subsequent threads wait and then find the deployment already in the cache.
 
+**Limitation:** This per-key locking is in-process only — it does not coordinate across multiple application instances. Multiple applications starting up concurrently may each independently discover the absence of a deployment and create one, resulting in duplicate deployments. For preventing this, a lock service that uses a database would be needed, which CAP does not have, unfortunately, see also https://github.tools.sap/cap/dev/issues/156.
+
 ---
 
 ### Resilience4j exponential backoff for asynchronous AI Core operations
