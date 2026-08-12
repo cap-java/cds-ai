@@ -134,7 +134,8 @@ flowchart TD
 
 #### Inference Client Resolution
 
-Every prediction request or inference call requires a fully-configured `ApiClient` that is scoped to a specific AI Core deployment. The challenge is that creating this client requires three sequential steps
+Every prediction request or inference call requires a fully-configured `ApiClient` that is scoped to a specific AI Core deployment. The challenge is that creating this client requires three sequential steps:
+
 — tenant → resource group
 - resource group + model spec (e.g. RPT-1) → deployment
 - deployment → ApiClient
