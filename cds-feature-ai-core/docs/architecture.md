@@ -151,7 +151,6 @@ Unlike the deployment cache, there is **no validation on cache hits** — if a r
 
 Emitted by callers via `AICoreService.deploymentId(rgId, spec)` to resolve (or lazily create) a running deployment matching the given `ModelDeploymentSpec` inside the resource group. `DeploymentResolver` first checks its deployment cache; on a cache miss or invalid cached entry it queries AI Core for an existing RUNNING/PENDING deployment, and — if none exists — creates the configuration and deployment, then polls until RUNNING with exponential backoff: Resilience4j exponential backoff (300 ms initial, doubling, capped at 30 s, max 10 attempts) on: 403/412 during deployment creation (`POST /v2/lm/deployments`); 403/404/412 during deployment polling (`GET /v2/lm/deployments`). A `ConcurrentHashMap` per-key lock prevents duplicate deployments from being created under concurrent first-use requests. The resolved deployment ID is cached for 1 h.
 
-
 ##### Event 3: inferenceClient — invoked with `resourceGroupId` and `deploymentId`
 
 Emitted by callers via `AICoreService.inferenceClient(rgId, deploymentId)` to obtain a pre-configured `ApiClient` ready to make prediction requests against a specific deployment. The handler delegates to the SAP AI SDK's `AiCoreService` to build an inference destination scoped to the resource group and deployment, then wraps it in an `ApiClient`. No caching — the client is lightweight to construct and callers are expected to obtain it once per request.
