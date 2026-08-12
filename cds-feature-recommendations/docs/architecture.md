@@ -22,7 +22,7 @@
 
 ## Purpose
 
-Automatically injects AI-powered field recommendations from the [SAP-RPT-1](https://help.sap.com/docs/sap-ai-core/generative-ai/sap-rpt-1) tabular prediction foundation model into Fiori Elements OData responses for draft-enabled entities. Zero application code required.
+This plugin (`cds-feature-recommendations`) automatically injects AI-powered field recommendations from the [SAP-RPT-1](https://help.sap.com/docs/sap-ai-core/generative-ai/sap-rpt-1) tabular prediction foundation model into Fiori Elements OData responses for draft-enabled entities. Zero application code required.
 
 → [README](../README.md)
 
