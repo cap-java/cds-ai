@@ -35,7 +35,7 @@ This plugin (`cds-feature-recommendations`) automatically injects AI-powered fie
 | [`cds-feature-ai-core`](../../cds-feature-ai-core/README.md) | Provides the `AICore` CDS service and `AICoreService` API used to resolve the resource group, deployment ID, and inference `ApiClient` for the RPT-1 model. Recommendations cannot function without an active AI Core connection. |
 | `@cap-js/ai` (Node.js CDS plugin) | At CDS build time, the plugin adds the `SAP_Recommendations` navigation property to draft-enabled entities that have value-list fields. Without this (or a manual CDS extension), predictions are computed but not serialized in OData responses. |
 | `com.sap.ai.sdk.foundationmodels:sap-rpt` (SAP AI SDK) | Provides the RPT-1 model client used to call the `/predict` endpoint. |
-| `com.github.ben-manes.caffeine:caffeine` | Thread-safe in-process caching for the per-tenant entity skip cache (10k max, no TTL). This might be replaced in #129.|
+| `com.github.ben-manes.caffeine:caffeine` | Thread-safe in-process caching for the per-tenant entity skip cache (10k max, no TTL). This might be replaced in [#129](https://github.com/cap-java/cds-ai/issues/129).|
 | `com.sap.cds:cds-services-api/-impl/-utils` | CAP Java integration — used to integrate the plugin into the CAP runtime. |
 
 ---
