@@ -70,17 +70,29 @@ The three custom events are **not declared in the CDS model** — they are Java-
 
 ### Public API
 
-Three custom CDS events are the only stable contract. All other classes are internal.
+Three custom CDS events are the only stable contract. All other classes are internal. Callers obtain the `AICore` service as a `RemoteService` (injected by CAP) and drive the three resolution steps by creating an `EventContext`, setting its inputs, emitting it, and reading back the result (see [`RecommendationConfiguration.java`](../../cds-feature-recommendations/src/main/java/com/sap/cds/feature/recommendation/RecommendationConfiguration.java) for a real-world example):
 
 ```java
+RemoteService aiCoreService = ...; // injected as a CAP RemoteService
+
 // Resolve resource group for the current tenant
-String rgId = aiCoreService.resourceGroup();
+ResourceGroupContext rgCtx = ResourceGroupContext.create();
+aiCoreService.emit(rgCtx);
+String resourceGroup = rgCtx.getResult();
 
 // Resolve (or lazily create) a deployment matching the given model spec
-String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
+DeploymentIdContext depCtx = DeploymentIdContext.create();
+depCtx.setResourceGroupId(resourceGroup);
+depCtx.setSpec(RptModelSpec.rpt1());
+aiCoreService.emit(depCtx);
+String deploymentId = depCtx.getResult();
 
 // Obtain a pre-configured ApiClient for inference
-ApiClient client = aiCoreService.inferenceClient(rgId, deploymentId);
+InferenceClientContext infCtx = InferenceClientContext.create();
+infCtx.setResourceGroupId(resourceGroup);
+infCtx.setDeploymentId(deploymentId);
+aiCoreService.emit(infCtx);
+ApiClient client = infCtx.getResult();
 ```
 
 See also [Programmatic Usage in README](../README.md#programmatic-usage).
