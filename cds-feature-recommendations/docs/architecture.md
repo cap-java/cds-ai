@@ -83,7 +83,7 @@ Cache<"<tenantId>:<entityName>", Boolean>   10k max, no TTL
   → invalidated by RecommendationModelChangedHandler on model change
 ```
 
-The cache is keyed by `<tenantId>:<entityName>` and is invalidated on `ExtensibilityService.EVENT_MODEL_CHANGED` — ensuring that model upgrades (which may add or remove value-list annotations) are reflected without a restart, see also [MTX Model Change — Cache Invalidation](#mtx-model-change--cache-invalidation). This cache might be replaced with #129.
+The cache is keyed by `<tenantId>:<entityName>` and is invalidated on `ExtensibilityService.EVENT_MODEL_CHANGED` — ensuring that model upgrades (which may add or remove value-list annotations) are reflected without a restart, see also [MTX Model Change — Cache Invalidation](#mtx-model-change--cache-invalidation). This cache might be replaced with [#129](https://github.com/cap-java/cds-ai/issues/129).
 
 Currently the cache stores only **misses** — entities that have no prediction columns. For entities that *do* have prediction columns, `RecommendationContextBuilder` re-derives them from the CDS model on every request. An alternative design would cache `Set<String>` (the prediction column names) instead of `Boolean`, using an empty set for the no-prediction case. This would eliminate the per-request model scan for all entities, at the cost of a slightly larger cache value.
 
