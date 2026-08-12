@@ -129,7 +129,7 @@ This means selection is **recency-based, not similarity-based**: the model recei
 Context rows are **not cached** — every prediction fires a fresh database query.
 
 Context rows are currently fetched via `PersistenceService` (direct DB access), bypassing the application service and any instance-based authorization checks. This means a user could receive recommendations trained on rows they would not be allowed to read through the application service.
-See: #128.
+See: [#128](https://github.com/cap-java/cds-ai/issues/128).
 
 #### MTX Model Change — Cache Invalidation
 
