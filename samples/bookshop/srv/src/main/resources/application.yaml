@@ -2,7 +2,6 @@ logging:
   level:
     root: INFO
     com.sap.cds.feature.aicore.core: DEBUG
-    com.sap.cds.feature.documentai: DEBUG
 ---
 spring:
   datasource:
@@ -36,9 +35,6 @@ cds:
     persistent:
       scheduler:
         enabled: true
-  document-ai:
-    polling:
-      interval-seconds: 5
 ---
 management:
   endpoint:
