@@ -21,7 +21,9 @@
 
 ## Purpose
 
-Bridges CAP Java to SAP AI Core's management and inference REST APIs, providing resource group management, deployment lifecycle, and inference client resolution as a CAP service. At the time of writing, `com.sap.ai.sdk:ai-core` offered no CAP integration — only raw REST API clients — so this plugin fills that gap.
+CAP Java applications need to have to access to AI Core (`com.sap.ai.sdk:ai-core`) to manage resource groups and deployments, and to access an inference client. At the time of writing, AI Core offers no CAP integration — only raw REST API clients. 
+
+This plugin (`‎cds-feature-ai-core`) fills this gap. It bridges CAP Java to SAP AI Core's management and inference REST APIs. It provides resource group management, deployment lifecycle, and inference client resolution as a CAP service. 
 
 → [README](../README.md)
 
