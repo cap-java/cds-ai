@@ -167,7 +167,7 @@ End-to-end integration tests covering the full recommendation pipeline against a
 
 ### Annotation-driven activation
 
-**Context:** Recommendations need to work across any CAP application that has value-list fields on draft-enabled entities, without requiring application developers to write handler code or configure anything beyond the CDS model annotations they already need for Fiori value help.
+**Context:** Recommendations need to work across any CAP application that has value-list fields on draft-enabled entities, without requiring application developers to write handler code or configure anything beyond the CDS model annotations that are already required for Fiori value help.
 
 **Decision:** Annotation-driven activation. `FioriRecommendationHandler` registers as an `@After(entity="*")` handler on all application services and derives prediction targets from the CDS model on each request. The `@cap-js/ai` Node.js CDS plugin adds the `SAP_Recommendations` navigation property to the model at build time so the predictions are serialized in the OData response without application changes. The trade-off is less flexibility — application code cannot currently override the inference call or observe the raw prediction result — tracked in [#110](https://github.com/cap-java/cds-ai/issues/110).
 
