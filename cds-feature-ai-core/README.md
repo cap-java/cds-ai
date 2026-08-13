@@ -67,10 +67,16 @@ The plugin registers a CAP service named `AICore` that proxies AI Core REST APIs
 
 ```java
 // Get the resource group for the current tenant
-String rgId = aiCoreService.resourceGroup();
+ResourceGroupContext rgCtx = ResourceGroupContext.create();
+aiCoreService.emit(rgCtx);
+String resourceGroup = rgCtx.getResult();
 
 // Get (or auto-create) a deployment ID for a model spec in the given resource group
-String deploymentId = aiCoreService.deploymentId(rgId, RptModelSpec.rpt1());
+DeploymentIdContext depCtx = DeploymentIdContext.create();
+depCtx.setResourceGroupId(resourceGroup);
+depCtx.setSpec(RptModelSpec.rpt1());
+aiCoreService.emit(depCtx);
+String deploymentId = depCtx.getResult();
 ```
 
 ## Multi-Tenancy
@@ -86,22 +92,36 @@ The lifecycle hooks are registered automatically when multi-tenancy is enabled.
 ## Programmatic Usage
 
 ```java
-// Obtain the service
-AICoreService aiCore = runtime.getServiceCatalog()
-    .getService(AICoreService.class, AICoreService.DEFAULT_NAME);
+// Obtain the AICore service (registered as a RemoteService by the plugin)
+RemoteService aiCoreService = runtime.getServiceCatalog()
+    .getService(RemoteService.class, "AICore");
 
-// Use for entity operations (AICoreService extends CqnService)
-Result rgs = aiCore.run(Select.from("AICore.resourceGroups"));
+// Use for entity operations (RemoteService extends CqnService)
+Result rgs = aiCoreService.run(Select.from("AICore.resourceGroups"));
 
-// Resolve a deployment and obtain a configured ApiClient for it
-String resourceGroupId = aiCore.resourceGroup();
-String deploymentId = aiCore.deploymentId(resourceGroupId, RptModelSpec.rpt1());
-ApiClient client = aiCore.inferenceClient(resourceGroupId, deploymentId);
+// Resolve resource group, deployment, and inference client via CDS events
+ResourceGroupContext rgCtx = ResourceGroupContext.create();
+aiCoreService.emit(rgCtx);
+String resourceGroup = rgCtx.getResult();
+
+DeploymentIdContext depCtx = DeploymentIdContext.create();
+depCtx.setResourceGroupId(resourceGroup);
+depCtx.setSpec(RptModelSpec.rpt1());
+aiCoreService.emit(depCtx);
+String deploymentId = depCtx.getResult();
+
+InferenceClientContext infCtx = InferenceClientContext.create();
+infCtx.setResourceGroupId(resourceGroup);
+infCtx.setDeploymentId(deploymentId);
+aiCoreService.emit(infCtx);
+ApiClient client = infCtx.getResult();
 ```
 
-The `ApiClient` returned by `inferenceClient` is preconfigured with the AI Core
+The `ApiClient` returned via `InferenceClientContext` is preconfigured with the AI Core
 destination and the deployment URL; use it to construct foundation-model SDK
 clients (for example `RptInferenceClient` from `cds-feature-recommendations`).
+
+See [`RecommendationConfiguration.java`](../cds-feature-recommendations/src/main/java/com/sap/cds/feature/recommendation/RecommendationConfiguration.java) for a real-world example of this pattern.
 
 ## Related
 
