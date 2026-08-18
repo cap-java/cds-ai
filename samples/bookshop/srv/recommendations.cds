@@ -2,6 +2,7 @@
 // This replaces the compile-time enhancement that @cap-js/ai's cds-plugin.js
 // would normally generate automatically for all draft-enabled entities with
 // value-list fields.
+// When adding @cap-js/ai as a dependency in the package.json, such a file is *not* needed.
 
 using { AdminService } from './admin-service';
 
