@@ -25,17 +25,18 @@ mvn verify -Pmtx-integration-tests
 
 **Skipping all integration tests (source modules only):**
 
+The `with-integration-tests` profile is active by default at the root. Deactivate it to skip both `integration-tests/` and `coverage-report/`:
+
 ```bash
-mvn verify -Pskip-integration-tests
+mvn install -P-with-integration-tests
 ```
 
 ## Profiles
 
 | Profile | Scope | Effect |
 |---------|-------|--------|
-| _(default)_ | Root | Builds all modules; runs spring integration tests |
+| `with-integration-tests` | Root | **Active by default**; includes `integration-tests/` and `coverage-report/`. Deactivate with `-P-with-integration-tests`. |
 | `mtx-integration-tests` | `integration-tests/` | Also includes the `mtx-local/srv` module |
-| `skip-integration-tests` | Root | Excludes `integration-tests/` and `coverage-report/` entirely |
 
 ## Coverage
 
@@ -61,7 +62,7 @@ coverage-report/target/site/jacoco-aggregate/index.html
 
 ### Thresholds
 
-Coverage thresholds are enforced by SonarQube in the CI pipeline (80% on new code).
+Coverage thresholds are enforced by SonarQube's Quality Gate in the CI pipeline (80%, configured on SonarQube).
 
 ### Coverage data sources
 
