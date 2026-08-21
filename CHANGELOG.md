@@ -16,16 +16,11 @@
 
 ### Added
 
-- Architecture documentation for `cds-feature-ai-core` and `cds-feature-recommendations`
 - Working sample application without `cap-js` dependency
 
 ### Changed
 
 - Upgraded to CAP Java 5 and Spring Boot 4 (minimum CAP Java version is now 5)
-
-### Fixed
-
-- Programmatic usage section in `cds-feature-ai-core` README
 
 ## Version 0.0.1-alpha
 
