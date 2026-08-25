@@ -142,7 +142,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: CodeQL Analysis
-        uses: cap-java/.github/actions/scan-with-codeql@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
+        uses: cap-java/.github/actions/scan-with-codeql@b5eb1ad6341e9fd1d681c42f3b36c4b750a7dac2 # main
         with:
           java-version: '21'
           maven-version: ${{ env.MAVEN_VERSION }}

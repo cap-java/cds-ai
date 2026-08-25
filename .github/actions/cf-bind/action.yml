@@ -22,7 +22,7 @@ runs:
   using: composite
   steps:
     - name: CF Login
-      uses: cap-java/.github/actions/cf-login@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
+      uses: cap-java/.github/actions/cf-login@b5eb1ad6341e9fd1d681c42f3b36c4b750a7dac2 # main
       with:
         cf-api: ${{ inputs.cf-api }}
         cf-username: ${{ inputs.cf-username }}
