@@ -11,7 +11,6 @@ jobs:
   release:
     uses: cap-java/.github/.github/workflows/release.yml@b5eb1ad6341e9fd1d681c42f3b36c4b750a7dac2 # main
     with:
-      java-version: '17'
       blackduck-project-name: com.sap.cds.cds-ai
       blackduck-included-modules: cds-feature-ai-core,cds-feature-recommendations,cds-starter-ai
       build-maven-args: "-P '!with-integration-tests'"
