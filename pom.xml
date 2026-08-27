@@ -107,7 +107,7 @@
     <!-- https://central.sonatype.com/artifact/com.github.ben-manes.caffeine/caffeine/versions -->
     <caffeine.version>3.2.4</caffeine.version>
     <!-- https://central.sonatype.com/artifact/com.github.spotbugs/spotbugs-maven-plugin/versions -->
-    <spotbugs.maven.plugin.version>4.10.3.0</spotbugs.maven.plugin.version>
+    <spotbugs.maven.plugin.version>4.10.4.0</spotbugs.maven.plugin.version>
 
     <!-- skip spotless check when not setting this to true sepecifically-->
     <spotless.check.skip>true</spotless.check.skip>
@@ -394,7 +394,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.9.0</version>
+        <version>3.10.0</version>
         <configuration>
           <java>
             <googleJavaFormat>
