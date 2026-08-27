@@ -8,7 +8,7 @@ on:
 
 jobs:
   stale:
-    uses: cap-java/.github/.github/workflows/stale.yml@296573b55e906f5c77a1855bcfe4285cbbc5cac4 # main
+    uses: cap-java/.github/.github/workflows/stale.yml@b5eb1ad6341e9fd1d681c42f3b36c4b750a7dac2 # main
     permissions:
       actions: write
       issues: write
