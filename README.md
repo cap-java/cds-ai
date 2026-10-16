@@ -2,9 +2,14 @@
 
 # SAP Cloud Application Programming Model - AI Plugins for Java
 
+> [!WARNING]
+> This project is in **alpha** status and is **not ready for productive usage**. APIs, behavior, and configuration may change without notice.
+
 ## About this project
 
 This repository contains a collection of AI plugins for [CAP Java](https://cap.cloud.sap/docs/java/) applications, leveraging [SAP AI Core](https://help.sap.com/docs/sap-ai-core) and the SAP-RPT-1 foundation model.
+
+
 
 ### Plugins
 
